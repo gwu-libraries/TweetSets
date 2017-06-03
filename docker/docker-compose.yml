@@ -1,0 +1,48 @@
+version: '2'
+services:
+  elasticsearch1:
+      image: docker.elastic.co/elasticsearch/elasticsearch:5.4.0
+      container_name: elasticsearch1
+      environment:
+        - cluster.name=tweetsets-cluster
+        - bootstrap.memory_lock=true
+        - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+        - xpack.security.enabled=false
+      ulimits:
+        memlock:
+          soft: -1
+          hard: -1
+      mem_limit: 1g
+      volumes:
+        - /esdata/esdata1:/usr/share/elasticsearch/data
+      ports:
+        - 9200:9200
+      networks:
+        - tweetsets
+  elasticsearch2:
+      image: docker.elastic.co/elasticsearch/elasticsearch:5.4.0
+      container_name: elasticsearch2
+      environment:
+        - cluster.name=tweetsets-cluster
+        - bootstrap.memory_lock=true
+        - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+        - "discovery.zen.ping.unicast.hosts=elasticsearch1"
+        - xpack.security.enabled=false
+      ulimits:
+        memlock:
+          soft: -1
+          hard: -1
+      mem_limit: 1g
+      volumes:
+        - /esdata/esdata2:/usr/share/elasticsearch/data
+      networks:
+        - tweetsets
+  redis:
+      image: 'redis:3.0.7'
+      command: --appendonly yes
+      volumes:
+          - /esdata/redis:/data
+      ports:
+          - '6379:6379'
+networks:
+  tweetsets:
