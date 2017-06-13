@@ -4,6 +4,7 @@ from dateutil.parser import parse as date_parse
 from datetime import datetime
 import uuid
 
+
 class DatasetDocType(DocType):
     name = Text()
     description = Text()
@@ -23,11 +24,11 @@ class DatasetDocType(DocType):
         self.updated = datetime.now()
         return super().save(**kwargs)
 
-def to_dataset(dataset_json, dataset=None):
+def to_dataset(dataset_json, dataset=None, dataset_id=None):
     if not dataset:
         dataset = DatasetDocType()
         dataset.created = datetime.now()
-        dataset.meta.id = uuid.uuid4().hex
+        dataset.meta.id = dataset_id or uuid.uuid4().hex
     # This will throw a KeyError for missing, required fields
     dataset.name = dataset_json['name']
     dataset.description = dataset_json.get('description')
@@ -51,19 +52,27 @@ class TweetDocType(DocType):
     hashtags = Keyword()
     favorite_count = Integer()
     retweet_count = Integer()
+    has_media = Boolean()
+    urls = Keyword()
+    has_geo = Boolean()
 
     class Meta:
         all = MetaField(enabled=False)
         index = 'tweets'
+        # Exclude storing the text field
+        source = MetaField(excludes=['text'])
     # TODO: urls
 
 
 def to_tweet(tweet_json, dataset_id):
+    entities = tweet_json.get('extended_tweet', {}).get('entities') or tweet_json['entities']
+
     tweet = TweetDocType()
     tweet.meta.id = ':'.join([dataset_id, tweet_json['id_str']])
     tweet.tweet_id = tweet_json['id_str']
     tweet.dataset_id = dataset_id
-    tweet.tweet_type = tweet_type(tweet_json)
+    type = tweet_type(tweet_json)
+    tweet.tweet_type = type
     tweet.text = [tweet_text(tweet_json)]
     if tweet.tweet_type == 'quote':
         tweet.text.append(tweet_text(tweet_json['quoted_status']))
@@ -72,10 +81,13 @@ def to_tweet(tweet_json, dataset_id):
     tweet.user_screen_name = tweet_json['user']['screen_name']
     tweet.user_follower_count = tweet_json['user']['followers_count']
     tweet.user_verified = tweet_json['user']['verified']
-    tweet.mention_user_ids, tweet.mention_screen_names = mentions(tweet_json)
-    tweet.hashtags = tweet_hashtags(tweet_json)
+    tweet.mention_user_ids, tweet.mention_screen_names = mentions(entities)
+    tweet.hashtags = tweet_hashtags(entities)
     tweet.favorite_count = tweet_json['favorite_count']
     tweet.retweet_count = tweet_json['retweet_count']
+    tweet.has_media = 'media' in entities
+    tweet.urls = urls(entities, type)
+    tweet.has_geo = tweet_json.get('geo') or tweet_json.get('place') or tweet_json.get('coordinates')
     return tweet
 
 
@@ -97,20 +109,29 @@ def tweet_text(tweet_json):
                   or tweet_json['text']
 
 
-def tweet_hashtags(tweet_json):
+def tweet_hashtags(entities):
     hashtags = []
-    for hashtag in tweet_json['entities']['hashtags']:
+    for hashtag in entities['hashtags']:
         hashtags.append(hashtag['text'].lower())
     return hashtags
 
 
-def mentions(tweet_json):
+def mentions(entities):
     mentions_user_ids = []
     mention_screen_names = []
-    for mention in tweet_json['entities']['user_mentions']:
+    for mention in entities['user_mentions']:
         mentions_user_ids.append(mention['id_str'])
         mention_screen_names.append(mention['screen_name'])
     return mentions_user_ids, mention_screen_names
+
+
+def urls(entities, type):
+    urls = []
+    for url_obj in entities['urls']:
+        url = url_obj.get('expanded_url') or url_obj['url']
+        if not type == 'quote' or not url.startswith('https://twitter.com/'):
+            urls.append(url.lower())
+    return urls
 
 
 class TweetIndex(Index):
@@ -118,6 +139,7 @@ class TweetIndex(Index):
         Index.__init__(self, 'tweets')
         # register a doc_type with the index
         self.doc_type(TweetDocType)
+
 
 class DatasetIndex(Index):
     def __init__(self):

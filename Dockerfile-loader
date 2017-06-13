@@ -1,0 +1,12 @@
+FROM python:3.6
+MAINTAINER Justin Littman <justinlittman@gwu.edu>
+
+ADD requirements.txt /opt/tweetsets/
+WORKDIR /opt/tweetsets
+RUN pip install -r requirements.txt
+
+ADD tweetset_loader.py /opt/tweetsets/
+ADD models.py /opt/tweetsets/
+ADD utils.py /opt/tweetsets/
+
+CMD /bin/bash

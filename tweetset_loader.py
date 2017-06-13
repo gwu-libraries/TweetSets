@@ -2,37 +2,31 @@ from elasticsearch_dsl.connections import connections
 from elasticsearch import helpers
 from elasticsearch_dsl import Search
 from glob import glob
-import os
 import gzip
 import logging
 import json
 import argparse
 from datetime import datetime
+from time import sleep
+import os
 
 from models import TweetIndex, to_tweet, DatasetIndex, to_dataset, DatasetDocType
-from tweetset_server import _read_json
+from utils import read_json, short_uid
 
 log = logging.getLogger(__name__)
 
-connections.create_connection(hosts=['localhost'], timeout=20)
+connections.create_connection(hosts=['elasticsearch'], timeout=20)
+
 
 def find_files(path):
     """
     Returns (.json files, .json.gz files, .txt files) found in path.
     """
-    # json_filepaths = []
-    # json_gz_filepaths = []
-    # txt_filepaths = []
-    # for filename in os.listdir(path):
-    #     filepath = os.path.join(path, filename)
-    #     if filename.lower().endswith('.json'):
-    #         json_filepaths.append(filepath)
-    #     elif filename.lower().endswith('.json.gz'):
-    #         json_gz_filepaths.append(filepath)
-    #     elif filepath.lower().endswith('.txt'):
-    #         txt_filepaths.append(filepath)
-    # return json_filepaths, json_gz_filepaths, txt_filepaths
-    return (glob('{}/*.json'.format(path)),
+    json_filepaths = glob('{}/*.json'.format(path))
+    dataset_filepath = os.path.join(path, 'dataset.json')
+    if dataset_filepath in json_filepaths:
+        json_filepaths.remove(dataset_filepath)
+    return (json_filepaths,
             glob('{}/*.json.gz'.format(path)),
             glob('{}/*.txt'.format(path)))
 
@@ -73,7 +67,7 @@ def tweet_iter(json_files, json_gz_files, txt_files, limit=None):
                 counter += 1
                 yield json.loads(line)
 
-    # TODO: Handle hydration
+                # TODO: Handle hydration
 
 
 if __name__ == '__main__':
@@ -84,11 +78,13 @@ if __name__ == '__main__':
     subparsers = parser.add_subparsers(dest='command', help='command help')
 
     create_parser = subparsers.add_parser('create', help='create a dataset')
-    create_parser.add_argument('dataset_filepath', help='filepath of dataset file')
+    create_parser.add_argument('--path', help='path of dataset', default='/dataset')
+    create_parser.add_argument('--filename', help='filename of dataset file', default='dataset.json')
 
     update_parser = subparsers.add_parser('update', help='update dataset metadata')
     update_parser.add_argument('dataset_identifier', help='identifier (a UUID) for the dataset')
-    update_parser.add_argument('dataset_filepath', help='filepath of dataset file')
+    update_parser.add_argument('--path', help='path of dataset', default='/dataset')
+    update_parser.add_argument('--filename', help='filename of dataset file', default='dataset.json')
 
     delete_parser = subparsers.add_parser('delete', help='delete dataset and tweets')
     delete_parser.add_argument('dataset_identifier', help='identifier (a UUID) for the dataset')
@@ -98,8 +94,16 @@ if __name__ == '__main__':
 
     tweets_parser = subparsers.add_parser('tweets', help='add tweets to a dataset')
     tweets_parser.add_argument('dataset_identifier', help='identifier (a UUID) for the dataset')
-    tweets_parser.add_argument('tweet_files_path', help='path of the directory containing the tweet files')
+    tweets_parser.add_argument('--path', help='path of the directory containing the tweet files', default='/dataset')
     tweets_parser.add_argument('--limit', type=int, help='limit the number of tweets to load')
+
+    dataset_parser = subparsers.add_parser('dataset', help='create a dataset and add tweets')
+    dataset_parser.add_argument('--path', help='path of dataset', default='/dataset')
+    dataset_parser.add_argument('--filename', help='filename of dataset file', default='dataset.json')
+    dataset_parser.add_argument('--limit', type=int, help='limit the number of tweets to load')
+
+
+    subparsers.add_parser('clear', help='delete all indexes')
 
     args = parser.parse_args()
 
@@ -119,19 +123,24 @@ if __name__ == '__main__':
     tweet_index = TweetIndex()
     tweet_index.create(ignore=400)
 
-    if args.command == 'create':
-        dataset = to_dataset(_read_json(args.dataset_filepath))
+    dataset_id = None
+    if args.command in ('create', 'dataset'):
+        dataset = to_dataset(read_json(os.path.join(args.path, args.filename)),
+                             dataset_id=short_uid(6,
+                                                  exists_func=lambda uid: DatasetDocType.get(uid,
+                                                                                              ignore=404) is not None))
         dataset.save()
+        dataset_id = dataset.meta.id
         log.info('Created {}'.format(dataset.meta.id))
         print('Dataset id is {}'.format(dataset.meta.id))
-    elif args.command == 'update':
+    if args.command == 'update':
         dataset = DatasetDocType.get(args.dataset_identifier)
         if not dataset:
             raise Exception('{} not found'.format(args.dataset_identifier))
-        updated_dataset = to_dataset(_read_json(args.dataset_filepath), dataset)
+        updated_dataset = to_dataset(read_json(os.path.join(args.path, args.filename)), dataset)
         updated_dataset.save()
         log.info('Updated {}'.format(dataset.meta.id))
-    elif args.command == 'delete':
+    if args.command == 'delete':
         dataset = DatasetDocType.get(args.dataset_identifier)
         if not dataset:
             raise Exception('{} not found'.format(args.dataset_identifier))
@@ -141,38 +150,40 @@ if __name__ == '__main__':
         search = search.query('term', dataset_id=args.dataset_identifier)
         search.delete()
         log.info('Deleted tweets from {}'.format(dataset.meta.id))
-    elif args.command == 'truncate':
-        pass
-    elif args.command == 'tweets':
-        dataset = DatasetDocType.get(args.dataset_identifier)
+    if args.command == 'truncate':
+        search = Search(index='tweets')
+        search = search.query('term', dataset_id=args.dataset_identifier)
+        search.delete()
+        log.info('Deleted tweets from {}'.format(args.dataset_identifier))
+    if args.command in ('tweets', 'dataset'):
+        if dataset_id is None:
+            dataset_id = args.dataset_identifier
+        dataset = DatasetDocType.get(dataset_id)
         if not dataset:
-            raise Exception('{} not found'.format(args.dataset_identifier))
-        filepaths = find_files(args.tweet_files_path)
+            raise Exception('{} not found'.format(dataset_id))
+        filepaths = find_files(args.path)
         file_count = count_files(*filepaths)
         log.info('Counting tweets in %s files.', file_count)
         tweet_count = count_lines(*filepaths)
         log.info("%s total tweets", tweet_count)
-        helpers.bulk(connections.get_connection(), (to_tweet(tweet_json, args.dataset_identifier).to_dict(include_meta=True) for tweet_json in tweet_iter(*filepaths, limit=args.limit)))
+        helpers.bulk(connections.get_connection(),
+                     (to_tweet(tweet_json, dataset_id).to_dict(include_meta=True) for tweet_json in
+                      tweet_iter(*filepaths, limit=args.limit)))
 
         # Get number of tweets in dataset and update
+        sleep(5)
         search = Search(index='tweets')
-        search = search.query('term', dataset_id=args.dataset_identifier)[0:0]
+        search = search.query('term', dataset_id=dataset_id)[0:0]
         search.aggs.metric('created_at_min', 'min', field='created_at')
         search.aggs.metric('created_at_max', 'max', field='created_at')
         search_response = search.execute()
-        dataset.first_created_at = datetime.utcfromtimestamp(search_response.aggregations.created_at_min.value / 1000.0)
-        dataset.last_created_at = datetime.utcfromtimestamp(search_response.aggregations.created_at_max.value / 1000.0)
+        dataset.first_tweet_created_at = datetime.utcfromtimestamp(
+            search_response.aggregations.created_at_min.value / 1000.0)
+        dataset.last_tweet_created_at = datetime.utcfromtimestamp(
+            search_response.aggregations.created_at_max.value / 1000.0)
         dataset.tweet_count = search_response.hits.total
         dataset.save()
-
-    # for counter, tweet_json in enumerate(tweet_iter(*filepaths, limit=5)):
-    # #     print(counter)
-    #     tweet = from_tweet_json(tweet_json)
-    #     log.info(tweet.to_dict(include_meta=True))
-    # #     tweet.save()
-    # # find_files('test_data')
-    # helpers.bulk(connections.get_connection(), (to_tweet(tweet_json).to_dict(include_meta=True) for tweet_json in tweet_iter(*filepaths, limit=50000)))
-
-    # TODO: Figure out updates
-    # TODO: Don't save source
-    # TODO: Log tweet count as loading
+    if args.command == 'clear':
+        dataset_index.delete()
+        tweet_index.delete()
+        log.info("Deleted indexes")

@@ -1,0 +1,60 @@
+<html>
+<head>
+    <!-- Latest compiled and minified CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='bootstrap/3.3.7/css/bootstrap.min.css') }}" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u">
+
+    <!-- Optional theme -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='bootstrap/3.3.7/css/bootstrap-theme.min.css') }}" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp">
+
+    <!-- Latest compiled and minified JavaScript -->
+    <script src="{{ url_for('static', filename='jquery/1.12.4/jquery.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='bootstrap/3.3.7/js/bootstrap.min.js') }}" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa"></script>
+</head>
+<body>
+<div class="container">
+    <div class="row">
+        <div class="jumbotron">
+            <h1>TweetSets</h1>
+            <h3>Twitter datasets for research and archiving.</h3>
+            <h4><ul>
+                <li>Create your own Twitter dataset from existing, public datasets.</li>
+                <li>Conforms with Twitter policies.</li>
+            </ul>
+            </h4>
+            <br />
+            <p><a class="btn btn-primary btn-lg" href="{{ url_for('dataset_list') }}" role="button">Get started</a></p>
+            <br />
+        </div>
+        <div class="well">
+            <h4><em>TweetSets is intended for academic purposes only. Users are encouraged to follow all relevant Twitter policies and
+                consider ethics and privacy in research and publication of Twitter data.</em></h4>
+        </div>
+
+        <h5>Steps for creating a dataset:</h5>
+        <ol>
+            <li>Select source dataset(s). Source datasets have been previously collected and are publicly available.</li>
+            <li>Limit the dataset by querying on keywords, hashtags, and other parameters. Repeat until you've created
+                the desired dataset.</li>
+            <li>Create the dataset. This freezes the query parameters.</li>
+            <li>Generate and download dataset derivatives such as the list of tweet ids, mention nodes/edges (e.g., for Gephi).</li>
+        </ol>
+        <br />
+        <h5>Important information:</h5>
+        <ul>
+        <li><em>You cannot view or download the text of tweets.</em> (In fact, it is indexed but not stored by TweetSets.)</li>
+        <li>Keep track of the URLs of your datasets. No account information is stored, so it is the only way you
+            will be able to get back to your datasets.</li>
+        <li>Generating dataset derivates may take a while.</li>
+        </ul>
+        <br />
+        <h5>About sharing Twitter datasets for research and archiving:</h5>
+        <p>
+        Twitter policies do not allow publicly posting or sharing the text of tweets retrieved from the Twitter API.
+        However, they do allow the sharing of tweet ids. Given a tweet id, the text of tweets can be retrieved from
+        the Twitter API using a tool such a <a href="https://github.com/DocNow/hydrator">DocNow's Hydrator</a>. Note that if a tweet has been deleted
+        or protected, it cannot be retrieved from the Twitter API, so some tweets from the dataset may be lost.
+        </p>
+    </div>
+</div>
+</body>
+</html>

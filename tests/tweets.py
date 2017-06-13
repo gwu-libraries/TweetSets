@@ -1255,3 +1255,125 @@ streaming_extended_tweet = {
   "in_reply_to_status_id_str": "839526473534959617",
   "place": None
 }
+
+geotagged_tweet = {
+  "contributors": None,
+  "truncated": False,
+  "text": "However, \"strong support for social media research that is for the\n'good' of society\" but not free pass for research https://t.co/SFSp62Ik1t",
+  "is_quote_status": False,
+  "in_reply_to_status_id": None,
+  "id": 872549121906929700,
+  "favorite_count": 0,
+  "source": "<a href=\"http://twitter.com\" rel=\"nofollow\">Twitter Web Client</a>",
+  "retweeted": False,
+  "coordinates": None,
+  "entities": {
+    "symbols": [],
+    "user_mentions": [],
+    "hashtags": [],
+    "urls": [
+      {
+        "url": "https://t.co/SFSp62Ik1t",
+        "indices": [
+          117,
+          140
+        ],
+        "expanded_url": "http://www.jmir.org/2017/6/e195/",
+        "display_url": "jmir.org/2017/6/e195/"
+      }
+    ]
+  },
+  "in_reply_to_screen_name": None,
+  "in_reply_to_user_id": None,
+  "retweet_count": 0,
+  "id_str": "872549121906929666",
+  "favorited": False,
+  "user": {
+    "follow_request_sent": False,
+    "has_extended_profile": False,
+    "profile_use_background_image": True,
+    "default_profile_image": False,
+    "id": 481186914,
+    "profile_background_image_url_https": "https://abs.twimg.com/images/themes/theme1/bg.png",
+    "verified": False,
+    "translator_type": "none",
+    "profile_text_color": "333333",
+    "profile_image_url_https": "https://pbs.twimg.com/profile_images/496478011533713408/GjecBUNj_normal.jpeg",
+    "profile_sidebar_fill_color": "DDEEF6",
+    "entities": {
+      "description": {
+        "urls": []
+      }
+    },
+    "followers_count": 258,
+    "profile_sidebar_border_color": "C0DEED",
+    "id_str": "481186914",
+    "profile_background_color": "C0DEED",
+    "listed_count": 16,
+    "is_translation_enabled": False,
+    "utc_offset": -14400,
+    "statuses_count": 797,
+    "description": "",
+    "friends_count": 102,
+    "location": "",
+    "profile_link_color": "1DA1F2",
+    "profile_image_url": "http://pbs.twimg.com/profile_images/496478011533713408/GjecBUNj_normal.jpeg",
+    "following": False,
+    "geo_enabled": True,
+    "profile_banner_url": "https://pbs.twimg.com/profile_banners/481186914/1460820528",
+    "profile_background_image_url": "http://abs.twimg.com/images/themes/theme1/bg.png",
+    "screen_name": "justin_littman",
+    "lang": "en",
+    "profile_background_tile": False,
+    "favourites_count": 284,
+    "name": "Justin Littman",
+    "notifications": False,
+    "url": None,
+    "created_at": "Thu Feb 02 12:19:18 +0000 2012",
+    "contributors_enabled": False,
+    "time_zone": "Eastern Time (US & Canada)",
+    "protected": False,
+    "default_profile": True,
+    "is_translator": False
+  },
+  "geo": None,
+  "in_reply_to_user_id_str": None,
+  "possibly_sensitive": False,
+  "lang": "en",
+  "created_at": "Wed Jun 07 20:21:36 +0000 2017",
+  "in_reply_to_status_id_str": None,
+  "place": {
+    "full_name": "Washington, DC",
+    "url": "https://api.twitter.com/1.1/geo/id/01fbe706f872cb32.json",
+    "country": "United States",
+    "place_type": "city",
+    "bounding_box": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            -77.119401,
+            38.801826
+          ],
+          [
+            -76.909396,
+            38.801826
+          ],
+          [
+            -76.909396,
+            38.9953797
+          ],
+          [
+            -77.119401,
+            38.9953797
+          ]
+        ]
+      ]
+    },
+    "contained_within": [],
+    "country_code": "US",
+    "attributes": {},
+    "id": "01fbe706f872cb32",
+    "name": "Washington"
+  }
+}
