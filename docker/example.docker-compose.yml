@@ -1,0 +1,102 @@
+version: '2'
+services:
+  # This has 2 ElasticSearch nodes. Scale as necessary to additional nodes.
+  elasticsearch1:
+      image: docker.elastic.co/elasticsearch/elasticsearch:5.4.0
+      container_name: elasticsearch1
+      ulimits:
+        memlock:
+          soft: -1
+          hard: -1
+      # This value is suitable for dev. Set higher for production.
+      mem_limit: ${ES_MEM_LIMIT}
+      volumes:
+        - ${TWEETSETS_DATA_PATH}/elasticsearch/esdata1:/usr/share/elasticsearch/data
+      networks:
+        - tweetsets
+      environment:
+        - cluster.name=tweetsets-cluster
+        - bootstrap.memory_lock=true
+        - "ES_JAVA_OPTS=-Xms${ES_JAVA_MEM} -Xmx${ES_JAVA_MEM}"
+        - xpack.security.enabled=false
+        - TZ
+  elasticsearch2:
+      image: docker.elastic.co/elasticsearch/elasticsearch:5.4.0
+      container_name: elasticsearch2
+      ulimits:
+        memlock:
+          soft: -1
+          hard: -1
+      # This value is suitable for dev. Set higher for production.
+      mem_limit: ${ES_MEM_LIMIT}
+      volumes:
+        - ${TWEETSETS_DATA_PATH}/elasticsearch/esdata2:/usr/share/elasticsearch/data
+      networks:
+        - tweetsets
+      environment:
+        - cluster.name=tweetsets-cluster
+        - bootstrap.memory_lock=true
+        - "ES_JAVA_OPTS=-Xms${ES_JAVA_MEM} -Xmx${ES_JAVA_MEM}"
+        - "discovery.zen.ping.unicast.hosts=elasticsearch1"
+        - xpack.security.enabled=false
+        - TZ
+  redis:
+      image: redis:3.0.7
+      command: --appendonly yes
+      volumes:
+          - ${TWEETSETS_DATA_PATH}/redis:/data
+      networks:
+        - tweetsets
+      environment:
+       - TZ
+  server-flaskrun:
+      build:
+          context: ..
+          dockerfile: Dockerfile-flaskrun
+      links:
+        - redis:redis
+        - elasticsearch1:elasticsearch
+      ports:
+          - ${SERVER_PORT}:5000
+      volumes:
+        - /tweetsets_data/datasets:/tweetsets_data/datasets
+        # This links in external code.
+        - "..:/opt/tweetsets"
+      networks:
+        - tweetsets
+      environment:
+        - SECRET_KEY=${SERVER_SECRET_KEY}
+        - TZ
+  # This can be duplicated for multiple workers
+  worker1:
+      build:
+          context: ..
+          dockerfile: Dockerfile-worker
+      links:
+        - redis:redis
+        - elasticsearch1:elasticsearch
+      volumes:
+        - ${TWEETSETS_DATA_PATH}/datasets:/tweetsets_data/datasets
+      networks:
+        - tweetsets
+      environment:
+        - LOGGING_LEVEL=${WORKER_LOGGING_LEVEL}
+        - TZ
+  # This will exit. That's OK.
+  loader:
+      build:
+          context: ..
+          dockerfile: Dockerfile-loader
+      links:
+        - elasticsearch1:elasticsearch
+      volumes:
+        - ${DATASET_PATH}:/dataset
+      networks:
+        - tweetsets
+      environment:
+       - TZ
+      # DATASET_PATH is the path of the dataset to be loaded.
+      # export DATASET_PATH=../test_data
+      # docker-compose run --rm loader /bin/bash
+networks:
+  tweetsets:

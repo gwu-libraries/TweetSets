@@ -170,12 +170,19 @@ def _prepare_dataset_view(dataset_params):
         search_response.hits.total, int(dataset_params['tweet_limit']))
     sample_tweet_ids = []
     sample_tweet_html = []
+    oembed_error = False
     for hit in search_response:
         tweet_id = hit.meta.id[7:]
         sample_tweet_ids.append(tweet_id)
-        tweet_html = _oembed(tweet_id)
-        if tweet_html:
-            sample_tweet_html.append(tweet_html)
+        if not oembed_error:
+            try:
+                tweet_html = _oembed(tweet_id)
+                if tweet_html:
+                    sample_tweet_html.append(tweet_html)
+            except OembedException:
+                # Skip further Oembed attemts
+                oembed_error = True
+
     context['sample_tweet_ids'] = sample_tweet_ids
     context['sample_tweet_html'] = sample_tweet_html
     context['top_users'] = search_response.aggregations.top_users.buckets
@@ -457,6 +464,65 @@ def _generate_mentions_task(self, dataset_params, total_tweets, dataset_path, ma
     return {'current': tweet_count + 1, 'total': total_tweets,
             'status': 'Completed.'}
 
+@celery.task(bind=True)
+def _generate_top_mentions_task(self, dataset_params, total_tweets, dataset_path, max_per_file=None,
+                            generate_update_increment=None):
+    max_per_file = max_per_file or 1000000
+    generate_update_increment = generate_update_increment or 10000
+
+    search = _dataset_params_to_search(dataset_params)
+    search.source(['mention_user_ids', 'user_id'])
+
+    # Delete existing files
+    for filename in fnmatch.filter(os.listdir(dataset_path), "top-mentions-*.txt.gz"):
+        os.remove(os.path.join(dataset_path, filename))
+
+    # Create db
+    db_filepath = os.path.join(dataset_path, "top-mentions.db")
+    if os.path.exists(db_filepath):
+        os.remove(db_filepath)
+    conn = sqlite3.connect(db_filepath)
+    with conn:
+        conn.execute('create table mentions(user_id primary key, screen_name text, mention_count int);')
+
+    mention_count = 0
+    tweet_count = 0
+    for tweet_count, hit in enumerate(search.scan()):
+        # This is to support limiting the number of tweets
+        if tweet_count + 1 > total_tweets:
+            break
+        if hasattr(hit, 'mention_user_ids'):
+            for i, mention_user_id in enumerate(hit.mention_user_ids):
+                mention_count += 1
+                mention_screen_name = hit.mention_screen_names[i]
+                with conn:
+                    conn.execute('update mentions set mention_count=mention_count+1 where user_id=?', (mention_user_id,))
+                    if not conn.rowcount:
+                        conn.execute('insert into mentions(user_id, screen_name, mention_count) values (?, ?, 0);', (mention_user_id, mention_screen_name,))
+
+        if (tweet_count + 1) % generate_update_increment == 0:
+            self.update_state(state='PROGRESS',
+                              meta={'current': tweet_count + 1, 'total': total_tweets,
+                                    'status': '{} of {} tweets contains {} mentions'.format(
+                                        tweet_count + 1, total_tweets,
+                                        mention_count)})
+
+    cur = conn.cursor()
+    cur.execute('select user_id, screen_name, mention_count from mentions order by mention_count desc')
+    for row in cur:
+        app.logger.info(row)
+        print(row)
+
+    generate_task_filepath = os.path.join(dataset_path, 'generate_top_mentions_task.json')
+    if os.path.exists(generate_task_filepath):
+        os.remove(generate_task_filepath)
+    conn.close()
+    os.remove(db_filepath)
+
+    return {'current': tweet_count + 1, 'total': total_tweets,
+            'status': 'Completed.'}
+
+
 
 def _oembed(tweet_id):
     tweet_html = tweet_html_cache.get(tweet_id)
@@ -467,11 +533,16 @@ def _oembed(tweet_id):
                          params={'url': 'https://twitter.com/_/status/{}'.format(tweet_id),
                                  'omit_script': 'true',
                                  'hide_media': 'false',
-                                 'hide_thread': 'false'})
+                                 'hide_thread': 'false'},
+                         timeout=5)
         if r:
             tweet_html = r.json()['html']
             tweet_html_cache[tweet_id] = tweet_html
             return tweet_html
     except requests.exceptions.ConnectionError:
-        pass
+        raise OembedException()
     return None
+
+
+class OembedException(Exception):
+    pass

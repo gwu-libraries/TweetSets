@@ -102,3 +102,7 @@ ENV/
 
 # PyCharm
 .idea/
+
+# Docker files
+docker/docker-compose.yml
+docker/.env
