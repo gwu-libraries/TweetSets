@@ -46,13 +46,13 @@ def count_files(json_files, json_gz_files, txt_files):
     return len(json_files) + len(json_gz_files) + len(txt_files)
 
 
-def tweet_iter(json_files, json_gz_files, txt_files, limit=None):
+def tweet_iter(json_files, json_gz_files, txt_files, limit=None, total_tweets=None):
     counter = 0
     for filepath in json_files:
         with open(filepath) as file:
             for line in file:
                 if counter % 10000 == 0:
-                    log.info('%s tweets', counter)
+                    log.info('{:,} of {:,} tweets'.format(counter, limit or total_tweets or 0))
                 if counter == limit:
                     break
                 counter += 1
@@ -61,7 +61,7 @@ def tweet_iter(json_files, json_gz_files, txt_files, limit=None):
         with gzip.open(filepath) as file:
             for line in file:
                 if counter % 10000 == 0:
-                    log.info('%s tweets', counter)
+                    log.info('{:,} of {:,} tweets'.format(counter, limit or total_tweets or 0))
                 if counter == limit:
                     break
                 counter += 1
@@ -102,13 +102,13 @@ if __name__ == '__main__':
     dataset_parser.add_argument('--filename', help='filename of dataset file', default='dataset.json')
     dataset_parser.add_argument('--limit', type=int, help='limit the number of tweets to load')
 
-
     subparsers.add_parser('clear', help='delete all indexes')
 
     args = parser.parse_args()
 
     # Logging
-    logging.getLogger("urllib3").setLevel(logging.WARNING)
+    logging.getLogger('urllib3').setLevel(logging.WARNING)
+    logging.getLogger('elasticsearch').setLevel(logging.WARNING)
     logging.basicConfig(
         level=logging.DEBUG if args.debug else logging.INFO
     )
@@ -165,10 +165,10 @@ if __name__ == '__main__':
         file_count = count_files(*filepaths)
         log.info('Counting tweets in %s files.', file_count)
         tweet_count = count_lines(*filepaths)
-        log.info("%s total tweets", tweet_count)
+        log.info('{:,} total tweets'.format(tweet_count))
         helpers.bulk(connections.get_connection(),
                      (to_tweet(tweet_json, dataset_id).to_dict(include_meta=True) for tweet_json in
-                      tweet_iter(*filepaths, limit=args.limit)))
+                      tweet_iter(*filepaths, limit=args.limit, total_tweets=tweet_count)))
 
         # Get number of tweets in dataset and update
         sleep(5)

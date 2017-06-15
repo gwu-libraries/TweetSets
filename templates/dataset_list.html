@@ -84,8 +84,10 @@
                                     {% endif %}
                                     {% if dataset.tweet_count %}
                                         <dt>Tweet count</dt>
-                                        <dd>{{ dataset.tweet_count }}</dd>
+                                        <dd>{{ dataset.tweet_count | nf }}</dd>
                                     {% endif %}
+                                    <dt>ID</dt>
+                                    <dd>{{ dataset.meta.id }}</dd>
                                 </dl>
                             </div>
                         </div>

@@ -1,7 +1,6 @@
 amqp==2.1.4
 appdirs==1.4.3
 billiard==3.5.0.2
-cachetools==2.0.0
 celery==4.0.2
 certifi==2017.4.17
 chardet==3.0.3

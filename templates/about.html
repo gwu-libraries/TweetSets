@@ -24,6 +24,7 @@
             <br />
             <p><a class="btn btn-primary btn-lg" href="{{ url_for('dataset_list') }}" role="button">Get started</a></p>
             <br />
+            <p>{{ tweet_count | nf }} tweets available.</p>
         </div>
         <div class="well">
             <h4><em>TweetSets is intended for academic purposes only. Users are encouraged to follow all relevant Twitter policies and
@@ -35,16 +36,17 @@
             <li>Select source dataset(s). Source datasets have been previously collected and are publicly available.</li>
             <li>Limit the dataset by querying on keywords, hashtags, and other parameters. Repeat until you've created
                 the desired dataset.</li>
-            <li>Create the dataset. This freezes the query parameters.</li>
+            <li>Create the dataset. This freezes the dataset parameters.</li>
             <li>Generate and download dataset derivatives such as the list of tweet ids, mention nodes/edges (e.g., for Gephi).</li>
         </ol>
         <br />
         <h5>Important information:</h5>
         <ul>
-        <li><em>You cannot view or download the text of tweets.</em> (In fact, it is indexed but not stored by TweetSets.)</li>
-        <li>Keep track of the URLs of your datasets. No account information is stored, so it is the only way you
+            <li><em>You cannot view or download the text of tweets.</em> (In fact, it is indexed but not stored by TweetSets.)</li>
+            <li>Keep track of the URLs of your datasets. No account information is stored, so it is the only way you
             will be able to get back to your datasets.</li>
-        <li>Generating dataset derivates may take a while.</li>
+            <li>Generating dataset derivates may take a while.</li>
+            <li>Datasets may change if new tweets are added to the source datasets.</li>
         </ul>
         <br />
         <h5>About sharing Twitter datasets for research and archiving:</h5>

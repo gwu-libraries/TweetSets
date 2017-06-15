@@ -49,24 +49,42 @@ services:
         - tweetsets
       environment:
        - TZ
-  server-flaskrun:
+  # For production
+  server:
       build:
           context: ..
-          dockerfile: Dockerfile-flaskrun
+          dockerfile: Dockerfile-server
       links:
         - redis:redis
         - elasticsearch1:elasticsearch
       ports:
-          - ${SERVER_PORT}:5000
+          - ${SERVER_PORT}:8080
       volumes:
         - /tweetsets_data/datasets:/tweetsets_data/datasets
-        # This links in external code.
-        - "..:/opt/tweetsets"
       networks:
         - tweetsets
       environment:
         - SECRET_KEY=${SERVER_SECRET_KEY}
         - TZ
+  # For development
+#  server-flaskrun:
+#      build:
+#          context: ..
+#          dockerfile: Dockerfile-flaskrun
+#      links:
+#        - redis:redis
+#        - elasticsearch1:elasticsearch
+#      ports:
+#          - ${SERVER_PORT}:5000
+#      volumes:
+#        - /tweetsets_data/datasets:/tweetsets_data/datasets
+#        # This links in external code.
+#        - "..:/opt/tweetsets"
+#      networks:
+#        - tweetsets
+#      environment:
+#        - SECRET_KEY=${SERVER_SECRET_KEY}
+#        - TZ
   # This can be duplicated for multiple workers
   worker1:
       build:

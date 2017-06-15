@@ -12,17 +12,14 @@ From redis:
 redis_1            | 1:M 14 Jun 01:53:54.763 # WARNING overcommit_memory is set to 0! Background save may fail under low memory condition. To fix this issue add 'vm.overcommit_memory = 1' to /etc/sysctl.conf and then reboot or run the command 'sysctl vm.overcommit_memory=1' for this to take effect.
 
 Also, document ES prereqs.
-Move to .env.
 
 TODO:
-* Dockerize
 * Write install instructions
 * Add hydration to loading
 * Save recent datasets in cookie
 * Scroll additional sample tweets
-* Change tweet HTML cache to use redis
 * Limit by mention user ids, screen names
 * Limit by user ids, screen names
 * Limit by verified users
-* Export mention counts
+* Export mention counts options (top #, > mentions than)
 * Export edges in gephi, additional formats

@@ -6,11 +6,11 @@ from celery import Celery
 import gzip
 import requests
 import fnmatch
-from cachetools import LRUCache
 import re
 from models import DatasetDocType
 from datetime import datetime
 import sqlite3
+import redis as redispy
 
 from utils import read_json, write_json, short_uid
 
@@ -20,7 +20,6 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'secret')
 app.config['DATASETS_PATH'] = '/tweetsets_data/datasets'
 app.config['MAX_PER_FILE'] = os.environ.get('MAX_PER_FILE')
 app.config['GENERATE_UPDATE_INCREMENT'] = os.environ.get('GENERATE_UPDATE_INCREMENT')
-app.config['TWEET_HTML_QUEUE_SIZE'] = 500
 
 # ElasticSearch setup
 es_connections.create_connection(hosts=['elasticsearch'], timeout=20)
@@ -32,12 +31,12 @@ app.config['CELERY_RESULT_BACKEND'] = 'redis://redis:6379/0'
 celery = Celery(app.name, broker=app.config['CELERY_BROKER_URL'])
 celery.conf.update(app.config)
 
-tweet_html_cache = LRUCache(maxsize=app.config['TWEET_HTML_QUEUE_SIZE'])
+redis = redispy.StrictRedis(host='redis', port=6379, db=1)
 
 
 @app.route('/')
 def about():
-    return render_template('about.html')
+    return render_template('about.html', tweet_count = _tweet_count())
 
 
 @app.route('/datasets')
@@ -95,6 +94,29 @@ def dataset(dataset_id):
         # Check for existing derivatives
         context['mentions_filenames'] = fnmatch.filter(os.listdir(dataset_path), "mention-*.txt.gz")
 
+    # Generate top mentions
+    generate_top_mentions_task_filepath = os.path.join(dataset_path, 'generate_top_mentions_task.json')
+    if request.form.get('generate_top_mentions', '').lower() == 'true' and not os.path.exists(
+            generate_top_mentions_task_filepath):
+        app.logger.info('Generating top mentions for {}'.format(dataset_id))
+        flash('Started generating top mention')
+        # _generate_top_mentions_task(dataset_params, context['total_tweets'], dataset_path)
+
+        generate_top_mentions_task = _generate_top_mentions_task.delay(dataset_params, context['total_tweets'], dataset_path,
+                                                               max_per_file=app.config[
+                                                                   'MAX_PER_FILE'],
+                                                               generate_update_increment=app.config[
+                                                                   'GENERATE_UPDATE_INCREMENT'])
+
+        # Write task.json
+        write_json(generate_top_mentions_task_filepath, {'id': generate_top_mentions_task.id})
+        context['top_mentions_task_id'] = generate_top_mentions_task.id
+    elif os.path.exists(generate_top_mentions_task_filepath):
+        context['top_mentions_task_id'] = read_json(generate_top_mentions_task_filepath)['id']
+    else:
+        # Check for existing derivatives
+        context['top_mentions_filenames'] = fnmatch.filter(os.listdir(dataset_path), "top-mentions-*.txt.gz")
+
     context['dataset_id'] = dataset_id
     app.logger.info(context.get('task_id'))
     return render_template('dataset.html', **context)
@@ -119,7 +141,7 @@ def limit_dataset():
         # Write dataset_params
         write_json(os.path.join(dataset_path, 'dataset_params.json'), dataset_params)
         flash('Created dataset')
-        return redirect(url_for('dataset', dataset_id=dataset_id), code=303)
+        return redirect('{}#datasetDerivatives'.format(url_for('dataset', dataset_id=dataset_id)), code=303)
 
     return render_template('dataset.html', **context)
 
@@ -341,6 +363,19 @@ def _form_to_dataset_params(form):
     return dataset_params
 
 
+def _tweet_count():
+    tweet_count_str = redis.get('tweet_count')
+    if not tweet_count_str:
+        search = Search(index='tweets')
+        search.query = Q()
+        search_response = search.execute()
+        tweet_count = search_response.hits.total
+        redis.set('tweet_count', tweet_count, ex=24 * 60 * 60)
+    else:
+        tweet_count = int(tweet_count_str)
+    return tweet_count
+
+
 @celery.task(bind=True)
 def _generate_tweet_ids_task(self, dataset_params, total_tweets, dataset_path, max_per_file=None,
                              generate_update_increment=None):
@@ -414,7 +449,6 @@ def _generate_mentions_task(self, dataset_params, total_tweets, dataset_path, ma
     mention_count = 0
     tweet_count = 0
     try:
-
         for tweet_count, hit in enumerate(search.scan()):
             # This is to support limiting the number of tweets
             if tweet_count + 1 > total_tweets:
@@ -464,6 +498,7 @@ def _generate_mentions_task(self, dataset_params, total_tweets, dataset_path, ma
     return {'current': tweet_count + 1, 'total': total_tweets,
             'status': 'Completed.'}
 
+
 @celery.task(bind=True)
 def _generate_top_mentions_task(self, dataset_params, total_tweets, dataset_path, max_per_file=None,
                             generate_update_increment=None):
@@ -485,8 +520,13 @@ def _generate_top_mentions_task(self, dataset_params, total_tweets, dataset_path
     with conn:
         conn.execute('create table mentions(user_id primary key, screen_name text, mention_count int);')
 
+    self.update_state(state='PROGRESS',
+                      meta={'current': 0, 'total': 1,
+                            'status': 'Querying'})
+
     mention_count = 0
-    tweet_count = 0
+    total_user_count = 0
+    buf = dict()
     for tweet_count, hit in enumerate(search.scan()):
         # This is to support limiting the number of tweets
         if tweet_count + 1 > total_tweets:
@@ -495,23 +535,62 @@ def _generate_top_mentions_task(self, dataset_params, total_tweets, dataset_path
             for i, mention_user_id in enumerate(hit.mention_user_ids):
                 mention_count += 1
                 mention_screen_name = hit.mention_screen_names[i]
-                with conn:
-                    conn.execute('update mentions set mention_count=mention_count+1 where user_id=?', (mention_user_id,))
-                    if not conn.rowcount:
-                        conn.execute('insert into mentions(user_id, screen_name, mention_count) values (?, ?, 0);', (mention_user_id, mention_screen_name,))
+
+                if mention_user_id in buf:
+                    buf[mention_user_id][0] += 1
+                else:
+                    cur = conn.cursor()
+                    cur.execute('update mentions set mention_count=mention_count+1 where user_id=?', (mention_user_id,))
+                    if not cur.rowcount:
+                        buf[mention_user_id] = [1, mention_screen_name]
+                    conn.commit()
+
+                if len(buf) and len(buf) % 1000 == 0:
+                    with conn:
+                        conn.executemany('insert into mentions(user_id, screen_name, mention_count) values (?, ?, ?);',
+                                         _mention_iter(buf))
+                    total_user_count += len(buf)
+                    buf = dict()
 
         if (tweet_count + 1) % generate_update_increment == 0:
             self.update_state(state='PROGRESS',
                               meta={'current': tweet_count + 1, 'total': total_tweets,
-                                    'status': '{} of {} tweets contains {} mentions'.format(
-                                        tweet_count + 1, total_tweets,
-                                        mention_count)})
+                                    'status': 'Counted {} mentions in {} of {} tweets'.format(
+                                        mention_count, tweet_count + 1, total_tweets)})
 
-    cur = conn.cursor()
-    cur.execute('select user_id, screen_name, mention_count from mentions order by mention_count desc')
-    for row in cur:
-        app.logger.info(row)
-        print(row)
+    # Final write of buffer
+    if len(buf):
+        with conn:
+            conn.executemany('insert into mentions(user_id, screen_name, mention_count) values (?, ?, ?);',
+                             _mention_iter(buf))
+        total_user_count += len(buf)
+
+
+    file_count = 1
+    file = None
+    try:
+        cur = conn.cursor()
+        for user_count, row in enumerate(cur.execute("select user_id, screen_name, mention_count from mentions order by mention_count desc")):
+            # Cycle tweet id files
+            if user_count % max_per_file == 0:
+                if file:
+                    file.close()
+                file = gzip.open(
+                    os.path.join(dataset_path, 'top-mentions-{}.txt.gz'.format(str(file_count).zfill(3))), 'wb')
+                file_count += 1
+            # Write to mentions to file
+            file.write(bytes(','.join([row[0], row[1], str(row[2])]), 'utf-8'))
+            file.write(bytes('\n', 'utf-8'))
+
+            if (user_count + 1) % generate_update_increment == 0:
+                app.logger.info(user_count)
+                self.update_state(state='PROGRESS',
+                                  meta={'current': user_count + 1, 'total': total_user_count,
+                                        'status': '{} of {} mentioners in {} files'.format(
+                                            user_count + 1, total_user_count, file_count)})
+    finally:
+        if file:
+            file.close()
 
     generate_task_filepath = os.path.join(dataset_path, 'generate_top_mentions_task.json')
     if os.path.exists(generate_task_filepath):
@@ -519,13 +598,16 @@ def _generate_top_mentions_task(self, dataset_params, total_tweets, dataset_path
     conn.close()
     os.remove(db_filepath)
 
-    return {'current': tweet_count + 1, 'total': total_tweets,
+    return {'current': user_count + 1, 'total': total_user_count,
             'status': 'Completed.'}
 
 
+def _mention_iter(buf):
+    for mention_user_id, (count, screen_name) in buf.items():
+        yield mention_user_id, screen_name, count
 
 def _oembed(tweet_id):
-    tweet_html = tweet_html_cache.get(tweet_id)
+    tweet_html = redis.get(tweet_id)
     if tweet_html:
         return tweet_html
     try:
@@ -537,7 +619,7 @@ def _oembed(tweet_id):
                          timeout=5)
         if r:
             tweet_html = r.json()['html']
-            tweet_html_cache[tweet_id] = tweet_html
+            redis.set(tweet_id, tweet_html, ex=24 * 60 * 60)
             return tweet_html
     except requests.exceptions.ConnectionError:
         raise OembedException()
@@ -546,3 +628,11 @@ def _oembed(tweet_id):
 
 class OembedException(Exception):
     pass
+
+
+@app.template_filter('nf')
+def number_format_filter(num):
+    """
+    A filter for formatting numbers with commas.
+    """
+    return '{:,}'.format(num)
