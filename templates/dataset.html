@@ -113,19 +113,14 @@
     {% endif %}
 
 
-    <nav class="nav navbar-pills" role="tablist" id="navBar">
-        <ul class="nav navbar-nav">
-            {% if task_id %}
-                <li role="presentation"><a href="#progress" aria-controls="progress" role="tab" data-toggle="tab">Progress</a></li>
-            {% endif %}
-            <li role="presentation"><a href="#datasetParametersActions" aria-controls="datasetParametersActions" role="tab" data-toggle="tab">Dataset parameters / actions</a></li>
-            <li role="presentation"><a href="#datasetStatistics" aria-controls="datasetStatistics" role="tab" data-toggle="tab">Dataset statistics</a></li>
-            <li role="presentation"><a href="#sampleTweets" aria-controls="sampleTweets" role="tab" data-toggle="tab">Sample tweets</a></li>
-            {% if dataset_id %}
-                <li role="presentation"><a href="#datasetDerivatives" aria-controls="datasetDerivatives" role="tab" data-toggle="tab">Dataset derivatives</a></li>
-            {% endif %}
-        </ul>
-    </nav>
+    <ul class="nav nav-pills" role="tablist" id="navBar">
+        <li role="presentation" class="active"><a href="#datasetParametersActions" aria-controls="datasetParametersActions" role="tab" data-toggle="tab" id="datasetParametersActionsTab">Dataset parameters / actions</a></li>
+        <li role="presentation"><a href="#datasetStatistics" aria-controls="datasetStatistics" role="tab" data-toggle="tab" id="datasetStatisticsTab">Dataset statistics</a></li>
+        <li role="presentation"><a href="#sampleTweets" aria-controls="sampleTweets" role="tab" data-toggle="tab" id="sampleTweetsTab">Sample tweets</a></li>
+        {% if dataset_id %}
+            <li role="presentation"><a href="#datasetDerivatives" aria-controls="datasetDerivatives" role="tab" data-toggle="tab" id="datasetDerivativesTab">Dataset derivatives</a></li>
+        {% endif %}
+    </ul>
     <div class="tab-content">
         <div role="tabpanel" class="tab-pane active" id="datasetParametersActions">
             <form class="form-horizontal" action="{{ url_for('limit_dataset') }}#datasetStatistics" method="POST">
@@ -473,22 +468,15 @@
     </div>
     <script>
         $(function() {
-            $('.navbar-nav a').click(function(e) {
+            $('#navBar a').click(function(e) {
               e.preventDefault();
               $(this).tab('show');
             });
 
-            // store the currently selected tab in the hash value
-            $("ul.navbar-nav > li > a").on("shown.bs.tab", function(e) {
-              var id = $(e.target).attr("href").substr(1);
-              window.location.hash = id;
-            });
-
             // on load of the page: switch to the currently selected tab
             var hash = window.location.hash;
-            $('.navbar-nav a[href="' + hash + '"]').tab('show');
+            $(hash + 'Tab').click();
         });
-
     </script>
 </div>
 </body>
