@@ -112,359 +112,363 @@
         </div>
     {% endif %}
 
-
-    <ul class="nav nav-pills" role="tablist" id="navBar">
-        <li role="presentation" class="active"><a href="#datasetParametersActions" aria-controls="datasetParametersActions" role="tab" data-toggle="tab" id="datasetParametersActionsTab">Dataset parameters / actions</a></li>
-        <li role="presentation"><a href="#datasetStatistics" aria-controls="datasetStatistics" role="tab" data-toggle="tab" id="datasetStatisticsTab">Dataset statistics</a></li>
-        <li role="presentation"><a href="#sampleTweets" aria-controls="sampleTweets" role="tab" data-toggle="tab" id="sampleTweetsTab">Sample tweets</a></li>
-        {% if dataset_id %}
-            <li role="presentation"><a href="#datasetDerivatives" aria-controls="datasetDerivatives" role="tab" data-toggle="tab" id="datasetDerivativesTab">Dataset derivatives</a></li>
-        {% endif %}
-    </ul>
-    <div class="tab-content">
-        <div role="tabpanel" class="tab-pane active" id="datasetParametersActions">
-            <form class="form-horizontal" action="{{ url_for('limit_dataset') }}#datasetStatistics" method="POST">
-                <div class="row">
-                    <div id="datasetParameters" class="panel panel-default">
-                        <div class="panel-heading"><h2 class="panel-title">Dataset parameters</h2></div>
-                        <div class="panel-body">
-                            <div class="col-sm-offset-1">
-                                <h4>Source datasets</h4>
-                            </div>
-                            <div class="form-group">
-                                <div class="checkbox col-sm-offset-2">
-                                    {% for dataset in source_datasets %}
-                                        <div class="checkbox">
-                                          <label>
-                                            <input type="checkbox" name="limit_source_datasets" value="{{ dataset.meta.id }}" {% if dataset.meta.id in limit_source_datasets %}checked{% endif %}>
-                                            {{ dataset.name }}
-                                          </label>
-                                        </div>
-                                    {% endfor %}
-                                </div>
-                            </div>
-                            <div class="col-sm-offset-1">
-                                <h4>Tweet text</h4>
-                                <p class="help-block">For a retweet or quote, tweet text includes the text of the source tweet.</p>
-                            </div>
-                            <div class="form-group">
-                                <label for="tweetTextContainsAll" class="col-sm-2 control-label">Contains all</label>
-                                <div class="col-sm-10">
-                                    <textarea class="form-control" rows="2" id="tweetTextContainsAll" name="limit_tweet_text_all">{{ limit_tweet_text_all }}</textarea>
-                                    <p class="help-block">Text must contain all of these terms (AND). Comma separate multiple terms. Space separated words are treated as a phrase.</p>
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label for="tweetTextContainsAny" class="col-sm-2 control-label">Contains any</label>
-                                <div class="col-sm-10">
-                                    <textarea class="form-control" rows="2" id="tweetTextContainsAny" name="limit_tweet_text_any">{{ limit_tweet_text_any }}</textarea>
-                                    <p class="help-block">Text must contain one of these terms (OR). Comma separate multiple terms. Space separated words are treated as a phrase.</p>
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label for="tweetTextExclude" class="col-sm-2 control-label">Excludes</label>
-                                <div class="col-sm-10">
-                                    <textarea class="form-control" rows="2" id="tweetTextExclude" name="limit_tweet_text_exclude">{{ limit_tweet_text_exclude }}</textarea>
-                                    <p class="help-block">Text may not contain (NOT). Comma separate multiple terms. Space separated words are treated as a phrase.</p>
-                                </div>
-                            </div>
-                            <h4 class="col-sm-offset-1">Hashtags</h4>
-                            <div class="form-group">
-                                <label for="hashtagContainsAny" class="col-sm-2 control-label">Contains any</label>
-                                <div class="col-sm-10">
-                                    <textarea class="form-control" rows="2" id="hashtagContainsAny" name="limit_hashtag_any">{{ limit_hashtag_any }}</textarea>
-                                    <p class="help-block">Text must contain one of these hashtags (OR). # is optional. Case insensitive.</p>
-                                </div>
-                            </div>
-                            <h4 class="col-sm-offset-1">Tweet types</h4>
-                            <div class="form-group">
-                                <div class="checkbox col-sm-offset-2">
-                                    <label>
-                                        <input type="checkbox" name="limit_tweet_type_original" value="true" {% if limit_tweet_type_original == 'true' %}checked{% endif %}>
-                                            Original
-                                    </label>
-                                </div>
-                                <div class="checkbox col-sm-offset-2">
-                                    <label>
-                                        <input type="checkbox" name="limit_tweet_type_quote" value="true" {% if limit_tweet_type_quote == 'true' %}checked{% endif %}>
-                                            Quote
-                                    </label>
-                                </div>
-                                <div class="checkbox col-sm-offset-2">
-                                    <label>
-                                        <input type="checkbox" name="limit_tweet_type_retweet" value="true" {% if limit_tweet_type_retweet == 'true' %}checked{% endif %}>
-                                            Retweet
-                                    </label>
-                                </div>
-                                <div class="checkbox col-sm-offset-2">
-                                    <label>
-                                        <input type="checkbox" name="limit_tweet_type_reply" value="true" {% if limit_tweet_type_reply == 'true' %}checked{% endif %}>
-                                            Reply
-                                    </label>
-                                </div>
-
-                            </div>
-                            <h4 class="col-sm-offset-1">Created at</h4>
-                            <div class="form-group">
-                                <label for="created_at_from" class="col-sm-2 control-label">From</label>
-                                <div class="col-sm-2">
-                                    <input type="date" class="form-control" id="created_at_from" name="limit_created_at_from" value="{{ limit_created_at_from }}">
-                                </div>
-                                <div class="col-sm-7">
-                                    <p class="help-block">Created at date is greater than or equal to.{% if created_at_min %} First tweet in limited dataset is {{ created_at_min.strftime('%Y-%m-%d') }}.{% endif %}{% if dataset_created_at_min %} First tweet in source dataset(s) is {{ dataset_created_at_min.strftime('%Y-%m-%d') }}.{% endif %}</p>
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label for="created_at_to" class="col-sm-2 control-label">To</label>
-                                <div class="col-sm-2">
-                                    <input type="date" class="form-control" id="created_at_to" name="limit_created_at_to" value="{{ limit_created_at_to }}">
-                                </div>
-                                <div class="col-sm-7">
-                                    <p class="help-block">Created at date is less than or equal to.{% if created_at_max %} Last tweet in limited dataset is {{ created_at_max.strftime('%Y-%m-%d') }}.{% endif %}{% if dataset_created_at_max %} Last tweet in source dataset(s) is {{ dataset_created_at_max.strftime('%Y-%m-%d') }}.{% endif %}</p>
-                                </div>
-                            </div>
-                            <h4 class="col-sm-offset-1">Entities</h4>
-                            <div class="form-group">
-                                <div class="checkbox col-sm-offset-2">
-                                    <label>
-                                        <input type="checkbox" name="limit_has_media" value="true" {% if limit_has_media == 'true' %}checked{% endif %}>
-                                            Tweet has at least one media (embedded images)
-                                    </label>
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <div class="checkbox col-sm-offset-2">
-                                    <label>
-                                        <input type="checkbox" name="limit_has_url" value="true" {% if limit_has_url == 'true' %}checked{% endif %}>
-                                            Tweet includes at least one URL
-                                    </label>
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label for="urlAny" class="col-sm-2 control-label">Contains any URL</label>
-                                <div class="col-sm-10">
-                                    <textarea class="form-control" rows="2" id="urlAny" name="limit_url_any">{{ limit_url_any }}</textarea>
-                                    <p class="help-block">Tweet must contain a URL that starts with one of these URL fragments (OR). For example, "https://twitter.com/" will match "https://twitter.com/justin_littman". Case insensitive.</p>
-                                </div>
-                            </div>
-                            <h4 class="col-sm-offset-1">Other</h4>
-                            <div class="form-group">
-                                <div class="checkbox col-sm-offset-2">
-                                    <label>
-                                        <input type="checkbox" name="limit_has_geo" value="true" {% if limit_has_geo == 'true' %}checked{% endif %}>
-                                            Tweet is geotagged
-                                    </label>
-                                    <p class="help-block">Tweet has a value for geo, coordinates, or place.</p>
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label for="tweetLimit" class="col-sm-2 control-label">Limit</label>
-                                <div class="col-sm-2">
-                                    <input type="number" class="form-control" id="tweetLimit" name="limit_tweet_limit" value="{{ limit_tweet_limit }}" min="1">
-                                </div>
-                                <div class="col-sm-7">
-                                    <p class="help-block">Maximum number of tweets to include in dataset.</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="row">
-                    <div id="actions" class="panel panel-default">
-                        <div class="panel-heading"><h2 class="panel-title">Limit Actions</h2></div>
-                        <div class="panel-body">
-                            <div class="form-group">
+    <div class="row">
+        <ul class="nav nav-pills" role="tablist" id="navBar">
+            <li role="presentation" class="active"><a href="#datasetParametersActions" aria-controls="datasetParametersActions" role="tab" data-toggle="tab" id="datasetParametersActionsTab">Dataset parameters / actions</a></li>
+            <li role="presentation"><a href="#datasetStatistics" aria-controls="datasetStatistics" role="tab" data-toggle="tab" id="datasetStatisticsTab">Dataset statistics</a></li>
+            <li role="presentation"><a href="#sampleTweets" aria-controls="sampleTweets" role="tab" data-toggle="tab" id="sampleTweetsTab">Sample tweets</a></li>
+            {% if dataset_id %}
+                <li role="presentation"><a href="#datasetDerivatives" aria-controls="datasetDerivatives" role="tab" data-toggle="tab" id="datasetDerivativesTab">Dataset derivatives</a></li>
+            {% endif %}
+        </ul>
+    </div>
+    <br />
+    <div class="row">
+        <div class="tab-content">
+            <div role="tabpanel" class="tab-pane active" id="datasetParametersActions">
+                <form class="form-horizontal" action="{{ url_for('limit_dataset') }}#datasetStatistics" method="POST">
+                    <div class="row">
+                        <div id="datasetParameters" class="panel panel-default">
+                            <div class="panel-heading"><h2 class="panel-title">Dataset parameters</h2></div>
+                            <div class="panel-body">
                                 <div class="col-sm-offset-1">
-                                    {% if not dataset_id %}
-                                        <button type="submit" class="btn btn-primary">Preview</button>
-                                        <p class="help-block">Get a sample of tweets in the dataset and see dataset statistics.</p>
-                                        <button type="submit" name="create" value="true" class="btn btn-primary">Create dataset</button>
-                                        <p class="help-block">Freeze the dataset parameters to allow generating dataset derivatives.</p>
-                                    {% else %}
-                                        <button type="submit" class="btn btn-primary">Preview new dataset</button>
-                                        <p class="help-block">Return to limiting the tweets in the dataset using the dataset parameters.</p>
-                                    {% endif %}
-                                    <a href="{{ url_for('dataset_list') }}" class="btn btn-default">Start over</a>
-                                    <p class="help-block">Return to selecting source datasets.</p>
+                                    <h4>Source datasets</h4>
+                                </div>
+                                <div class="form-group">
+                                    <div class="checkbox col-sm-offset-2">
+                                        {% for dataset in source_datasets %}
+                                            <div class="checkbox">
+                                              <label>
+                                                <input type="checkbox" name="limit_source_datasets" value="{{ dataset.meta.id }}" {% if dataset.meta.id in limit_source_datasets %}checked{% endif %}>
+                                                {{ dataset.name }}
+                                              </label>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                <div class="col-sm-offset-1">
+                                    <h4>Tweet text</h4>
+                                    <p class="help-block">For a retweet or quote, tweet text includes the text of the source tweet.</p>
+                                </div>
+                                <div class="form-group">
+                                    <label for="tweetTextContainsAll" class="col-sm-2 control-label">Contains all</label>
+                                    <div class="col-sm-10">
+                                        <textarea class="form-control" rows="2" id="tweetTextContainsAll" name="limit_tweet_text_all">{{ limit_tweet_text_all }}</textarea>
+                                        <p class="help-block">Text must contain all of these terms (AND). Comma separate multiple terms. Space separated words are treated as a phrase.</p>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="tweetTextContainsAny" class="col-sm-2 control-label">Contains any</label>
+                                    <div class="col-sm-10">
+                                        <textarea class="form-control" rows="2" id="tweetTextContainsAny" name="limit_tweet_text_any">{{ limit_tweet_text_any }}</textarea>
+                                        <p class="help-block">Text must contain one of these terms (OR). Comma separate multiple terms. Space separated words are treated as a phrase.</p>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="tweetTextExclude" class="col-sm-2 control-label">Excludes</label>
+                                    <div class="col-sm-10">
+                                        <textarea class="form-control" rows="2" id="tweetTextExclude" name="limit_tweet_text_exclude">{{ limit_tweet_text_exclude }}</textarea>
+                                        <p class="help-block">Text may not contain (NOT). Comma separate multiple terms. Space separated words are treated as a phrase.</p>
+                                    </div>
+                                </div>
+                                <h4 class="col-sm-offset-1">Hashtags</h4>
+                                <div class="form-group">
+                                    <label for="hashtagContainsAny" class="col-sm-2 control-label">Contains any</label>
+                                    <div class="col-sm-10">
+                                        <textarea class="form-control" rows="2" id="hashtagContainsAny" name="limit_hashtag_any">{{ limit_hashtag_any }}</textarea>
+                                        <p class="help-block">Text must contain one of these hashtags (OR). # is optional. Case insensitive.</p>
+                                    </div>
+                                </div>
+                                <h4 class="col-sm-offset-1">Tweet types</h4>
+                                <div class="form-group">
+                                    <div class="checkbox col-sm-offset-2">
+                                        <label>
+                                            <input type="checkbox" name="limit_tweet_type_original" value="true" {% if limit_tweet_type_original == 'true' %}checked{% endif %}>
+                                                Original
+                                        </label>
+                                    </div>
+                                    <div class="checkbox col-sm-offset-2">
+                                        <label>
+                                            <input type="checkbox" name="limit_tweet_type_quote" value="true" {% if limit_tweet_type_quote == 'true' %}checked{% endif %}>
+                                                Quote
+                                        </label>
+                                    </div>
+                                    <div class="checkbox col-sm-offset-2">
+                                        <label>
+                                            <input type="checkbox" name="limit_tweet_type_retweet" value="true" {% if limit_tweet_type_retweet == 'true' %}checked{% endif %}>
+                                                Retweet
+                                        </label>
+                                    </div>
+                                    <div class="checkbox col-sm-offset-2">
+                                        <label>
+                                            <input type="checkbox" name="limit_tweet_type_reply" value="true" {% if limit_tweet_type_reply == 'true' %}checked{% endif %}>
+                                                Reply
+                                        </label>
+                                    </div>
+
+                                </div>
+                                <h4 class="col-sm-offset-1">Created at</h4>
+                                <div class="form-group">
+                                    <label for="created_at_from" class="col-sm-2 control-label">From</label>
+                                    <div class="col-sm-2">
+                                        <input type="date" class="form-control" id="created_at_from" name="limit_created_at_from" value="{{ limit_created_at_from }}">
+                                    </div>
+                                    <div class="col-sm-7">
+                                        <p class="help-block">Created at date is greater than or equal to.{% if created_at_min %} First tweet in limited dataset is {{ created_at_min.strftime('%Y-%m-%d') }}.{% endif %}{% if dataset_created_at_min %} First tweet in source dataset(s) is {{ dataset_created_at_min.strftime('%Y-%m-%d') }}.{% endif %}</p>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="created_at_to" class="col-sm-2 control-label">To</label>
+                                    <div class="col-sm-2">
+                                        <input type="date" class="form-control" id="created_at_to" name="limit_created_at_to" value="{{ limit_created_at_to }}">
+                                    </div>
+                                    <div class="col-sm-7">
+                                        <p class="help-block">Created at date is less than or equal to.{% if created_at_max %} Last tweet in limited dataset is {{ created_at_max.strftime('%Y-%m-%d') }}.{% endif %}{% if dataset_created_at_max %} Last tweet in source dataset(s) is {{ dataset_created_at_max.strftime('%Y-%m-%d') }}.{% endif %}</p>
+                                    </div>
+                                </div>
+                                <h4 class="col-sm-offset-1">Entities</h4>
+                                <div class="form-group">
+                                    <div class="checkbox col-sm-offset-2">
+                                        <label>
+                                            <input type="checkbox" name="limit_has_media" value="true" {% if limit_has_media == 'true' %}checked{% endif %}>
+                                                Tweet has at least one media (embedded images)
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <div class="checkbox col-sm-offset-2">
+                                        <label>
+                                            <input type="checkbox" name="limit_has_url" value="true" {% if limit_has_url == 'true' %}checked{% endif %}>
+                                                Tweet includes at least one URL
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="urlAny" class="col-sm-2 control-label">Contains any URL</label>
+                                    <div class="col-sm-10">
+                                        <textarea class="form-control" rows="2" id="urlAny" name="limit_url_any">{{ limit_url_any }}</textarea>
+                                        <p class="help-block">Tweet must contain a URL that starts with one of these URL fragments (OR). For example, "https://twitter.com/" will match "https://twitter.com/justin_littman". Case insensitive.</p>
+                                    </div>
+                                </div>
+                                <h4 class="col-sm-offset-1">Other</h4>
+                                <div class="form-group">
+                                    <div class="checkbox col-sm-offset-2">
+                                        <label>
+                                            <input type="checkbox" name="limit_has_geo" value="true" {% if limit_has_geo == 'true' %}checked{% endif %}>
+                                                Tweet is geotagged
+                                        </label>
+                                        <p class="help-block">Tweet has a value for geo, coordinates, or place.</p>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="tweetLimit" class="col-sm-2 control-label">Limit</label>
+                                    <div class="col-sm-2">
+                                        <input type="number" class="form-control" id="tweetLimit" name="limit_tweet_limit" value="{{ limit_tweet_limit }}" min="1">
+                                    </div>
+                                    <div class="col-sm-7">
+                                        <p class="help-block">Maximum number of tweets to include in dataset.</p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            </form>
-            <script>
-                var checkboxes = $("input[name='limit_source_datasets']");
-                var submitBtn = $("button[type='submit']");
-
-                checkboxes.click(function() {
-                    submitBtn.attr("disabled", !checkboxes.is(":checked"));
-                });
-            </script>
-        </div>
-        <div role="tabpanel" class="tab-pane" id="datasetStatistics">
-            <div class="row">
-                <div class="panel panel-default">
-                    <div class="panel-heading"><h2 class="panel-title">Dataset statistics</h2></div>
-                    <div class="panel-body">
-                        <h4>Tweet count</h4>
-                        <p>{{ total_tweets | nf }}</p>
-                        <h4>First tweet</h4>
-                        <p>{{ created_at_min }}</p>
-                        <h4>Last tweet</h4>
-                        <p>{{ created_at_max }}</p>
-                        <div class="row">
-                            <div class="col-md-4">
-                                <h4>Tweet type</h4>
-                                <ul class="list-group">
-                                    {% for tweet_type in tweet_types %}
-                                        <li class="list-group-item">
-                                            <span class="badge">{{ tweet_type.doc_count | nf }} ({{ '{:.0%}'.format(tweet_type.doc_count / total_tweets) }})</span>
-                                            {{ tweet_type.key }}
-                                        </li>
-                                    {% endfor %}
-                                </ul>
-                                <h4>Top users</h4>
-                                <ul class="list-group">
-                                    {% for user in top_users %}
-                                        <li class="list-group-item">
-                                            <span class="badge">{{ user.doc_count | nf }}</span>
-                                            <a href="https://twitter.com/{{ user.key }}" target="_blank">@{{ user.key }}</a>
-                                        </li>
-                                    {% endfor %}
-                                </ul>
-                                <h4>Top mentions</h4>
-                                <ul class="list-group">
-                                    {% for user in top_mentions %}
-                                        <li class="list-group-item">
-                                            <span class="badge">{{ user.doc_count | nf }}</span>
-                                            <a href="https://twitter.com/{{ user.key }}" target="_blank">@{{ user.key }}</a>
-                                        </li>
-                                    {% endfor %}
-                                </ul>
-                                <h4>Top hashtags</h4>
-                                <ul class="list-group">
-                                    {% for hashtag in top_hashtags %}
-                                        <li class="list-group-item">
-                                            <span class="badge">{{ hashtag.doc_count | nf }}</span>
-                                            #{{ hashtag.key }}
-                                        </li>
-                                    {% endfor %}
-                                </ul>
+                    <div class="row">
+                        <div id="actions" class="panel panel-default">
+                            <div class="panel-heading"><h2 class="panel-title">Limit Actions</h2></div>
+                            <div class="panel-body">
+                                <div class="form-group">
+                                    <div class="col-sm-offset-1">
+                                        {% if not dataset_id %}
+                                            <button type="submit" class="btn btn-primary">Preview</button>
+                                            <p class="help-block">Get a sample of tweets in the dataset and see dataset statistics.</p>
+                                            <button type="submit" name="create" value="true" class="btn btn-primary">Create dataset</button>
+                                            <p class="help-block">Freeze the dataset parameters to allow generating dataset derivatives.</p>
+                                        {% else %}
+                                            <button type="submit" class="btn btn-primary">Preview new dataset</button>
+                                            <p class="help-block">Return to limiting the tweets in the dataset using the dataset parameters.</p>
+                                        {% endif %}
+                                        <a href="{{ url_for('dataset_list') }}" class="btn btn-default">Start over</a>
+                                        <p class="help-block">Return to selecting source datasets.</p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        <h4>Top URLs</h4>
-                        <ul class="list-group">
-                            {% for url in top_urls %}
-                                <li class="list-group-item">
-                                    <span class="badge">{{ url.doc_count | nf }}</span>
-                                    <a href="{{ url.key }}">{{ url.key }}</a>
-                                </li>
-                            {% endfor %}
-                        </ul>
                     </div>
-                </div>
+                </form>
+                <script>
+                    var checkboxes = $("input[name='limit_source_datasets']");
+                    var submitBtn = $("button[type='submit']");
+
+                    checkboxes.click(function() {
+                        submitBtn.attr("disabled", !checkboxes.is(":checked"));
+                    });
+                </script>
             </div>
-        </div>
-        <div role="tabpanel" class="tab-pane" id="sampleTweets">
-            <div class="row">
-                <div class="panel panel-default">
-                    <div class="panel-heading"><h2 class="panel-title">Sample tweets from dataset</h2></div>
-                    <div class="panel-body">
-                        {% if sample_tweet_html %}
-                            {% for tweet_html in sample_tweet_html %}
-                                {{ tweet_html | safe }}
-                            {% endfor %}
-                        {% elif sample_tweet_ids %}
-                            <ul>
-                                {% for tweet_id in sample_tweet_ids %}
-                                    <li><a href="https://twitter.com/_/status/{{ tweet_id }}" target="_blank">{{ tweet_id }}</a></li>
+            <div role="tabpanel" class="tab-pane" id="datasetStatistics">
+                <div class="row">
+                    <div class="panel panel-default">
+                        <div class="panel-heading"><h2 class="panel-title">Dataset statistics</h2></div>
+                        <div class="panel-body">
+                            <h4>Tweet count</h4>
+                            <p>{{ total_tweets | nf }}</p>
+                            <h4>First tweet</h4>
+                            <p>{{ created_at_min }}</p>
+                            <h4>Last tweet</h4>
+                            <p>{{ created_at_max }}</p>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <h4>Tweet type</h4>
+                                    <ul class="list-group">
+                                        {% for tweet_type in tweet_types %}
+                                            <li class="list-group-item">
+                                                <span class="badge">{{ tweet_type.doc_count | nf }} ({{ '{:.0%}'.format(tweet_type.doc_count / total_tweets) }})</span>
+                                                {{ tweet_type.key }}
+                                            </li>
+                                        {% endfor %}
+                                    </ul>
+                                    <h4>Top users</h4>
+                                    <ul class="list-group">
+                                        {% for user in top_users %}
+                                            <li class="list-group-item">
+                                                <span class="badge">{{ user.doc_count | nf }}</span>
+                                                <a href="https://twitter.com/{{ user.key }}" target="_blank">@{{ user.key }}</a>
+                                            </li>
+                                        {% endfor %}
+                                    </ul>
+                                    <h4>Top mentions</h4>
+                                    <ul class="list-group">
+                                        {% for user in top_mentions %}
+                                            <li class="list-group-item">
+                                                <span class="badge">{{ user.doc_count | nf }}</span>
+                                                <a href="https://twitter.com/{{ user.key }}" target="_blank">@{{ user.key }}</a>
+                                            </li>
+                                        {% endfor %}
+                                    </ul>
+                                    <h4>Top hashtags</h4>
+                                    <ul class="list-group">
+                                        {% for hashtag in top_hashtags %}
+                                            <li class="list-group-item">
+                                                <span class="badge">{{ hashtag.doc_count | nf }}</span>
+                                                #{{ hashtag.key }}
+                                            </li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            </div>
+                            <h4>Top URLs</h4>
+                            <ul class="list-group">
+                                {% for url in top_urls %}
+                                    <li class="list-group-item">
+                                        <span class="badge">{{ url.doc_count | nf }}</span>
+                                        <a href="{{ url.key }}">{{ url.key }}</a>
+                                    </li>
                                 {% endfor %}
                             </ul>
-                        {% endif %}
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-        {% if dataset_id %}
-            <div role="tabpanel" class="tab-pane" id="datasetDerivatives">
-
+            <div role="tabpanel" class="tab-pane" id="sampleTweets">
                 <div class="row">
-                    <div id="datasetDerivativesActions" class="panel panel-default">
-                        <div class="panel-heading"><h2 class="panel-title">Generate Derivative Actions</h2></div>
+                    <div class="panel panel-default">
+                        <div class="panel-heading"><h2 class="panel-title">Sample tweets from dataset</h2></div>
                         <div class="panel-body">
-                            <div class="form-group">
-                                <div class="col-sm-offset-1">
-                                    {% if not tweet_id_task_id %}
-                                        <form class="form-horizontal" action="{{ url_for('dataset', dataset_id=dataset_id) }}" method="POST">
-                                            <button type="submit" name="generate_tweet_ids" value="true" class="btn btn-primary">Generate tweet ids</button>
-                                            <p class="help-block">Generate files containing the tweet ids of the dataset.</p>
-                                        </form>
-                                    {% endif %}
-                                    {% if not mentions_task_id %}
-                                        <form class="form-horizontal" action="{{ url_for('dataset', dataset_id=dataset_id) }}" method="POST">
-                                            <button type="submit" name="generate_mentions" value="true" class="btn btn-primary">Generate mentions</button>
-                                            <p class="help-block">Generate files containing a mapping of user id to mentioned user id (edges) and user ids to screen names (nodes).</p>
-                                        </form>
-                                    {% endif %}
-                                    {% if not top_mentions_task_id %}
-                                        <form class="form-horizontal" action="{{ url_for('dataset', dataset_id=dataset_id) }}" method="POST">
-                                            <button type="submit" name="generate_top_mentions" value="true" class="btn btn-primary">Generate top mentions</button>
-                                            <p class="help-block">Generate files containing an ordered count of mentioned user ids and screen names.</p>
-                                        </form>
-                                    {% endif %}
-                                    {% if tweet_id_task_id and mentions_task_id %}
-                                        <p>No actions available. Wait for the current tasks to complete.</p>
-                                    {% endif %}
+                            {% if sample_tweet_html %}
+                                {% for tweet_html in sample_tweet_html %}
+                                    {{ tweet_html | safe }}
+                                {% endfor %}
+                            {% elif sample_tweet_ids %}
+                                <ul>
+                                    {% for tweet_id in sample_tweet_ids %}
+                                        <li><a href="https://twitter.com/_/status/{{ tweet_id }}" target="_blank">{{ tweet_id }}</a></li>
+                                    {% endfor %}
+                                </ul>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% if dataset_id %}
+                <div role="tabpanel" class="tab-pane" id="datasetDerivatives">
+
+                    <div class="row">
+                        <div id="datasetDerivativesActions" class="panel panel-default">
+                            <div class="panel-heading"><h2 class="panel-title">Generate Derivative Actions</h2></div>
+                            <div class="panel-body">
+                                <div class="form-group">
+                                    <div class="col-sm-offset-1">
+                                        {% if not tweet_id_task_id %}
+                                            <form class="form-horizontal" action="{{ url_for('dataset', dataset_id=dataset_id) }}" method="POST">
+                                                <button type="submit" name="generate_tweet_ids" value="true" class="btn btn-primary">Generate tweet ids</button>
+                                                <p class="help-block">Generate files containing the tweet ids of the dataset.</p>
+                                            </form>
+                                        {% endif %}
+                                        {% if not mentions_task_id %}
+                                            <form class="form-horizontal" action="{{ url_for('dataset', dataset_id=dataset_id) }}" method="POST">
+                                                <button type="submit" name="generate_mentions" value="true" class="btn btn-primary">Generate mentions</button>
+                                                <p class="help-block">Generate files containing a mapping of user id to mentioned user id (edges) and user ids to screen names (nodes).</p>
+                                            </form>
+                                        {% endif %}
+                                        {% if not top_mentions_task_id %}
+                                            <form class="form-horizontal" action="{{ url_for('dataset', dataset_id=dataset_id) }}" method="POST">
+                                                <button type="submit" name="generate_top_mentions" value="true" class="btn btn-primary">Generate top mentions</button>
+                                                <p class="help-block">Generate files containing an ordered count of mentioned user ids and screen names.</p>
+                                            </form>
+                                        {% endif %}
+                                        {% if tweet_id_task_id and mentions_task_id %}
+                                            <p>No actions available. Wait for the current tasks to complete.</p>
+                                        {% endif %}
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </div>
 
-                {% if tweet_id_filenames %}
-                    <div class="row">
-                        <div class="panel panel-default" id="tweetIdFiles">
-                            <div class="panel-heading"><h2 class="panel-title">Generated tweet id files</h2></div>
-                            <div class="panel-body">
-                                <ul class="list-group">
-                                {% for filename in tweet_id_filenames %}
-                                    <li class="list-group-item"><a href="{{ url_for('dataset_file', dataset_id=dataset_id, filename=filename) }}">{{ filename }}</a></li>
-                                {% endfor %}
-                                </ul>
+                    {% if tweet_id_filenames %}
+                        <div class="row">
+                            <div class="panel panel-default" id="tweetIdFiles">
+                                <div class="panel-heading"><h2 class="panel-title">Generated tweet id files</h2></div>
+                                <div class="panel-body">
+                                    <ul class="list-group">
+                                    {% for filename in tweet_id_filenames %}
+                                        <li class="list-group-item"><a href="{{ url_for('dataset_file', dataset_id=dataset_id, filename=filename) }}">{{ filename }}</a></li>
+                                    {% endfor %}
+                                    </ul>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                {% endif %}
-                {% if mentions_filenames %}
-                    <div class="row">
-                        <div class="panel panel-default" id="mentionFiles">
-                            <div class="panel-heading"><h2 class="panel-title">Generated mention files</h2></div>
-                            <div class="panel-body">
-                                <ul class="list-group">
-                                {% for filename in mentions_filenames %}
-                                    <li class="list-group-item"><a href="{{ url_for('dataset_file', dataset_id=dataset_id, filename=filename) }}">{{ filename }}</a></li>
-                                {% endfor %}
-                                </ul>
+                    {% endif %}
+                    {% if mentions_filenames %}
+                        <div class="row">
+                            <div class="panel panel-default" id="mentionFiles">
+                                <div class="panel-heading"><h2 class="panel-title">Generated mention files</h2></div>
+                                <div class="panel-body">
+                                    <ul class="list-group">
+                                    {% for filename in mentions_filenames %}
+                                        <li class="list-group-item"><a href="{{ url_for('dataset_file', dataset_id=dataset_id, filename=filename) }}">{{ filename }}</a></li>
+                                    {% endfor %}
+                                    </ul>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                {% endif %}
-                {% if top_mentions_filenames %}
-                    <div class="row">
-                        <div class="panel panel-default" id="topMentionFiles">
-                            <div class="panel-heading"><h2 class="panel-title">Generated top mention files</h2></div>
-                            <div class="panel-body">
-                                <ul class="list-group">
-                                {% for filename in top_mentions_filenames %}
-                                    <li class="list-group-item"><a href="{{ url_for('dataset_file', dataset_id=dataset_id, filename=filename) }}">{{ filename }}</a></li>
-                                {% endfor %}
-                                </ul>
+                    {% endif %}
+                    {% if top_mentions_filenames %}
+                        <div class="row">
+                            <div class="panel panel-default" id="topMentionFiles">
+                                <div class="panel-heading"><h2 class="panel-title">Generated top mention files</h2></div>
+                                <div class="panel-body">
+                                    <ul class="list-group">
+                                    {% for filename in top_mentions_filenames %}
+                                        <li class="list-group-item"><a href="{{ url_for('dataset_file', dataset_id=dataset_id, filename=filename) }}">{{ filename }}</a></li>
+                                    {% endfor %}
+                                    </ul>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                {% endif %}
-            </div>
-        {% endif %}
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
     </div>
     <script>
         $(function() {
