@@ -66,9 +66,7 @@ To see other loader commands:
         python dataset_loader.py
 
 ## TODO
-* Write install instructions
 * Add hydration to loading
-* Save recent datasets in cookie
 * Scroll additional sample tweets
 * Limit by mention user ids, screen names
 * Limit by user ids, screen names
