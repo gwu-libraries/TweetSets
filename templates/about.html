@@ -9,6 +9,7 @@
     <!-- Latest compiled and minified JavaScript -->
     <script src="{{ url_for('static', filename='jquery/1.12.4/jquery.min.js') }}"></script>
     <script src="{{ url_for('static', filename='bootstrap/3.3.7/js/bootstrap.min.js') }}" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa"></script>
+    <script src="{{ url_for('static', filename='js-cookie/2.1.4/js.cookie.js') }}"></script>
 </head>
 <body>
 <div class="container">
@@ -22,7 +23,37 @@
             </ul>
             </h4>
             <br />
-            <p><a class="btn btn-primary btn-lg" href="{{ url_for('dataset_list') }}" role="button">Get started</a></p>
+            <div class="row">
+                <div class="col-xs-2">
+            <a class="btn btn-primary btn-lg" href="{{ url_for('dataset_list') }}" role="button">Get started</a>
+                    </div>
+
+            {% if prev_datasets %}
+                <div class="col-md-1">
+                    <div class="dropdown">
+                        <button class="btn btn-default" type="button" id="prevDatasetDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                            Previous datasets
+                            <span class="caret"></span>
+                        </button>
+                        <ul class="dropdown-menu" aria-labelledby="prevDatasetDropdown">
+                            {% for prev_dataset in prev_datasets %}
+                                <li><a href="{{ url_for('dataset', dataset_id=prev_dataset['dataset_id']) }}">{{ prev_dataset['dataset_name'] }} ({{ prev_dataset['create_date'] }})</a></li>
+                            {% endfor %}
+                            <li role="separator" class="divider"></li>
+                            <li><a id="clearPrevDatasets" href="#">Clear previous datasets</a></li>
+                        </ul>
+                    </div>
+                </div>
+                <script>
+                    $('#clearPrevDatasets').click(function(e) {
+                        e.preventDefault();
+                        Cookies.remove('prev_datasets');
+                        $('#prevDatasetDropdown').addClass('hidden');
+                    });
+                </script>
+            {% endif %}
+
+            </div>
             <br />
             <p>{{ tweet_count | nf }} tweets available.</p>
         </div>

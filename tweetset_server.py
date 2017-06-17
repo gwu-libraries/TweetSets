@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, send_file, jsonify, redirect, url_for, flash
+from flask import Flask, render_template, request, send_file, jsonify, redirect, url_for, flash, make_response
 from elasticsearch_dsl import Search, Q
 from elasticsearch_dsl.connections import connections as es_connections
 import os
@@ -11,6 +11,8 @@ from models import DatasetDocType
 from datetime import datetime
 import sqlite3
 import redis as redispy
+from datetime import date, datetime, timedelta
+import json
 
 from utils import read_json, write_json, short_uid
 
@@ -36,12 +38,16 @@ redis = redispy.StrictRedis(host='redis', port=6379, db=1, decode_responses=True
 
 @app.route('/')
 def about():
-    return render_template('about.html', tweet_count = _tweet_count())
+    return render_template('about.html',
+                           tweet_count=_tweet_count(),
+                           prev_datasets = json.loads(request.cookies.get('prev_datasets', '[]')))
 
 
 @app.route('/datasets')
 def dataset_list():
-    return render_template('dataset_list.html', datasets=DatasetDocType.search())
+    return render_template('dataset_list.html',
+                           datasets=DatasetDocType.search(),
+                           prev_datasets = json.loads(request.cookies.get('prev_datasets', '[]')))
 
 
 @app.route('/dataset/<dataset_id>', methods=['GET', 'POST'])
@@ -102,11 +108,12 @@ def dataset(dataset_id):
         flash('Started generating top mention')
         # _generate_top_mentions_task(dataset_params, context['total_tweets'], dataset_path)
 
-        generate_top_mentions_task = _generate_top_mentions_task.delay(dataset_params, context['total_tweets'], dataset_path,
-                                                               max_per_file=app.config[
-                                                                   'MAX_PER_FILE'],
-                                                               generate_update_increment=app.config[
-                                                                   'GENERATE_UPDATE_INCREMENT'])
+        generate_top_mentions_task = _generate_top_mentions_task.delay(dataset_params, context['total_tweets'],
+                                                                       dataset_path,
+                                                                       max_per_file=app.config[
+                                                                           'MAX_PER_FILE'],
+                                                                       generate_update_increment=app.config[
+                                                                           'GENERATE_UPDATE_INCREMENT'])
 
         # Write task.json
         write_json(generate_top_mentions_task_filepath, {'id': generate_top_mentions_task.id})
@@ -118,7 +125,6 @@ def dataset(dataset_id):
         context['top_mentions_filenames'] = fnmatch.filter(os.listdir(dataset_path), "top-mentions-*.txt.gz")
 
     context['dataset_id'] = dataset_id
-    app.logger.info(context.get('task_id'))
     return render_template('dataset.html', **context)
 
 
@@ -131,9 +137,10 @@ def limit_dataset():
         dataset_params['tweet_type_quote'] = 'true'
         dataset_params['tweet_type_reply'] = 'true'
     context = _prepare_dataset_view(dataset_params)
-    if request.form.get('create', '').lower() == 'true':
+    if request.form.get('dataset_name'):
+        dataset_name = request.form['dataset_name']
         dataset_id = short_uid(8, lambda uid: os.path.exists(_dataset_path(uid)))
-        app.logger.info('Creating {}'.format(dataset_id))
+        app.logger.info('Creating {} ({})'.format(dataset_name, dataset_id))
 
         # Create dataset path
         dataset_path = _dataset_path(dataset_id)
@@ -141,7 +148,15 @@ def limit_dataset():
         # Write dataset_params
         write_json(os.path.join(dataset_path, 'dataset_params.json'), dataset_params)
         flash('Created dataset')
-        return redirect('{}#datasetDerivatives'.format(url_for('dataset', dataset_id=dataset_id)), code=303)
+        # Add to prev_datasets
+        prev_datasets = json.loads(request.cookies.get('prev_datasets', '[]'))
+        prev_datasets.insert(0, {'dataset_name': dataset_name,
+                                 'dataset_id': dataset_id,
+                                 'create_date': date.today().isoformat()})
+        resp = make_response(redirect('{}#datasetDerivatives'.format(url_for('dataset', dataset_id=dataset_id)),
+                                      code=303))
+        resp.set_cookie('prev_datasets', json.dumps(prev_datasets), expires=datetime.now() + timedelta(days=365 * 5))
+        return resp
 
     return render_template('dataset.html', **context)
 
@@ -231,6 +246,9 @@ def _prepare_dataset_view(dataset_params):
             if dataset_created_at_max else dataset.last_tweet_created_at
     context['dataset_created_at_min'] = dataset_created_at_min
     context['dataset_created_at_max'] = dataset_created_at_max
+
+    # Previous datasets
+    context['prev_datasets'] = json.loads(request.cookies.get('prev_datasets', '[]'))
     return context
 
 
@@ -350,7 +368,10 @@ def _and(q1, q2):
 def _dataset_params_to_context(dataset_params):
     context = dict()
     for key, value in dataset_params.items():
-        context['limit_{}'.format(key)] = value
+        if key != 'dataset_name':
+            context['limit_{}'.format(key)] = value
+        else:
+            context['dataset_name'] = value
     return context
 
 
@@ -360,6 +381,8 @@ def _form_to_dataset_params(form):
         if key.startswith('limit_') and key != 'limit_source_datasets':
             dataset_params[key[6:]] = value
     dataset_params['source_datasets'] = form.getlist('limit_source_datasets')
+    if 'dataset_name' in form:
+        dataset_params['dataset_name'] = form['dataset_name']
     return dataset_params
 
 
@@ -501,7 +524,7 @@ def _generate_mentions_task(self, dataset_params, total_tweets, dataset_path, ma
 
 @celery.task(bind=True)
 def _generate_top_mentions_task(self, dataset_params, total_tweets, dataset_path, max_per_file=None,
-                            generate_update_increment=None):
+                                generate_update_increment=None):
     max_per_file = max_per_file or 1000000
     generate_update_increment = generate_update_increment or 10000
 
@@ -565,12 +588,12 @@ def _generate_top_mentions_task(self, dataset_params, total_tweets, dataset_path
                              _mention_iter(buf))
         total_user_count += len(buf)
 
-
     file_count = 1
     file = None
     try:
         cur = conn.cursor()
-        for user_count, row in enumerate(cur.execute("select user_id, screen_name, mention_count from mentions order by mention_count desc")):
+        for user_count, row in enumerate(
+                cur.execute("select user_id, screen_name, mention_count from mentions order by mention_count desc")):
             # Cycle tweet id files
             if user_count % max_per_file == 0:
                 if file:
@@ -605,6 +628,7 @@ def _generate_top_mentions_task(self, dataset_params, total_tweets, dataset_path
 def _mention_iter(buf):
     for mention_user_id, (count, screen_name) in buf.items():
         yield mention_user_id, screen_name, count
+
 
 def _oembed(tweet_id):
     tweet_html = redis.get(tweet_id)

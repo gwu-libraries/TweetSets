@@ -106,3 +106,6 @@ ENV/
 # Docker files
 docker/docker-compose.yml
 docker/.env
+
+# OS X
+.DS_Store

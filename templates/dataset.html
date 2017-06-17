@@ -9,22 +9,43 @@
     <!-- Latest compiled and minified JavaScript -->
     <script src="{{ url_for('static', filename='jquery/1.12.4/jquery.min.js') }}"></script>
     <script src="{{ url_for('static', filename='bootstrap/3.3.7/js/bootstrap.min.js') }}" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa"></script>
+    <script src="{{ url_for('static', filename='js-cookie/2.1.4/js.cookie.js') }}"></script>
     <script async src="//platform.twitter.com/widgets.js" charset="utf-8"></script>
 </head>
 <body>
 <div class="container">
     <div class="row">
-        {% if not dataset_id %}
-            <div class="page-header">
+        <div class="page-header">
+            {% if prev_datasets %}
+                    <div class="dropdown pull-right">
+                        <button class="btn btn-default dropdown-toggle" type="button" id="prevDatasetDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                            Previous datasets
+                            <span class="caret"></span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-right" aria-labelledby="prevDatasetDropdown">
+                            {% for prev_dataset in prev_datasets %}
+                                <li><a href="{{ url_for('dataset', dataset_id=prev_dataset['dataset_id']) }}">{{ prev_dataset['dataset_name'] }} ({{ prev_dataset['create_date']}})</a></li>
+                            {% endfor %}
+                            <li role="separator" class="divider"></li>
+                            <li><a id="clearPrevDatasets" href="#">Clear previous datasets</a></li>
+                        </ul>
+                    </div>
+                    <script>
+                        $('#clearPrevDatasets').click(function(e) {
+                            e.preventDefault();
+                            Cookies.remove('prev_datasets');
+                            $('#prevDatasetDropdown').addClass('hidden');
+                        });
+                    </script>
+            {% endif %}
+            {% if not dataset_id %}
                 <h1>Select tweets in dataset</h1>
                 <p class="help-block">Limit the tweets selected from the source datasets. Once completed, create the dataset.</p>
-            </div>
-        {% else %}
-            <div class="page-header">
-                <h1>Dataset</h1>
+            {% else %}
+                <h1>Dataset: {{ dataset_name }}</h1>
                 <p class="help-block">The parameters are frozen. Generate and download dataset derivatives.</p>
-            </div>
-        {% endif %}
+            {% endif %}
+        </div>
     </div>
     {% with messages = get_flashed_messages() %}
         {% if messages %}
@@ -126,7 +147,7 @@
     <div class="row">
         <div class="tab-content">
             <div role="tabpanel" class="tab-pane active" id="datasetParametersActions">
-                <form class="form-horizontal" action="{{ url_for('limit_dataset') }}#datasetStatistics" method="POST">
+                <form id="limitForm" class="form-horizontal" action="{{ url_for('limit_dataset') }}#datasetStatistics" method="POST">
                     <div class="row">
                         <div id="datasetParameters" class="panel panel-default">
                             <div class="panel-heading"><h2 class="panel-title">Dataset parameters</h2></div>
@@ -281,8 +302,10 @@
                                         {% if not dataset_id %}
                                             <button type="submit" class="btn btn-primary">Preview</button>
                                             <p class="help-block">Get a sample of tweets in the dataset and see dataset statistics.</p>
-                                            <button type="submit" name="create" value="true" class="btn btn-primary">Create dataset</button>
+                                            <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#datasetNameModal">Create dataset</button>
                                             <p class="help-block">Freeze the dataset parameters to allow generating dataset derivatives.</p>
+                                            <input type="hidden"  name="dataset_name" value="" />
+
                                         {% else %}
                                             <button type="submit" class="btn btn-primary">Preview new dataset</button>
                                             <p class="help-block">Return to limiting the tweets in the dataset using the dataset parameters.</p>
@@ -295,13 +318,21 @@
                         </div>
                     </div>
                 </form>
+
                 <script>
+                $(function() {
                     var checkboxes = $("input[name='limit_source_datasets']");
                     var submitBtn = $("button[type='submit']");
 
                     checkboxes.click(function() {
                         submitBtn.attr("disabled", !checkboxes.is(":checked"));
                     });
+
+                    $('#createModalSubmit').click(function() {
+                        $("input[name='dataset_name']" ).val($("input[name='dataset_name_modal']").val());
+                        $("#limitForm").submit();
+                    });
+                });
                 </script>
             </div>
             <div role="tabpanel" class="tab-pane" id="datasetStatistics">
@@ -483,5 +514,34 @@
         });
     </script>
 </div>
+
+
+<!-- Dataset name modal -->
+<div class="modal fade" id="datasetNameModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="false">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="false">
+                &times;
+                </button>
+                <h3 class="modal-title" id="myModalLabel">Provide a name for the dataset</h3>
+            </div>
+            <div class="modal-body">
+                <form name="modal-form" class="form-horizontal">
+                     <input class="form-control" type="text" name="dataset_name_modal" value="" />
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">
+                Close
+                </button>
+                <button type="button" type="submit" class="btn btn-primary" id="createModalSubmit" data-dismiss="modal">
+                Create dataset
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 </body>
 </html>
