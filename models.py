@@ -1,5 +1,5 @@
 from elasticsearch_dsl import DocType, Date, Boolean, \
-    Keyword, Text, Index, Integer, MetaField
+    Keyword, Text, Index, Integer, MetaField, Object
 from dateutil.parser import parse as date_parse
 from datetime import datetime
 import uuid
@@ -16,6 +16,7 @@ class DatasetDocType(DocType):
     first_tweet_created_at = Date()
     last_tweet_created_at = Date()
     tweet_count = Integer()
+    local_only = Boolean()
 
     class Meta:
         index = 'datasets'
@@ -23,6 +24,7 @@ class DatasetDocType(DocType):
     def save(self, **kwargs):
         self.updated = datetime.now()
         return super().save(**kwargs)
+
 
 def to_dataset(dataset_json, dataset=None, dataset_id=None):
     if not dataset:
@@ -35,7 +37,9 @@ def to_dataset(dataset_json, dataset=None, dataset_id=None):
     dataset.tags = dataset_json.get('tags', [])
     dataset.creators = dataset_json.get('creators', [])
     dataset.link = dataset_json['link']
+    dataset.local_only = dataset_json.get('local_only', False)
     return dataset
+
 
 class TweetDocType(DocType):
     tweet_id = Keyword()
@@ -55,16 +59,16 @@ class TweetDocType(DocType):
     has_media = Boolean()
     urls = Keyword()
     has_geo = Boolean()
+    tweet = Object(enabled=False)
 
     class Meta:
         all = MetaField(enabled=False)
         index = 'tweets'
         # Exclude storing the text field
         source = MetaField(excludes=['text'])
-    # TODO: urls
 
 
-def to_tweet(tweet_json, dataset_id):
+def to_tweet(tweet_json, dataset_id, store_tweet=False):
     entities = tweet_json.get('extended_tweet', {}).get('entities') or tweet_json['entities']
 
     tweet = TweetDocType()
@@ -88,6 +92,8 @@ def to_tweet(tweet_json, dataset_id):
     tweet.has_media = 'media' in entities
     tweet.urls = urls(entities, type)
     tweet.has_geo = tweet_json.get('geo') or tweet_json.get('place') or tweet_json.get('coordinates')
+    if store_tweet:
+        tweet.tweet = tweet_json
     return tweet
 
 
@@ -129,7 +135,7 @@ def urls(entities, type):
     urls = []
     for url_obj in entities['urls']:
         url = url_obj.get('expanded_url') or url_obj['url']
-        if not type == 'quote' or not url.startswith('https://twitter.com/'):
+        if url and (not type == 'quote' or not url.startswith('https://twitter.com/')):
             urls.append(url.lower())
     return urls
 

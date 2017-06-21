@@ -66,6 +66,8 @@ services:
       environment:
         - SECRET_KEY=${SERVER_SECRET_KEY}
         - TZ
+        - SERVER_MODE
+        - IP_RANGE
   # For development
 #  server-flaskrun:
 #      build:
@@ -85,6 +87,8 @@ services:
 #      environment:
 #        - SECRET_KEY=${SERVER_SECRET_KEY}
 #        - TZ
+#        - SERVER_MODE
+#        - IP_RANGE
   # This can be duplicated for multiple workers
   worker1:
       build:
@@ -113,5 +117,6 @@ services:
         - tweetsets
       environment:
        - TZ
+       - STORE_TWEET
 networks:
   tweetsets:

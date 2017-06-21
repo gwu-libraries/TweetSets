@@ -60,7 +60,7 @@
         <div class="well well-sm">Link for this dataset: <a href="{{ request.base_url }}">{{ request.base_url }}</a></div>
     {% endif %}
 
-    {% if tweet_id_task_id or mentions_task_id or top_mentions_task_id %}
+    {% if tweet_id_task_id or mentions_task_id or top_mentions_task_id or tweet_json_task_id %}
        <script>
             function update_progress(url, progressBar, progressBarStatus) {
                 // send GET request to status URL
@@ -99,6 +99,19 @@
                         <script>
                             $( document ).ready(function() {
                                 update_progress('/status/{{ tweet_id_task_id }}', $('#progressBarTweetId'), $('#progressBarStatusTweetId'));
+                            });
+                        </script>
+                    {% endif %}
+                    {% if tweet_json_task_id %}
+                        <h3>Tweet JSON</h3>
+                        <div class="progress">
+                            <div id="progressBarTweetJson" class="progress-bar" role="progressbar" aria-valuenow="45" aria-valuemin="0" aria-valuemax="100" style="width: 0%">
+                            </div>
+                        </div>
+                        <p id="progressBarStatusTweetJson" />
+                        <script>
+                            $( document ).ready(function() {
+                                update_progress('/status/{{ tweet_json_task_id }}', $('#progressBarTweetJson'), $('#progressBarStatusTweetJson'));
                             });
                         </script>
                     {% endif %}
@@ -231,19 +244,19 @@
                                 <h4 class="col-sm-offset-1">Created at</h4>
                                 <div class="form-group">
                                     <label for="created_at_from" class="col-sm-2 control-label">From</label>
-                                    <div class="col-sm-2">
+                                    <div class="col-sm-3">
                                         <input type="date" class="form-control" id="created_at_from" name="limit_created_at_from" value="{{ limit_created_at_from }}">
                                     </div>
-                                    <div class="col-sm-7">
+                                    <div class="col-sm-6">
                                         <p class="help-block">Created at date is greater than or equal to.{% if created_at_min %} First tweet in limited dataset is {{ created_at_min.strftime('%Y-%m-%d') }}.{% endif %}{% if dataset_created_at_min %} First tweet in source dataset(s) is {{ dataset_created_at_min.strftime('%Y-%m-%d') }}.{% endif %}</p>
                                     </div>
                                 </div>
                                 <div class="form-group">
                                     <label for="created_at_to" class="col-sm-2 control-label">To</label>
-                                    <div class="col-sm-2">
+                                    <div class="col-sm-3">
                                         <input type="date" class="form-control" id="created_at_to" name="limit_created_at_to" value="{{ limit_created_at_to }}">
                                     </div>
-                                    <div class="col-sm-7">
+                                    <div class="col-sm-6">
                                         <p class="help-block">Created at date is less than or equal to.{% if created_at_max %} Last tweet in limited dataset is {{ created_at_max.strftime('%Y-%m-%d') }}.{% endif %}{% if dataset_created_at_max %} Last tweet in source dataset(s) is {{ dataset_created_at_max.strftime('%Y-%m-%d') }}.{% endif %}</p>
                                     </div>
                                 </div>
@@ -428,6 +441,12 @@
                             <div class="panel-body">
                                 <div class="form-group">
                                     <div class="col-sm-offset-1">
+                                        {% if is_local_mode and not tweet_json_task_id %}
+                                            <form class="form-horizontal" action="{{ url_for('dataset', dataset_id=dataset_id) }}" method="POST">
+                                                <button type="submit" name="generate_tweet_json" value="true" class="btn btn-primary">Generate tweet JSON</button>
+                                                <p class="help-block">Generate files containing the tweet JSON of the dataset.</p>
+                                            </form>
+                                        {% endif %}
                                         {% if not tweet_id_task_id %}
                                             <form class="form-horizontal" action="{{ url_for('dataset', dataset_id=dataset_id) }}" method="POST">
                                                 <button type="submit" name="generate_tweet_ids" value="true" class="btn btn-primary">Generate tweet ids</button>
@@ -462,6 +481,20 @@
                                 <div class="panel-body">
                                     <ul class="list-group">
                                     {% for filename in tweet_id_filenames %}
+                                        <li class="list-group-item"><a href="{{ url_for('dataset_file', dataset_id=dataset_id, filename=filename) }}">{{ filename }}</a></li>
+                                    {% endfor %}
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+                    {% if tweet_json_filenames %}
+                        <div class="row">
+                            <div class="panel panel-default" id="tweetJsonFiles">
+                                <div class="panel-heading"><h2 class="panel-title">Generated tweet JSON files</h2></div>
+                                <div class="panel-body">
+                                    <ul class="list-group">
+                                    {% for filename in tweet_json_filenames %}
                                         <li class="list-group-item"><a href="{{ url_for('dataset_file', dataset_id=dataset_id, filename=filename) }}">{{ filename }}</a></li>
                                     {% endfor %}
                                     </ul>

@@ -18,7 +18,7 @@
             <h1>TweetSets</h1>
             <h3>Twitter datasets for research and archiving.</h3>
             <h4><ul>
-                <li>Create your own Twitter dataset from existing, public datasets.</li>
+                <li>Create your own Twitter dataset from existing datasets.</li>
                 <li>Conforms with Twitter policies.</li>
             </ul>
             </h4>
@@ -64,7 +64,7 @@
 
         <h5>Steps for creating a dataset:</h5>
         <ol>
-            <li>Select source dataset(s). Source datasets have been previously collected and are publicly available.</li>
+            <li>Select source dataset(s). Source datasets have been previously collected.</li>
             <li>Limit the dataset by querying on keywords, hashtags, and other parameters. Repeat until you've created
                 the desired dataset.</li>
             <li>Create the dataset. This freezes the dataset parameters.</li>
@@ -73,9 +73,11 @@
         <br />
         <h5>Important information:</h5>
         <ul>
-            <li><em>You cannot view or download the text of tweets.</em> (In fact, it is indexed but not stored by TweetSets.)</li>
-            <li>Keep track of the URLs of your datasets. No account information is stored, so it is the only way you
-            will be able to get back to your datasets.</li>
+            {% if not is_local_mode %}
+                <li><em>You cannot view or download the text of tweets.</em></li>
+            {% endif %}
+            <li>Keep track of the URLs of your datasets. A record of your datasets are stored in a cookie in your browser, but
+                no record of your datasets is stored on the server.</li>
             <li>Generating dataset derivates may take a while.</li>
             <li>Datasets may change if new tweets are added to the source datasets.</li>
         </ul>

@@ -8,11 +8,11 @@ import requests
 import fnmatch
 import re
 from models import DatasetDocType
-from datetime import datetime
 import sqlite3
 import redis as redispy
 from datetime import date, datetime, timedelta
 import json
+import ipaddress
 
 from utils import read_json, write_json, short_uid
 
@@ -22,6 +22,8 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'secret')
 app.config['DATASETS_PATH'] = '/tweetsets_data/datasets'
 app.config['MAX_PER_FILE'] = os.environ.get('MAX_PER_FILE')
 app.config['GENERATE_UPDATE_INCREMENT'] = os.environ.get('GENERATE_UPDATE_INCREMENT')
+app.config['SERVER_MODE'] = os.environ.get('SERVER_MODE', 'local')
+app.config['IP_RANGE'] = os.environ.get('IP_RANGE')
 
 # ElasticSearch setup
 es_connections.create_connection(hosts=['elasticsearch'], timeout=20)
@@ -35,18 +37,31 @@ celery.conf.update(app.config)
 
 redis = redispy.StrictRedis(host='redis', port=6379, db=1, decode_responses=True)
 
+# IP ranges
+ip_ranges = []
+if app.config['IP_RANGE']:
+    for address in app.config['IP_RANGE'].split(','):
+        ip_ranges.append(ipaddress.IPv4Network(address))
+
 
 @app.route('/')
 def about():
     return render_template('about.html',
                            tweet_count=_tweet_count(),
-                           prev_datasets = json.loads(request.cookies.get('prev_datasets', '[]')))
+                           prev_datasets=json.loads(request.cookies.get('prev_datasets', '[]')),
+                           is_local_mode=_is_local_mode(request))
 
 
 @app.route('/datasets')
 def dataset_list():
+    search = DatasetDocType.search()
+    search.sort('name')
+    if not _is_local_mode(request):
+        search = search.filter('term', local_only=False)
+
     return render_template('dataset_list.html',
-                           datasets=DatasetDocType.search(),
+                           server_mode=app.config['SERVER_MODE'],
+                           datasets=search.execute(),
                            prev_datasets = json.loads(request.cookies.get('prev_datasets', '[]')))
 
 
@@ -79,6 +94,27 @@ def dataset(dataset_id):
         # Check for existing derivatives
         context['tweet_id_filenames'] = fnmatch.filter(os.listdir(dataset_path), "tweet-ids-*.txt.gz")
 
+    # Generate tweet json
+    if context['is_local_mode']:
+        generate_tweet_json_task_filepath = os.path.join(dataset_path, 'generate_tweet_json_task.json')
+        if request.form.get('generate_tweet_json', '').lower() == 'true' and not os.path.exists(
+                generate_tweet_json_task_filepath):
+            app.logger.info('Generating tweet json for {}'.format(dataset_id))
+            flash('Started generating tweet JSON')
+            generate_tweet_json_task = _generate_tweet_json_task.delay(dataset_params, context['total_tweets'], dataset_path,
+                                                                     max_per_file=app.config[
+                                                                         'MAX_PER_FILE'],
+                                                                     generate_update_increment=app.config[
+                                                                         'GENERATE_UPDATE_INCREMENT'])
+            # Write task.json
+            write_json(generate_tweet_json_task_filepath, {'id': generate_tweet_json_task.id})
+            context['tweet_json_task_id'] = generate_tweet_json_task.id
+        elif os.path.exists(generate_tweet_json_task_filepath):
+            context['tweet_json_task_id'] = read_json(generate_tweet_json_task_filepath)['id']
+        else:
+            # Check for existing derivatives
+            context['tweet_json_filenames'] = fnmatch.filter(os.listdir(dataset_path), "tweets-*.json.gz")
+
     # Generate mentions
     generate_mentions_task_filepath = os.path.join(dataset_path, 'generate_mentions_task.json')
     if request.form.get('generate_mentions', '').lower() == 'true' and not os.path.exists(
@@ -98,7 +134,7 @@ def dataset(dataset_id):
         context['mentions_task_id'] = read_json(generate_mentions_task_filepath)['id']
     else:
         # Check for existing derivatives
-        context['mentions_filenames'] = fnmatch.filter(os.listdir(dataset_path), "mention-*.txt.gz")
+        context['mentions_filenames'] = fnmatch.filter(os.listdir(dataset_path), "mention-*.csv.gz")
 
     # Generate top mentions
     generate_top_mentions_task_filepath = os.path.join(dataset_path, 'generate_top_mentions_task.json')
@@ -122,7 +158,7 @@ def dataset(dataset_id):
         context['top_mentions_task_id'] = read_json(generate_top_mentions_task_filepath)['id']
     else:
         # Check for existing derivatives
-        context['top_mentions_filenames'] = fnmatch.filter(os.listdir(dataset_path), "top-mentions-*.txt.gz")
+        context['top_mentions_filenames'] = fnmatch.filter(os.listdir(dataset_path), "top-mentions-*.csv.gz")
 
     context['dataset_id'] = dataset_id
     return render_template('dataset.html', **context)
@@ -164,7 +200,7 @@ def limit_dataset():
 @app.route('/dataset_file/<dataset_id>/<filename>')
 def dataset_file(dataset_id, filename):
     filepath = os.path.join(_dataset_path(dataset_id), filename)
-    return send_file(filepath)
+    return send_file(filepath, as_attachment=True, attachment_filename=filename)
 
 
 @app.route('/status/<task_id>')
@@ -249,6 +285,9 @@ def _prepare_dataset_view(dataset_params):
 
     # Previous datasets
     context['prev_datasets'] = json.loads(request.cookies.get('prev_datasets', '[]'))
+
+    # Mode
+    context['is_local_mode'] = _is_local_mode(request)
     return context
 
 
@@ -446,6 +485,53 @@ def _generate_tweet_ids_task(self, dataset_params, total_tweets, dataset_path, m
 
 
 @celery.task(bind=True)
+def _generate_tweet_json_task(self, dataset_params, total_tweets, dataset_path, max_per_file=None,
+                             generate_update_increment=None):
+    max_per_file = max_per_file or 1000000
+    generate_update_increment = generate_update_increment or 10000
+    search = _dataset_params_to_search(dataset_params)
+    search.source(['tweet'])
+
+    # Delete existing files
+    for filename in fnmatch.filter(os.listdir(dataset_path), "tweets-*.json.gz"):
+        os.remove(os.path.join(dataset_path, filename))
+
+    file_count = 1
+    file = None
+    tweet_count = 0
+    try:
+        for tweet_count, hit in enumerate(search.scan()):
+            # This is to support limiting the number of tweets
+            if tweet_count + 1 > total_tweets:
+                break
+            # Cycle tweet id files
+            if tweet_count % max_per_file == 0:
+                if file:
+                    file.close()
+                file = gzip.open(
+                    os.path.join(dataset_path, 'tweets-{}.json.gz'.format(str(file_count).zfill(3))), 'wb')
+                file_count += 1
+            # Write to tweet file
+            file.write(bytes(json.dumps(hit.tweet.to_dict()), 'utf-8'))
+            file.write(bytes('\n', 'utf-8'))
+            if (tweet_count + 1) % generate_update_increment == 0:
+                self.update_state(state='PROGRESS',
+                                  meta={'current': tweet_count + 1, 'total': total_tweets,
+                                        'status': '{} of {} tweets in {} files'.format(tweet_count + 1, total_tweets,
+                                                                                          file_count)})
+    finally:
+        if file:
+            file.close()
+
+    generate_task_filepath = os.path.join(dataset_path, 'generate_tweet_json_task.json')
+    if os.path.exists(generate_task_filepath):
+        os.remove(generate_task_filepath)
+
+    return {'current': tweet_count + 1, 'total': total_tweets,
+            'status': 'Completed.'}
+
+
+@celery.task(bind=True)
 def _generate_mentions_task(self, dataset_params, total_tweets, dataset_path, max_per_file=None,
                             generate_update_increment=None):
     max_per_file = max_per_file or 1000000
@@ -455,7 +541,7 @@ def _generate_mentions_task(self, dataset_params, total_tweets, dataset_path, ma
     search.source(['mention_user_ids', 'user_id'])
 
     # Delete existing files
-    for filename in fnmatch.filter(os.listdir(dataset_path), "mention-edges-*.txt.gz"):
+    for filename in fnmatch.filter(os.listdir(dataset_path), "mention-edges-*.csv.gz"):
         os.remove(os.path.join(dataset_path, filename))
 
     # Create db
@@ -468,7 +554,7 @@ def _generate_mentions_task(self, dataset_params, total_tweets, dataset_path, ma
 
     file_count = 1
     edges_file = None
-    nodes_file = gzip.open(os.path.join(dataset_path, 'mention-nodes.txt.gz'), 'wb')
+    nodes_file = gzip.open(os.path.join(dataset_path, 'mention-nodes.csv.gz'), 'wb')
     mention_count = 0
     tweet_count = 0
     try:
@@ -481,7 +567,7 @@ def _generate_mentions_task(self, dataset_params, total_tweets, dataset_path, ma
                 if edges_file:
                     edges_file.close()
                 edges_file = gzip.open(
-                    os.path.join(dataset_path, 'mention-edges-{}.txt.gz'.format(str(file_count).zfill(3))), 'wb')
+                    os.path.join(dataset_path, 'mention-edges-{}.csv.gz'.format(str(file_count).zfill(3))), 'wb')
                 file_count += 1
             # Write to mentions to file
             if hasattr(hit, 'mention_user_ids'):
@@ -532,7 +618,7 @@ def _generate_top_mentions_task(self, dataset_params, total_tweets, dataset_path
     search.source(['mention_user_ids', 'user_id'])
 
     # Delete existing files
-    for filename in fnmatch.filter(os.listdir(dataset_path), "top-mentions-*.txt.gz"):
+    for filename in fnmatch.filter(os.listdir(dataset_path), "top-mentions-*.csv.gz"):
         os.remove(os.path.join(dataset_path, filename))
 
     # Create db
@@ -599,7 +685,7 @@ def _generate_top_mentions_task(self, dataset_params, total_tweets, dataset_path
                 if file:
                     file.close()
                 file = gzip.open(
-                    os.path.join(dataset_path, 'top-mentions-{}.txt.gz'.format(str(file_count).zfill(3))), 'wb')
+                    os.path.join(dataset_path, 'top-mentions-{}.csv.gz'.format(str(file_count).zfill(3))), 'wb')
                 file_count += 1
             # Write to mentions to file
             file.write(bytes(','.join([row[0], row[1], str(row[2])]), 'utf-8'))
@@ -631,6 +717,13 @@ def _mention_iter(buf):
 
 
 def _oembed(tweet_id):
+    """
+    Returns the HTML snippet for embedding the tweet.
+
+    Uses cache otherwise retrieves from Twitter API.
+
+    Raises OembedException if problem retrieving from Twitter API.
+    """
     tweet_html = redis.get(tweet_id)
     if tweet_html:
         return tweet_html
@@ -652,6 +745,40 @@ def _oembed(tweet_id):
 
 class OembedException(Exception):
     pass
+
+
+def _is_local_mode(request):
+    """
+    Returns true if the user is in local mode. Otherwise, user is in public mode.
+    """
+    # If in debug, can be set with is_local query parameter
+    if app.config['DEBUG'] and 'is_local' in request.args:
+        return request.args.get('is_local', 'false').lower() == 'true'
+
+    # Use configured server mode for local and public
+    if app.config['SERVER_MODE'] == 'local':
+        return True
+    elif app.config['SERVER_MODE'] == 'public':
+        return False
+
+    # For both, use local if in configured IP ranges.
+    ip_address = ipaddress.ip_address(_get_ipaddr(request))
+    for ip_range in ip_ranges:
+        if ip_address in ip_range:
+            return True
+
+    return False
+
+
+def _get_ipaddr(request):
+    """
+    Return the ip address for the current request (or 127.0.0.1 if none found)
+    based on the X-Forwarded-For headers.
+    """
+    if request.access_route:
+        return request.access_route[0]
+    else:
+        return request.remote_addr or '127.0.0.1'
 
 
 @app.template_filter('nf')

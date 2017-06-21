@@ -3,5 +3,6 @@
 	"description": "This is a test Twitter dataset.",
 	"link": "http://test.com/dataset",
 	"creators": ["Justin Littman"],
-	"tags": ["test"]
+	"tags": ["test"],
+	"local_only": false
 }

@@ -96,11 +96,15 @@ if __name__ == '__main__':
     tweets_parser.add_argument('dataset_identifier', help='identifier (a UUID) for the dataset')
     tweets_parser.add_argument('--path', help='path of the directory containing the tweet files', default='/dataset')
     tweets_parser.add_argument('--limit', type=int, help='limit the number of tweets to load')
+    tweets_parser.add_argument('--skip-count', action='store_true', help='skip count the tweets')
+    tweets_parser.add_argument('--store-tweet', action='store_true', help='store the entire tweet')
 
     dataset_parser = subparsers.add_parser('dataset', help='create a dataset and add tweets')
     dataset_parser.add_argument('--path', help='path of dataset', default='/dataset')
     dataset_parser.add_argument('--filename', help='filename of dataset file', default='dataset.json')
     dataset_parser.add_argument('--limit', type=int, help='limit the number of tweets to load')
+    dataset_parser.add_argument('--skip-count', action='store_true', help='skip count the tweets')
+    dataset_parser.add_argument('--store-tweet', action='store_true', help='store the entire tweet')
 
     subparsers.add_parser('clear', help='delete all indexes')
 
@@ -128,7 +132,7 @@ if __name__ == '__main__':
         dataset = to_dataset(read_json(os.path.join(args.path, args.filename)),
                              dataset_id=short_uid(6,
                                                   exists_func=lambda uid: DatasetDocType.get(uid,
-                                                                                              ignore=404) is not None))
+                                                                                             ignore=404) is not None))
         dataset.save()
         dataset_id = dataset.meta.id
         log.info('Created {}'.format(dataset.meta.id))
@@ -158,16 +162,22 @@ if __name__ == '__main__':
     if args.command in ('tweets', 'dataset'):
         if dataset_id is None:
             dataset_id = args.dataset_identifier
+        store_tweet = os.environ.get('STORE_TWEET', 'false').lower() == 'true' or args.store_tweet
+        if store_tweet:
+            log.info('Storing tweet')
         dataset = DatasetDocType.get(dataset_id)
         if not dataset:
             raise Exception('{} not found'.format(dataset_id))
         filepaths = find_files(args.path)
         file_count = count_files(*filepaths)
-        log.info('Counting tweets in %s files.', file_count)
-        tweet_count = count_lines(*filepaths)
-        log.info('{:,} total tweets'.format(tweet_count))
+        tweet_count = None
+        if not args.skip_count:
+            log.info('Counting tweets in %s files.', file_count)
+            tweet_count = count_lines(*filepaths)
+            log.info('{:,} total tweets'.format(tweet_count))
         helpers.bulk(connections.get_connection(),
-                     (to_tweet(tweet_json, dataset_id).to_dict(include_meta=True) for tweet_json in
+                     (to_tweet(tweet_json, dataset_id, store_tweet=store_tweet).to_dict(include_meta=True) for
+                      tweet_json in
                       tweet_iter(*filepaths, limit=args.limit, total_tweets=tweet_count)))
 
         # Get number of tweets in dataset and update

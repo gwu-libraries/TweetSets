@@ -1,8 +1,26 @@
 # TweetSets
 Twitter datasets for research and archiving.
 
-* Create your own Twitter dataset from existing, public datasets.
+* Create your own Twitter dataset from existing datasets.
 * Conforms with Twitter policies.
+
+TweetSets allows users to (1) select from existing datasets; (2) limit the dataset by querying on keywords, hashtags, 
+and other parameters; (3) generate and download dataset derivatives such as the list of tweet ids and mention nodes/edges.
+
+## Modes
+TweetSets can be run in different modes. The modes determine which datasets are available and what type of dataset
+derivates can be generated.
+
+* public mode: Source datasets that are marked as local only are excluded. Dataset derivates that include the text of the
+tweet cannot be generated.
+* local mode: All source datasets are included, including those that are marked as local only. All dataset derivatives 
+can be generated, including those that include the text of the tweet.
+* both mode: For configured network IP ranges, the user is placed in local mode. Otherwise, the user is placed in public
+mode.
+
+These modes allow conforming with the Twitter policy that prohibits sharing complete tweets with 3rd parties.
+
+Modes are configured in the `.env` file as described below.
 
 ## Installing
 ### Prerequisites
@@ -66,10 +84,23 @@ To see other loader commands:
         python dataset_loader.py
 
 ## TODO
-* Add hydration to loading
+* Loading:
+  * Hydration of tweet ids lists.
+  * Normalize http/https in urls.
+* Limiting:
+  * Limit by mention user ids, screen names
+  * Limit by user ids, screen names
+  * Limit by verified users
 * Scroll additional sample tweets
-* Limit by mention user ids, screen names
-* Limit by user ids, screen names
-* Limit by verified users
-* Export mention counts options (top #, > mentions than)
-* Export edges in gephi, additional formats
+* Dataset derivatives:
+  * For local users, generate CSV with key fields.
+  * Additional top derivatives:
+    * URL
+    * Quotes/retweets
+  * Options to limit top derivatives by:
+    * Top number (e.g., top 500)
+    * Count greater than (e.g., more than 5 mentions)
+  * Additional nodes/edges derivatives:
+    * Replies
+    * Quotes/retweets
+  * Provide nodes/edges in additional formats such as Gephi.
