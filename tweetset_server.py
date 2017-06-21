@@ -60,6 +60,7 @@ def dataset_list():
         search = search.filter('term', local_only=False)
 
     return render_template('dataset_list.html',
+                           is_local_mode=_is_local_mode(request),
                            server_mode=app.config['SERVER_MODE'],
                            datasets=search.execute(),
                            prev_datasets = json.loads(request.cookies.get('prev_datasets', '[]')))
