@@ -77,7 +77,7 @@ the format of the file.
         docker-compose run --rm loader /bin/bash
 3. Invoke the loader:
 
-        python dataset_loader.py dataset
+        python tweetset_loader.py dataset
     
 To see other loader commands:
 

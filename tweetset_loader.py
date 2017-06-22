@@ -1,6 +1,7 @@
 from elasticsearch_dsl.connections import connections
 from elasticsearch import helpers
 from elasticsearch_dsl import Search
+from elasticsearch.exceptions import ConnectionError
 from glob import glob
 import gzip
 import logging
@@ -9,6 +10,7 @@ import argparse
 from datetime import datetime
 from time import sleep
 import os
+import itertools
 
 from models import TweetIndex, to_tweet, DatasetIndex, to_dataset, DatasetDocType
 from utils import read_json, short_uid
@@ -16,6 +18,9 @@ from utils import read_json, short_uid
 log = logging.getLogger(__name__)
 
 connections.create_connection(hosts=['elasticsearch'], timeout=20)
+
+CONNECTION_ERROR_TRIES = 30
+CONNECTION_ERROR_SLEEP = 30
 
 
 def find_files(path):
@@ -68,6 +73,18 @@ def tweet_iter(json_files, json_gz_files, txt_files, limit=None, total_tweets=No
                 yield json.loads(line)
 
                 # TODO: Handle hydration
+
+
+def _chunker(iterable, chunk_size=500):
+    """
+    Splits an iterable up into chunks.
+    """
+    it = iter(iterable)
+    while True:
+        chunk = tuple(itertools.islice(it, chunk_size))
+        if not chunk:
+            return
+        yield chunk
 
 
 if __name__ == '__main__':
@@ -175,10 +192,24 @@ if __name__ == '__main__':
             log.info('Counting tweets in %s files.', file_count)
             tweet_count = count_lines(*filepaths)
             log.info('{:,} total tweets'.format(tweet_count))
-        helpers.bulk(connections.get_connection(),
-                     (to_tweet(tweet_json, dataset_id, store_tweet=store_tweet).to_dict(include_meta=True) for
-                      tweet_json in
-                      tweet_iter(*filepaths, limit=args.limit, total_tweets=tweet_count)))
+        # Doing this in chunks so that can retry if error
+        connection = connections.get_connection()
+        for chunk in _chunker(to_tweet(tweet_json, dataset_id, store_tweet=store_tweet).to_dict(include_meta=True) for
+                              tweet_json in
+                              tweet_iter(*filepaths, limit=args.limit, total_tweets=tweet_count)):
+            try_count = 1
+            while True:
+                try:
+                    helpers.bulk(connection, chunk)
+                    break
+                except ConnectionError as e:
+                    if try_count == CONNECTION_ERROR_TRIES:
+                        raise e
+                    log.warning('Sleeping %s after connection error %s of %s: %s', CONNECTION_ERROR_SLEEP, try_count,
+                                CONNECTION_ERROR_TRIES, e)
+                    try_count += 1
+                    sleep(CONNECTION_ERROR_SLEEP)
+                    connection = connections.get_connection()
 
         # Get number of tweets in dataset and update
         sleep(5)
