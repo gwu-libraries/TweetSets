@@ -51,9 +51,10 @@ services:
        - TZ
   # For production
   server:
-      build:
-          context: ..
-          dockerfile: Dockerfile-server
+      image: justinlittman/tweetsets-server
+#      build:
+#          context: ..
+#          dockerfile: Dockerfile-server
       links:
         - redis:redis
         - elasticsearch1:elasticsearch
@@ -70,9 +71,10 @@ services:
         - IP_RANGE
   # For development
 #  server-flaskrun:
-#      build:
-#          context: ..
-#          dockerfile: Dockerfile-flaskrun
+      image: justinlittman/tweetsets-flaskrun
+##      build:
+##          context: ..
+##          dockerfile: Dockerfile-flaskrun
 #      links:
 #        - redis:redis
 #        - elasticsearch1:elasticsearch
@@ -91,9 +93,10 @@ services:
 #        - IP_RANGE
   # This can be duplicated for multiple workers
   worker1:
-      build:
-          context: ..
-          dockerfile: Dockerfile-worker
+      image: justinlittman/tweetsets-worker
+#      build:
+#          context: ..
+#          dockerfile: Dockerfile-worker
       links:
         - redis:redis
         - elasticsearch1:elasticsearch
@@ -106,9 +109,10 @@ services:
         - TZ
   # This will exit. That's OK.
   loader:
-      build:
-          context: ..
-          dockerfile: Dockerfile-loader
+      image: justinlittman/tweetsets-loader
+#      build:
+#          context: ..
+#          dockerfile: Dockerfile-loader
       links:
         - elasticsearch1:elasticsearch
       volumes:
