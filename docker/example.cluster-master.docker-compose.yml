@@ -1,0 +1,107 @@
+version: '2'
+services:
+  elasticsearch:
+      image: docker.elastic.co/elasticsearch/elasticsearch:5.4.0
+      ulimits:
+        memlock:
+          soft: -1
+          hard: -1
+      # This value is suitable for dev. Set higher for production.
+      mem_limit: ${ES_MEM_LIMIT}
+      ports:
+          - 9300:9300
+           # To publicly expose ES
+#          - 9200:9200
+      volumes:
+        - ${TWEETSETS_DATA_PATH}/elasticsearch:/usr/share/elasticsearch/data
+      networks:
+        - tweetsets
+      environment:
+        - cluster.name=tweetsets-cluster
+        - bootstrap.memory_lock=true
+        - network.host=_global_
+        - http.port=9200
+        - transport.tcp.port=9300
+        - "ES_JAVA_OPTS=-Xms${ES_JAVA_MEM} -Xmx${ES_JAVA_MEM}"
+        - xpack.security.enabled=false
+        - TZ
+  redis:
+      image: redis:3.0.7
+      command: --appendonly yes
+      volumes:
+          - ${TWEETSETS_DATA_PATH}/redis:/data
+      networks:
+        - tweetsets
+      environment:
+       - TZ
+  # For production
+  server:
+      build:
+          context: ..
+          dockerfile: Dockerfile-server
+      links:
+        - redis:redis
+        - elasticsearch1:elasticsearch
+      ports:
+          - ${SERVER_PORT}:8080
+      volumes:
+        - ${TWEETSETS_DATA_PATH}/datasets:/tweetsets_data/datasets
+      networks:
+        - tweetsets
+      environment:
+        - SECRET_KEY=${SERVER_SECRET_KEY}
+        - TZ
+        - SERVER_MODE
+        - IP_RANGE
+  # For development
+#  server-flaskrun:
+#      build:
+#          context: ..
+#          dockerfile: Dockerfile-flaskrun
+#      links:
+#        - redis:redis
+#        - elasticsearch1:elasticsearch
+#      ports:
+#          - ${SERVER_PORT}:5000
+#      volumes:
+#        - /tweetsets_data/datasets:/tweetsets_data/datasets
+#        # This links in external code.
+#        - "..:/opt/tweetsets"
+#      networks:
+#        - tweetsets
+#      environment:
+#        - SECRET_KEY=${SERVER_SECRET_KEY}
+#        - TZ
+#        - SERVER_MODE
+#        - IP_RANGE
+  # This can be duplicated for multiple workers
+  worker1:
+      build:
+          context: ..
+          dockerfile: Dockerfile-worker
+      links:
+        - redis:redis
+        - elasticsearch1:elasticsearch
+      volumes:
+        - ${TWEETSETS_DATA_PATH}/datasets:/tweetsets_data/datasets
+      networks:
+        - tweetsets
+      environment:
+        - LOGGING_LEVEL=${WORKER_LOGGING_LEVEL}
+        - TZ
+  # This will exit. That's OK.
+  loader:
+      build:
+          context: ..
+          dockerfile: Dockerfile-loader
+      links:
+        - elasticsearch1:elasticsearch
+      volumes:
+        - ${DATASET_PATH}:/dataset
+      networks:
+        - tweetsets
+      environment:
+       - TZ
+       - STORE_TWEET
+networks:
+  tweetsets:
