@@ -1,7 +1,7 @@
 version: '2'
 services:
-  elasticsearch2:
-      image: docker.elastic.co/elasticsearch/elasticsearch:5.4.0
+  elasticsearch:
+      image: docker.elastic.co/elasticsearch/elasticsearch:5.5.2
       ulimits:
         memlock:
           soft: -1
@@ -17,11 +17,13 @@ services:
       environment:
         - cluster.name=tweetsets-cluster
         - bootstrap.memory_lock=true
-        - network.host=_global_
-        - transport.tcp.port=9300
+        - network.host=_eth0_
+        - network.publish_host=${HOSTNAME}
         - "ES_JAVA_OPTS=-Xms${ES_JAVA_MEM} -Xmx${ES_JAVA_MEM}"
-        - "discovery.zen.ping.unicast.hosts=${MASTER_HOST}"
+        - discovery.zen.ping.unicast.hosts=${MASTER_HOSTNAME}
         - xpack.security.enabled=false
+        - node.master=false
+        - node.master=false
         - TZ
 networks:
   tweetsets:

@@ -53,12 +53,59 @@ Note:
         cp example.env .env
 
 5. Edit `.env`. This file is annotated to help you select appropriate values.
-6. Build the containers:
-
-        docker-compose build
-7. Bring up the containers:
+6. Bring up the containers:
 
         docker-compose up -d
+
+### Cluster installation
+#### Master
+1. Create data directories on a volume with adequate storage:
+
+        mkdir -p /tweetset_data/redis
+        mkdir -p /tweetset_data/datasets
+        mkdir -p /tweetset_data/elasticsearch
+        chown -R 1000:1000 /tweetset_data/elasticsearch
+
+2. Clone or download this repository:
+
+        git clone https://github.com/justinlittman/TweetSets.git
+        
+3. Change to the `docker` directory:
+   
+        cd docker
+4. Copy the example docker files:
+
+        cp example.cluster-master.docker-compose.yml docker-compose.yml
+        cp example.env .env
+
+5. Edit `.env`. This file is annotated to help you select appropriate values.
+6. Bring up the containers:
+
+        docker-compose up -d
+
+#### Worker
+1. Create data directories on a volume with adequate storage:
+
+        mkdir -p /tweetset_data/elasticsearch
+        chown -R 1000:1000 /tweetset_data/elasticsearch
+
+2. Clone or download this repository:
+
+        git clone https://github.com/justinlittman/TweetSets.git
+        
+3. Change to the `docker` directory:
+   
+        cd docker
+4. Copy the example docker files:
+
+        cp example.cluster-worker.docker-compose.yml docker-compose.yml
+        cp example.cluster-worker.env .env
+
+5. Edit `.env`. This file is annotated to help you select appropriate values.
+6. Bring up the containers:
+
+        docker-compose up -d
+
 
 ## Loading a source dataset
 ### Prepping the source dataset

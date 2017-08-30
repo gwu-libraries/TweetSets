@@ -1,7 +1,7 @@
 version: '2'
 services:
   elasticsearch:
-      image: docker.elastic.co/elasticsearch/elasticsearch:5.4.0
+      image: docker.elastic.co/elasticsearch/elasticsearch:5.5.2
       ulimits:
         memlock:
           soft: -1
@@ -19,11 +19,11 @@ services:
       environment:
         - cluster.name=tweetsets-cluster
         - bootstrap.memory_lock=true
-        - network.host=_global_
-        - http.port=9200
-        - transport.tcp.port=9300
+        - network.host=_eth0_
+        - network.publish_host=${HOSTNAME}
         - "ES_JAVA_OPTS=-Xms${ES_JAVA_MEM} -Xmx${ES_JAVA_MEM}"
         - xpack.security.enabled=false
+        - node.master=true
         - TZ
   redis:
       image: redis:3.0.7
