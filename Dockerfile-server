@@ -9,6 +9,7 @@ RUN pip install -r requirements.txt
 ADD tweetset_server.py /opt/tweetsets/
 ADD models.py /opt/tweetsets/
 ADD utils.py /opt/tweetsets/
+ADD stats.py /opt/tweetsets/
 ADD templates/ /opt/tweetsets/templates/
 ADD static /opt/tweetsets/static/
 
