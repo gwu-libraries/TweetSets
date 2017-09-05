@@ -1,17 +1,5 @@
-<html>
-<head>
-    <!-- Latest compiled and minified CSS -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='bootstrap/3.3.7/css/bootstrap.min.css') }}" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u">
-
-    <!-- Optional theme -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='bootstrap/3.3.7/css/bootstrap-theme.min.css') }}" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp">
-
-    <!-- Latest compiled and minified JavaScript -->
-    <script src="{{ url_for('static', filename='jquery/1.12.4/jquery.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='bootstrap/3.3.7/js/bootstrap.min.js') }}" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa"></script>
-    <script src="{{ url_for('static', filename='js-cookie/2.1.4/js.cookie.js') }}"></script>
-</head>
-<body>
+{% extends "base.html" %}
+{% block body %}
 <div class="container">
     <div class="row">
         <div class="page-header">
@@ -51,9 +39,7 @@
                                 <div class="checkbox">
                                     <label>
                                         <input type="checkbox" name="limit_source_datasets" value="{{ dataset.meta.id }}">
-                                            <a role="button" data-toggle="collapse" data-parent="#accordion" href="#collapse{{ dataset.meta.id }}" aria-expanded="true" aria-controls="collapse{{ dataset.meta.id }}">
-                                                {{ dataset.name }}
-                                            </a>
+                                            <a role="button" data-toggle="collapse" data-parent="#accordion" href="#collapse{{ dataset.meta.id }}" aria-expanded="true" aria-controls="collapse{{ dataset.meta.id }}">{{ dataset.name }}</a> {% if dataset.tweet_count %}<span class="badge">{{ dataset.tweet_count | nf }} tweets</span>{% endif %}
                                     </label>
                                 </div>
                             </h4>
@@ -133,5 +119,4 @@
         </script>
     </div>
 </div>
-</body>
-</html>
+{% endblock %}

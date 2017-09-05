@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, send_file, jsonify, redirect, url_for, flash, make_response
+from flask import Flask, render_template, request, send_file, jsonify, redirect, url_for, flash, make_response, session
 from elasticsearch_dsl import Search, Q
 from elasticsearch_dsl.connections import connections as es_connections
 import os
@@ -15,6 +15,7 @@ import json
 import ipaddress
 
 from utils import read_json, write_json, short_uid
+from stats import TweetSetStats
 
 # Flask setup
 app = Flask(__name__)
@@ -36,6 +37,8 @@ celery = Celery(app.name, broker=app.config['CELERY_BROKER_URL'])
 celery.conf.update(app.config)
 
 redis = redispy.StrictRedis(host='redis', port=6379, db=1, decode_responses=True)
+
+ts_stats = TweetSetStats()
 
 # IP ranges
 ip_ranges = []
@@ -63,7 +66,7 @@ def dataset_list():
                            is_local_mode=_is_local_mode(request),
                            server_mode=app.config['SERVER_MODE'],
                            datasets=search.execute(),
-                           prev_datasets = json.loads(request.cookies.get('prev_datasets', '[]')))
+                           prev_datasets=json.loads(request.cookies.get('prev_datasets', '[]')))
 
 
 @app.route('/dataset/<dataset_id>', methods=['GET', 'POST'])
@@ -89,6 +92,11 @@ def dataset(dataset_id):
         # Write task.json
         write_json(generate_tweet_ids_task_filepath, {'id': generate_tweet_ids_task.id})
         context['tweet_id_task_id'] = generate_tweet_ids_task.id
+
+        # Record stats
+        if not session.get("demo_mode", False):
+            ts_stats.add_derivative('tweet ids', _is_local(request))
+
     elif os.path.exists(generate_tweet_ids_task_filepath):
         context['tweet_id_task_id'] = read_json(generate_tweet_ids_task_filepath)['id']
     else:
@@ -102,14 +110,20 @@ def dataset(dataset_id):
                 generate_tweet_json_task_filepath):
             app.logger.info('Generating tweet json for {}'.format(dataset_id))
             flash('Started generating tweet JSON')
-            generate_tweet_json_task = _generate_tweet_json_task.delay(dataset_params, context['total_tweets'], dataset_path,
-                                                                     max_per_file=app.config[
-                                                                         'MAX_PER_FILE'],
-                                                                     generate_update_increment=app.config[
-                                                                         'GENERATE_UPDATE_INCREMENT'])
+            generate_tweet_json_task = _generate_tweet_json_task.delay(dataset_params, context['total_tweets'],
+                                                                       dataset_path,
+                                                                       max_per_file=app.config[
+                                                                           'MAX_PER_FILE'],
+                                                                       generate_update_increment=app.config[
+                                                                           'GENERATE_UPDATE_INCREMENT'])
             # Write task.json
             write_json(generate_tweet_json_task_filepath, {'id': generate_tweet_json_task.id})
             context['tweet_json_task_id'] = generate_tweet_json_task.id
+
+            # Record stats
+            if not session.get("demo_mode", False):
+                ts_stats.add_derivative('tweet json', _is_local(request))
+
         elif os.path.exists(generate_tweet_json_task_filepath):
             context['tweet_json_task_id'] = read_json(generate_tweet_json_task_filepath)['id']
         else:
@@ -131,6 +145,11 @@ def dataset(dataset_id):
         # Write task.json
         write_json(generate_mentions_task_filepath, {'id': generate_mentions_task.id})
         context['mentions_task_id'] = generate_mentions_task.id
+
+        # Record stats
+        if not session.get("demo_mode", False):
+            ts_stats.add_derivative('mentions', _is_local(request))
+
     elif os.path.exists(generate_mentions_task_filepath):
         context['mentions_task_id'] = read_json(generate_mentions_task_filepath)['id']
     else:
@@ -155,6 +174,11 @@ def dataset(dataset_id):
         # Write task.json
         write_json(generate_top_mentions_task_filepath, {'id': generate_top_mentions_task.id})
         context['top_mentions_task_id'] = generate_top_mentions_task.id
+
+        # Record stats
+        if not session.get("demo_mode", False):
+            ts_stats.add_derivative('top mentions', _is_local(request))
+
     elif os.path.exists(generate_top_mentions_task_filepath):
         context['top_mentions_task_id'] = read_json(generate_top_mentions_task_filepath)['id']
     else:
@@ -193,6 +217,14 @@ def limit_dataset():
         resp = make_response(redirect('{}#datasetDerivatives'.format(url_for('dataset', dataset_id=dataset_id)),
                                       code=303))
         resp.set_cookie('prev_datasets', json.dumps(prev_datasets), expires=datetime.now() + timedelta(days=365 * 5))
+
+        # Record stats
+        if not session.get("demo_mode", False):
+            is_local = _is_local(request)
+            ts_stats.add_dataset(is_local, context['total_tweets'])
+            for dataset_id in context['source_datasets']:
+                app.logger.info(dataset_id)
+                ts_stats.add_source_dataset(dataset_id.meta.id, is_local)
         return resp
 
     return render_template('dataset.html', **context)
@@ -233,6 +265,30 @@ def dataset_status(task_id):
             'status': str(task.info),  # this is the exception raised
         }
     return jsonify(response)
+
+
+@app.route('/stats')
+def stats():
+    # Handle demo mode
+    if 'demo_mode' in request.args:
+        if request.args['demo_mode'].lower() == 'true':
+            session['demo_mode'] = True
+        else:
+            session['demo_mode'] = False
+
+    since = datetime.utcnow() - timedelta(days=30 * 6)
+    source_dataset_stats = ts_stats.source_datasets_merge_stats(since_datetime=since)
+    source_dataset_names = {}
+    for source_dataset in DatasetDocType.mget([stat.dataset_id for stat in source_dataset_stats]):
+        source_dataset_names[source_dataset.meta.id] = source_dataset.name
+    return render_template('stats.html',
+                           all_datasets_stat=ts_stats.datasets_stats(),
+                           local_datasets_stat=ts_stats.datasets_stats(local_only=True),
+                           all_recent_datasets_stats=ts_stats.datasets_stats(since_datetime=since),
+                           local_recent_dataset_stats=ts_stats.datasets_stats(since_datetime=since, local_only=True),
+                           source_dataset_stats=source_dataset_stats,
+                           source_dataset_names=source_dataset_names,
+                           derivatives_stats=ts_stats.derivatives_merge_stats(since_datetime=since))
 
 
 def _prepare_dataset_view(dataset_params):
@@ -487,7 +543,7 @@ def _generate_tweet_ids_task(self, dataset_params, total_tweets, dataset_path, m
 
 @celery.task(bind=True)
 def _generate_tweet_json_task(self, dataset_params, total_tweets, dataset_path, max_per_file=None,
-                             generate_update_increment=None):
+                              generate_update_increment=None):
     max_per_file = max_per_file or 1000000
     generate_update_increment = generate_update_increment or 10000
     search = _dataset_params_to_search(dataset_params)
@@ -519,7 +575,7 @@ def _generate_tweet_json_task(self, dataset_params, total_tweets, dataset_path, 
                 self.update_state(state='PROGRESS',
                                   meta={'current': tweet_count + 1, 'total': total_tweets,
                                         'status': '{} of {} tweets in {} files'.format(tweet_count + 1, total_tweets,
-                                                                                          file_count)})
+                                                                                       file_count)})
     finally:
         if file:
             file.close()
@@ -762,13 +818,17 @@ def _is_local_mode(request):
     elif app.config['SERVER_MODE'] == 'public':
         return False
 
-    # For both, use local if in configured IP ranges.
+    return _is_local(request)
+
+
+def _is_local(request):
+    """
+    Returns true if user is in configured IP ranges.
+    """
     ip_address = ipaddress.ip_address(_get_ipaddr(request))
     for ip_range in ip_ranges:
         if ip_address in ip_range:
             return True
-
-    return False
 
 
 def _get_ipaddr(request):

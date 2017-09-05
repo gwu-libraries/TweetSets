@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="container">
+    <div class="row">
+        <h2>Datasets created</h2>
+        <table class="table">
+            <thead>
+                <td />
+                <td>Count</td>
+                <td>Count (last 6 months)</td>
+                <td>Tweets</td>
+                <td>Tweets (last 6 months)</td>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>All users</td>
+                    <td>{{ all_datasets_stat.count | nf }}</td>
+                    <td>{{ all_recent_datasets_stats.count | nf }}</td>
+                    <td>{{ all_datasets_stat.tweets | nf }}</td>
+                    <td>{{ all_recent_datasets_stats.tweets | nf }}</td>
+                </tr>
+                <tr>
+                    <td>Local users</td>
+                    <td>{{ local_datasets_stat.count | nf }}</td>
+                    <td>{{ local_recent_dataset_stats.count | nf }}</td>
+                    <td>{{ local_datasets_stat.tweets | nf }}</td>
+                    <td>{{ local_recent_dataset_stats.tweets | nf }}</td>
+                </tr>
+            </tbody>
+        </table>
+        <br>
+        <h2>Derivatives created</h2>
+        <table class="table" id="derivativeTable">
+            <thead>
+                <tr>
+                    <th>Derivative type</th>
+                    <th>All users</th>
+                    <th>All users (last 6 months)</th>
+                    <th>Local users</th>
+                    <th>Local users (last 6 months)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for derivative_stat in derivatives_stats %}
+                    <tr>
+                        <td>{{ derivative_stat.derivative_type }}</td>
+                        <td>{{ derivative_stat.all_count | nf }}</td>
+                        <td>{{ derivative_stat.all_recent_count | nf }}</td>
+                        <td>{{ derivative_stat.local_count | nf }}</td>
+                        <td>{{ derivative_stat.local_recent_count | nf }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <script>
+            $(document).ready(function() {
+                $('#derivativeTable').DataTable({
+                    paging: false,
+                    searching: false,
+                    info: false
+                });
+            } );
+        </script>
+        <br>
+        <h2>Source datasets</h2>
+        <table class="table" id="sourceDatasetsTable">
+            <thead>
+                <tr>
+                    <th>Source dataset</th>
+                    <th>All users</th>
+                    <th>All users (last 6 months)</th>
+                    <th>Local users</th>
+                    <th>Local users (last 6 months)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for source_dataset_stat in source_dataset_stats %}
+                    <tr>
+                        <td>{{ source_dataset_names[source_dataset_stat.dataset_id] }}</td>
+                        <td>{{ source_dataset_stat.all_count | nf }}</td>
+                        <td>{{ source_dataset_stat.all_recent_count | nf }}</td>
+                        <td>{{ source_dataset_stat.local_count | nf }}</td>
+                        <td>{{ source_dataset_stat.local_recent_count | nf }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <script>
+            $(document).ready(function() {
+                $('#sourceDatasetsTable').DataTable({
+                    paging: false,
+                    searching: false,
+                    info: false
+                });
+            } );
+        </script>
+    </div>
+    <br>
+    <br>
+    <div class="row">
+        {% if session.get("demo_mode") %}
+            <a href="{{ url_for('stats') }}?demo_mode=false" class="btn btn-default btn-sm">Exit demo mode</a>
+        {% else %}
+            <a href="?demo_mode=true" class="btn btn-default btn-sm">Enter demo mode</a>
+        {% endif %}
+        <p class="help-block">Statistics will not be collected for the datasets and derivatives that you create while in demo mode.</p>
+
+    </div>
+</div>
+{% endblock %}

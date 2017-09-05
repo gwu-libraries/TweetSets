@@ -151,6 +151,4 @@ To see other loader commands:
     * Replies
     * Quotes/retweets
   * Provide nodes/edges in additional formats such as Gephi.
-* Logging
 * Separate counts of tweets available for public / local on home page.
-* Add link to code on github to home page.

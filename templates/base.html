@@ -1,0 +1,35 @@
+<html>
+<head>
+    <!-- Latest compiled and minified CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='bootstrap/3.3.7/css/bootstrap.min.css') }}" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u">
+
+    <!-- Optional theme -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='bootstrap/3.3.7/css/bootstrap-theme.min.css') }}" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='datatables/1.10.15/css/jquery.dataTables.min.css') }}"/>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='datatables/1.10.15/css/dataTables.bootstrap.min.css') }}"/>
+
+    <!-- Latest compiled and minified JavaScript -->
+    <script src="{{ url_for('static', filename='jquery/1.12.4/jquery.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='bootstrap/3.3.7/js/bootstrap.min.js') }}" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa"></script>
+    <script src="{{ url_for('static', filename='js-cookie/2.1.4/js.cookie.js') }}"></script>
+    <script type="text/javascript" src="{{ url_for('static', filename='datatables/1.10.15/js/jquery.dataTables.min.js') }}"></script>
+    <script type="text/javascript" src="{{ url_for('static', filename='datatables/1.10.15/js/dataTables.bootstrap.min.js') }}"></script>
+</head>
+<body>
+    {% if session.get("demo_mode") %}
+        <div class="alert alert-info" role="alert">You're in demo mode.</div>
+    {% endif %}
+    {% block body %}
+    {% endblock %}
+    {% block footer %}
+        <div class="container">
+            <div class="row">
+                <footer>
+                    <hr>
+                    <a href="{{ url_for('about') }}">Home</a>  |  <a href="{{ url_for('stats') }}">Statistics</a>  |  <a href="https://github.com/justinlittman/TweetSets">Github</a>  |  <a href="mailto:justinlittman@gwu.edu">Contact</a>
+                </footer>
+            </div>
+        </div>
+    {% endblock %}
+</body>
+</html>
