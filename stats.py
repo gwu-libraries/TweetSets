@@ -36,14 +36,14 @@ class TweetSetStats():
         conn = self._get_conn()
         with conn:
             conn.execute(
-                'create table datasets (create_timestamp timestamp default current_timestamp, is_local boolean, '
-                'tweet_count integer);')
+                'create table if not exists datasets (create_timestamp timestamp default current_timestamp, is_local '
+                'boolean, tweet_count integer);')
             conn.execute(
-                'create table source_datasets (create_timestamp timestamp default current_timestamp, dataset_id, '
-                'is_local boolean);')
+                'create table if not exists source_datasets (create_timestamp timestamp default current_timestamp, '
+                'dataset_id, is_local boolean);')
             conn.execute(
-                'create table derivatives (create_timestamp timestamp default current_timestamp, derivative_type, '
-                'is_local boolean);')
+                'create table if not exists derivatives (create_timestamp timestamp default current_timestamp, '
+                'derivative_type, is_local boolean);')
 
     def add_dataset(self, is_local, tweet_count):
         conn = self._get_conn()
