@@ -72,6 +72,15 @@ services:
         # For ngninx-proxy
         - VIRTUAL_HOST=${HOSTNAME}
         - VIRTUAL_PORT=${SERVER_PORT}
+        # For email
+        - EMAIL_PORT
+        - EMAIL_SMTP
+        - EMAIL_FROM
+        - EMAIL_USERNAME
+        - EMAIL_PASSWORD
+        - ADMIN_EMAIL
+        - USE_TLS
+        - HOST=${HOSTNAME}
   # For development
 #  server-flaskrun:
       image: justinlittman/tweetsets-flaskrun

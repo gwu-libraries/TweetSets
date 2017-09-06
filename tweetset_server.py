@@ -23,6 +23,14 @@ app.config['MAX_PER_FILE'] = os.environ.get('MAX_PER_FILE')
 app.config['GENERATE_UPDATE_INCREMENT'] = os.environ.get('GENERATE_UPDATE_INCREMENT')
 app.config['SERVER_MODE'] = os.environ.get('SERVER_MODE', 'local')
 app.config['IP_RANGE'] = os.environ.get('IP_RANGE')
+app.config['HOST'] = os.environ.get('HOST') or 'localhost'
+app.config['USE_TLS'] = os.environ.get('USE_TLS', 'false').lower() == 'true'
+app.config['EMAIL_PORT'] = int(os.environ.get('EMAIL_PORT', '25'))
+app.config['EMAIL_SMTP'] = os.environ.get('EMAIL_SMTP')
+app.config['EMAIL_FROM'] = os.environ.get('EMAIL_FROM') or os.environ.get('EMAIL_USERNAME')
+app.config['EMAIL_USERNAME'] = os.environ.get('EMAIL_USERNAME')
+app.config['EMAIL_PASSWORD'] = os.environ.get('EMAIL_PASSWORD')
+app.config['ADMIN_EMAIL'] = os.environ.get('ADMIN_EMAIL')
 
 # ElasticSearch setup
 es_connections.create_connection(hosts=['elasticsearch'], timeout=20)
@@ -44,9 +52,31 @@ if app.config['IP_RANGE']:
     for address in app.config['IP_RANGE'].split(','):
         ip_ranges.append(ipaddress.IPv4Network(address))
 
+# Email on error
+if not app.debug and app.config['ADMIN_EMAIL'] and app.config['EMAIL_SMTP'] and app.config['EMAIL_FROM']:
+    import logging
+    from logging.handlers import SMTPHandler
+
+    credentials = None
+    if app.config['EMAIL_USERNAME'] and app.config['EMAIL_PASSWORD']:
+        credentials = (app.config['EMAIL_USERNAME'], app.config['EMAIL_PASSWORD'])
+
+    secure = None
+    if app.config['USE_TLS']:
+        secure=()
+    mail_handler = SMTPHandler((app.config['EMAIL_SMTP'], app.config['EMAIL_PORT']),
+                               app.config['EMAIL_FROM'],
+                               [app.config['ADMIN_EMAIL']], 'TweetSet error on {}'.format(app.config['HOST']),
+                               credentials=('sfm_no_reply@email.gwu.edu','noreply4SFM!'), secure=secure)
+    mail_handler.setLevel(logging.ERROR)
+    app.logger.addHandler(mail_handler)
+
 
 @app.route('/')
 def about():
+    # For testing
+    if 'error' in request.args:
+        raise Exception('Test exception')
     return render_template('about.html',
                            tweet_count=_tweet_count(),
                            prev_datasets=json.loads(request.cookies.get('prev_datasets', '[]')),
