@@ -28,7 +28,6 @@ services:
         - discovery.zen.ping.unicast.hosts=${MASTER_HOSTNAME}
         - xpack.security.enabled=false
         - node.master=false
-        - node.master=false
         - TZ
 networks:
   tweetsets:
