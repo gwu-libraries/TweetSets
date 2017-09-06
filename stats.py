@@ -18,11 +18,11 @@ class TweetSetStats():
     def __init__(self, db_filepath='/tweetsets_data/datasets/stats.db'):
         self._connection_cache = {}
         self.db_filepath = db_filepath
-        db_exists = os.path.exists(db_filepath)
+        # db_exists = os.path.exists(db_filepath)
 
         # Create db if it doesn't exist
-        if not db_exists:
-            self._create_db()
+        # if not db_exists:
+        self._create_db()
 
     def _get_conn(self):
         id = get_ident()
@@ -102,7 +102,6 @@ class TweetSetStats():
         for source_dataset, count in self.source_datasets_stats(local_only=True, since_datetime=since_datetime):
             source_datasets[source_dataset] = source_datasets[source_dataset]._replace(local_recent_count=count)
         return list(source_datasets.values())
-
 
     def derivatives_stats(self, local_only=False, since_datetime=None):
         """

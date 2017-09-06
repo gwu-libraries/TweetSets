@@ -3,19 +3,17 @@ from elasticsearch_dsl import Search, Q
 from elasticsearch_dsl.connections import connections as es_connections
 import os
 from celery import Celery
-import gzip
 import requests
 import fnmatch
-import re
 from models import DatasetDocType
-import sqlite3
 import redis as redispy
 from datetime import date, datetime, timedelta
 import json
 import ipaddress
 
-from utils import read_json, write_json, short_uid
+from utils import read_json, write_json, short_uid, dataset_params_to_search
 from stats import TweetSetStats
+import tasks
 
 # Flask setup
 app = Flask(__name__)
@@ -279,8 +277,9 @@ def stats():
     since = datetime.utcnow() - timedelta(days=30 * 6)
     source_dataset_stats = ts_stats.source_datasets_merge_stats(since_datetime=since)
     source_dataset_names = {}
-    for source_dataset in DatasetDocType.mget([stat.dataset_id for stat in source_dataset_stats]):
-        source_dataset_names[source_dataset.meta.id] = source_dataset.name
+    if source_dataset_stats:
+        for source_dataset in DatasetDocType.mget([stat.dataset_id for stat in source_dataset_stats]):
+            source_dataset_names[source_dataset.meta.id] = source_dataset.name
     return render_template('stats.html',
                            all_datasets_stat=ts_stats.datasets_stats(),
                            local_datasets_stat=ts_stats.datasets_stats(local_only=True),
@@ -294,7 +293,7 @@ def stats():
 def _prepare_dataset_view(dataset_params):
     context = _dataset_params_to_context(dataset_params)
 
-    search = _dataset_params_to_search(dataset_params)
+    search = dataset_params_to_search(dataset_params)
     search_response = search.execute()
     context['total_tweets'] = search_response.hits.total if not dataset_params.get('tweet_limit') else min(
         search_response.hits.total, int(dataset_params['tweet_limit']))
@@ -352,115 +351,6 @@ def _dataset_path(dataset_id):
     return os.path.join(app.config['DATASETS_PATH'], dataset_id)
 
 
-def _dataset_params_to_search(dataset_params):
-    search = Search(index='tweets')
-
-    # Query
-    q = None
-    # Source datasets
-    if dataset_params.get('source_datasets'):
-        q = _and(q, Q('terms', dataset_id=dataset_params.get('source_datasets')))
-    # Text
-    if dataset_params.get('tweet_text_all'):
-        for term in re.split(', *', dataset_params['tweet_text_all']):
-            if ' ' in term:
-                q = _and(q, Q('match_phrase', text=term))
-            else:
-                q = _and(q, Q('match', text=term))
-    if dataset_params.get('tweet_text_any'):
-        any_q = None
-        for term in re.split(', *', dataset_params['tweet_text_any']):
-            if ' ' in term:
-                any_q = _or(any_q, Q('match_phrase', text=term))
-            else:
-                any_q = _or(any_q, Q('match', text=term))
-        q = _and(q, any_q)
-    if dataset_params.get('tweet_text_exclude'):
-        for term in re.split(', *', dataset_params['tweet_text_exclude']):
-            if ' ' in term:
-                q = _and(q, ~Q('match_phrase', text=term))
-            else:
-                q = _and(q, ~Q('match', text=term))
-
-    # Hashtags
-    if dataset_params.get('hashtag_any'):
-        hashtags = []
-        for hashtag in re.split(', *', dataset_params['hashtag_any']):
-            hashtags.append(hashtag.lstrip('#').lower())
-        if hashtags:
-            q = _and(q, Q('terms', hashtags=hashtags))
-
-    # Tweet types
-    tweet_types = []
-    if dataset_params.get('tweet_type_original', '').lower() == 'true':
-        tweet_types.append('original')
-    if dataset_params.get('tweet_type_quote', '').lower() == 'true':
-        tweet_types.append('quote')
-    if dataset_params.get('tweet_type_retweet', '').lower() == 'true':
-        tweet_types.append('retweet')
-    if dataset_params.get('tweet_type_reply', '').lower() == 'true':
-        tweet_types.append('reply')
-    if len(tweet_types) != 4:
-        q = _and(q, Q('terms', tweet_type=tweet_types))
-
-    # Created at
-    created_at_dict = {}
-    if dataset_params.get('created_at_from'):
-        created_at_dict['gte'] = datetime.strptime(dataset_params['created_at_from'], '%Y-%m-%d').date()
-    if dataset_params.get('created_at_to'):
-        created_at_dict['lte'] = datetime.strptime(dataset_params['created_at_to'], '%Y-%m-%d').date()
-    if created_at_dict:
-        q = _and(q, Q('range', created_at=created_at_dict))
-
-    # Has media
-    if dataset_params.get('has_media', '').lower() == 'true':
-        q = _and(q, Q('term', has_media=True))
-
-    # URL
-    if dataset_params.get('has_url', '').lower() == 'true':
-        q = _and(q, Q('exists', field='urls'))
-    if dataset_params.get('url_any'):
-        any_q = None
-        for url_prefix in re.split(', *', dataset_params['url_any']):
-            any_q = _or(any_q, Q('prefix', urls=url_prefix))
-        q = _and(q, any_q)
-
-    # Has geotag
-    if dataset_params.get('has_geo', '').lower() == 'true':
-        q = _and(q, Q('term', has_geo=True))
-
-    search.query = Q('bool', filter=q or Q())
-
-    # Aggregations
-    search.aggs.bucket('top_users', 'terms', field='user_screen_name', size=10)
-    search.aggs.bucket('top_hashtags', 'terms', field='hashtags', size=10)
-    search.aggs.bucket('top_mentions', 'terms', field='mention_screen_names', size=10)
-    search.aggs.bucket('top_urls', 'terms', field='urls', size=10)
-    search.aggs.bucket('tweet_types', 'terms', field='tweet_type')
-    search.aggs.metric('created_at_min', 'min', field='created_at')
-    search.aggs.metric('created_at_max', 'max', field='created_at')
-
-    # Only get ids
-    search.source(False)
-    # Sort by _doc
-    search.sort('_doc')
-    app.logger.info(dataset_params)
-    app.logger.info(search.to_dict())
-    return search
-
-
-def _or(q1, q2):
-    if q1 is None:
-        return q2
-    return q1 | q2
-
-
-def _and(q1, q2):
-    if q1 is None:
-        return q2
-    return q1 & q2
-
-
 def _dataset_params_to_context(dataset_params):
     context = dict()
     for key, value in dataset_params.items():
@@ -495,284 +385,6 @@ def _tweet_count():
     return tweet_count
 
 
-@celery.task(bind=True)
-def _generate_tweet_ids_task(self, dataset_params, total_tweets, dataset_path, max_per_file=None,
-                             generate_update_increment=None):
-    max_per_file = max_per_file or 1000000
-    generate_update_increment = generate_update_increment or 10000
-    search = _dataset_params_to_search(dataset_params)
-
-    # Delete existing files
-    for filename in fnmatch.filter(os.listdir(dataset_path), "tweet-ids-*.txt.gz"):
-        os.remove(os.path.join(dataset_path, filename))
-
-    file_count = 1
-    file = None
-    tweet_count = 0
-    try:
-        for tweet_count, hit in enumerate(search.scan()):
-            # This is to support limiting the number of tweets
-            if tweet_count + 1 > total_tweets:
-                break
-            # Cycle tweet id files
-            if tweet_count % max_per_file == 0:
-                if file:
-                    file.close()
-                file = gzip.open(
-                    os.path.join(dataset_path, 'tweet-ids-{}.txt.gz'.format(str(file_count).zfill(3))), 'wb')
-                file_count += 1
-            # Write to tweet id file
-            file.write(bytes(hit.meta.id[7:], 'utf-8'))
-            file.write(bytes('\n', 'utf-8'))
-            if (tweet_count + 1) % generate_update_increment == 0:
-                self.update_state(state='PROGRESS',
-                                  meta={'current': tweet_count + 1, 'total': total_tweets,
-                                        'status': '{} of {} tweet ids in {} files'.format(tweet_count + 1, total_tweets,
-                                                                                          file_count)})
-    finally:
-        if file:
-            file.close()
-
-    generate_task_filepath = os.path.join(dataset_path, 'generate_tweet_ids_task.json')
-    if os.path.exists(generate_task_filepath):
-        os.remove(generate_task_filepath)
-
-    return {'current': tweet_count + 1, 'total': total_tweets,
-            'status': 'Completed.'}
-
-
-@celery.task(bind=True)
-def _generate_tweet_json_task(self, dataset_params, total_tweets, dataset_path, max_per_file=None,
-                              generate_update_increment=None):
-    max_per_file = max_per_file or 1000000
-    generate_update_increment = generate_update_increment or 10000
-    search = _dataset_params_to_search(dataset_params)
-    search.source(['tweet'])
-
-    # Delete existing files
-    for filename in fnmatch.filter(os.listdir(dataset_path), "tweets-*.json.gz"):
-        os.remove(os.path.join(dataset_path, filename))
-
-    file_count = 1
-    file = None
-    tweet_count = 0
-    try:
-        for tweet_count, hit in enumerate(search.scan()):
-            # This is to support limiting the number of tweets
-            if tweet_count + 1 > total_tweets:
-                break
-            # Cycle tweet id files
-            if tweet_count % max_per_file == 0:
-                if file:
-                    file.close()
-                file = gzip.open(
-                    os.path.join(dataset_path, 'tweets-{}.json.gz'.format(str(file_count).zfill(3))), 'wb')
-                file_count += 1
-            # Write to tweet file
-            file.write(bytes(json.dumps(hit.tweet.to_dict()), 'utf-8'))
-            file.write(bytes('\n', 'utf-8'))
-            if (tweet_count + 1) % generate_update_increment == 0:
-                self.update_state(state='PROGRESS',
-                                  meta={'current': tweet_count + 1, 'total': total_tweets,
-                                        'status': '{} of {} tweets in {} files'.format(tweet_count + 1, total_tweets,
-                                                                                       file_count)})
-    finally:
-        if file:
-            file.close()
-
-    generate_task_filepath = os.path.join(dataset_path, 'generate_tweet_json_task.json')
-    if os.path.exists(generate_task_filepath):
-        os.remove(generate_task_filepath)
-
-    return {'current': tweet_count + 1, 'total': total_tweets,
-            'status': 'Completed.'}
-
-
-@celery.task(bind=True)
-def _generate_mentions_task(self, dataset_params, total_tweets, dataset_path, max_per_file=None,
-                            generate_update_increment=None):
-    max_per_file = max_per_file or 1000000
-    generate_update_increment = generate_update_increment or 10000
-
-    search = _dataset_params_to_search(dataset_params)
-    search.source(['mention_user_ids', 'user_id'])
-
-    # Delete existing files
-    for filename in fnmatch.filter(os.listdir(dataset_path), "mention-edges-*.csv.gz"):
-        os.remove(os.path.join(dataset_path, filename))
-
-    # Create db
-    db_filepath = os.path.join(dataset_path, "mentions.db")
-    if os.path.exists(db_filepath):
-        os.remove(db_filepath)
-    conn = sqlite3.connect(db_filepath)
-    with conn:
-        conn.execute('create table user_ids (user_id primary key);')
-
-    file_count = 1
-    edges_file = None
-    nodes_file = gzip.open(os.path.join(dataset_path, 'mention-nodes.csv.gz'), 'wb')
-    mention_count = 0
-    tweet_count = 0
-    try:
-        for tweet_count, hit in enumerate(search.scan()):
-            # This is to support limiting the number of tweets
-            if tweet_count + 1 > total_tweets:
-                break
-            # Cycle tweet id files
-            if tweet_count % max_per_file == 0:
-                if edges_file:
-                    edges_file.close()
-                edges_file = gzip.open(
-                    os.path.join(dataset_path, 'mention-edges-{}.csv.gz'.format(str(file_count).zfill(3))), 'wb')
-                file_count += 1
-            # Write to mentions to file
-            if hasattr(hit, 'mention_user_ids'):
-                for i, mention_user_id in enumerate(hit.mention_user_ids):
-                    mention_count += 1
-                    # Write mention user id (edge)
-                    edges_file.write(bytes(','.join([hit.user_id, mention_user_id]), 'utf-8'))
-                    edges_file.write(bytes('\n', 'utf-8'))
-
-                    # Possibly write mention user id to mention screen name (node)
-                    try:
-                        with conn:
-                            conn.execute('insert into user_ids(user_id) values (?);', (mention_user_id,))
-                        nodes_file.write(bytes(','.join([mention_user_id, hit.mention_screen_names[i]]), 'utf-8'))
-                        nodes_file.write(bytes('\n', 'utf-8'))
-                    except sqlite3.IntegrityError:
-                        # A dupe, so skipping writing to nodes file
-                        pass
-
-            if (tweet_count + 1) % generate_update_increment == 0:
-                self.update_state(state='PROGRESS',
-                                  meta={'current': tweet_count + 1, 'total': total_tweets,
-                                        'status': '{} of {} tweets contains {} mentions in {} files'.format(
-                                            tweet_count + 1, total_tweets,
-                                            mention_count, file_count)})
-    finally:
-        if edges_file:
-            edges_file.close()
-        nodes_file.close()
-
-    generate_task_filepath = os.path.join(dataset_path, 'generate_mentions_task.json')
-    if os.path.exists(generate_task_filepath):
-        os.remove(generate_task_filepath)
-    conn.close()
-    os.remove(db_filepath)
-
-    return {'current': tweet_count + 1, 'total': total_tweets,
-            'status': 'Completed.'}
-
-
-@celery.task(bind=True)
-def _generate_top_mentions_task(self, dataset_params, total_tweets, dataset_path, max_per_file=None,
-                                generate_update_increment=None):
-    max_per_file = max_per_file or 1000000
-    generate_update_increment = generate_update_increment or 10000
-
-    search = _dataset_params_to_search(dataset_params)
-    search.source(['mention_user_ids', 'user_id'])
-
-    # Delete existing files
-    for filename in fnmatch.filter(os.listdir(dataset_path), "top-mentions-*.csv.gz"):
-        os.remove(os.path.join(dataset_path, filename))
-
-    # Create db
-    db_filepath = os.path.join(dataset_path, "top-mentions.db")
-    if os.path.exists(db_filepath):
-        os.remove(db_filepath)
-    conn = sqlite3.connect(db_filepath)
-    with conn:
-        conn.execute('create table mentions(user_id primary key, screen_name text, mention_count int);')
-
-    self.update_state(state='PROGRESS',
-                      meta={'current': 0, 'total': 1,
-                            'status': 'Querying'})
-
-    mention_count = 0
-    total_user_count = 0
-    buf = dict()
-    for tweet_count, hit in enumerate(search.scan()):
-        # This is to support limiting the number of tweets
-        if tweet_count + 1 > total_tweets:
-            break
-        if hasattr(hit, 'mention_user_ids'):
-            for i, mention_user_id in enumerate(hit.mention_user_ids):
-                mention_count += 1
-                mention_screen_name = hit.mention_screen_names[i]
-
-                if mention_user_id in buf:
-                    buf[mention_user_id][0] += 1
-                else:
-                    cur = conn.cursor()
-                    cur.execute('update mentions set mention_count=mention_count+1 where user_id=?', (mention_user_id,))
-                    if not cur.rowcount:
-                        buf[mention_user_id] = [1, mention_screen_name]
-                    conn.commit()
-
-                if len(buf) and len(buf) % 1000 == 0:
-                    with conn:
-                        conn.executemany('insert into mentions(user_id, screen_name, mention_count) values (?, ?, ?);',
-                                         _mention_iter(buf))
-                    total_user_count += len(buf)
-                    buf = dict()
-
-        if (tweet_count + 1) % generate_update_increment == 0:
-            self.update_state(state='PROGRESS',
-                              meta={'current': tweet_count + 1, 'total': total_tweets,
-                                    'status': 'Counted {} mentions in {} of {} tweets'.format(
-                                        mention_count, tweet_count + 1, total_tweets)})
-
-    # Final write of buffer
-    if len(buf):
-        with conn:
-            conn.executemany('insert into mentions(user_id, screen_name, mention_count) values (?, ?, ?);',
-                             _mention_iter(buf))
-        total_user_count += len(buf)
-
-    file_count = 1
-    file = None
-    try:
-        cur = conn.cursor()
-        for user_count, row in enumerate(
-                cur.execute("select user_id, screen_name, mention_count from mentions order by mention_count desc")):
-            # Cycle tweet id files
-            if user_count % max_per_file == 0:
-                if file:
-                    file.close()
-                file = gzip.open(
-                    os.path.join(dataset_path, 'top-mentions-{}.csv.gz'.format(str(file_count).zfill(3))), 'wb')
-                file_count += 1
-            # Write to mentions to file
-            file.write(bytes(','.join([row[0], row[1], str(row[2])]), 'utf-8'))
-            file.write(bytes('\n', 'utf-8'))
-
-            if (user_count + 1) % generate_update_increment == 0:
-                app.logger.info(user_count)
-                self.update_state(state='PROGRESS',
-                                  meta={'current': user_count + 1, 'total': total_user_count,
-                                        'status': '{} of {} mentioners in {} files'.format(
-                                            user_count + 1, total_user_count, file_count)})
-    finally:
-        if file:
-            file.close()
-
-    generate_task_filepath = os.path.join(dataset_path, 'generate_top_mentions_task.json')
-    if os.path.exists(generate_task_filepath):
-        os.remove(generate_task_filepath)
-    conn.close()
-    os.remove(db_filepath)
-
-    return {'current': user_count + 1, 'total': total_user_count,
-            'status': 'Completed.'}
-
-
-def _mention_iter(buf):
-    for mention_user_id, (count, screen_name) in buf.items():
-        yield mention_user_id, screen_name, count
-
-
 def _oembed(tweet_id):
     """
     Returns the HTML snippet for embedding the tweet.
@@ -804,13 +416,13 @@ class OembedException(Exception):
     pass
 
 
-def _is_local_mode(request):
+def _is_local_mode(req):
     """
     Returns true if the user is in local mode. Otherwise, user is in public mode.
     """
     # If in debug, can be set with is_local query parameter
-    if app.config['DEBUG'] and 'is_local' in request.args:
-        return request.args.get('is_local', 'false').lower() == 'true'
+    if app.config['DEBUG'] and 'is_local' in req.args:
+        return req.args.get('is_local', 'false').lower() == 'true'
 
     # Use configured server mode for local and public
     if app.config['SERVER_MODE'] == 'local':
@@ -818,28 +430,28 @@ def _is_local_mode(request):
     elif app.config['SERVER_MODE'] == 'public':
         return False
 
-    return _is_local(request)
+    return _is_local(req)
 
 
-def _is_local(request):
+def _is_local(req):
     """
     Returns true if user is in configured IP ranges.
     """
-    ip_address = ipaddress.ip_address(_get_ipaddr(request))
+    ip_address = ipaddress.ip_address(_get_ipaddr(req))
     for ip_range in ip_ranges:
         if ip_address in ip_range:
             return True
 
 
-def _get_ipaddr(request):
+def _get_ipaddr(req):
     """
     Return the ip address for the current request (or 127.0.0.1 if none found)
     based on the X-Forwarded-For headers.
     """
-    if request.access_route:
-        return request.access_route[0]
+    if req.access_route:
+        return req.access_route[0]
     else:
-        return request.remote_addr or '127.0.0.1'
+        return req.remote_addr or '127.0.0.1'
 
 
 @app.template_filter('nf')
@@ -847,4 +459,33 @@ def number_format_filter(num):
     """
     A filter for formatting numbers with commas.
     """
-    return '{:,}'.format(num)
+    return '{:,}'.format(num) if num else 0
+
+
+# Task
+@celery.task(bind=True)
+def _generate_tweet_ids_task(self, dataset_params, total_tweets, dataset_path, max_per_file=None,
+                             generate_update_increment=None):
+    return tasks.generate_tweet_ids_task(self, dataset_params, total_tweets, dataset_path=dataset_path,
+                                         max_per_file=max_per_file, generate_update_increment=generate_update_increment)
+
+
+@celery.task(bind=True)
+def _generate_tweet_json_task(self, dataset_params, total_tweets, dataset_path, max_per_file=None,
+                              generate_update_increment=None):
+    return tasks.generate_tweet_json_task(self, dataset_params, total_tweets, dataset_path, max_per_file,
+                                          generate_update_increment)
+
+
+@celery.task(bind=True)
+def _generate_mentions_task(self, dataset_params, total_tweets, dataset_path, max_per_file=None,
+                            generate_update_increment=None):
+    return tasks.generate_mentions_task(self, dataset_params, total_tweets, dataset_path, max_per_file,
+                                        generate_update_increment)
+
+
+@celery.task(bind=True)
+def _generate_top_mentions_task(self, dataset_params, total_tweets, dataset_path, max_per_file=None,
+                                generate_update_increment=None):
+    return tasks.generate_top_mentions_task(self, dataset_params, total_tweets, dataset_path, max_per_file,
+                                            generate_update_increment)
