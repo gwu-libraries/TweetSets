@@ -47,7 +47,7 @@
         <div class="well well-sm">Link for this dataset: <a href="{{ request.base_url }}">{{ request.base_url }}</a></div>
     {% endif %}
 
-    {% if tweet_id_task_id or mentions_task_id or top_mentions_task_id or tweet_json_task_id %}
+    {% if tweet_id_task_id or mentions_task_id or top_mentions_task_id or tweet_json_task_id or tweet_csv_task_id %}
        <script>
             function update_progress(url, progressBar, progressBarStatus) {
                 // send GET request to status URL
@@ -99,6 +99,19 @@
                         <script>
                             $( document ).ready(function() {
                                 update_progress('/status/{{ tweet_json_task_id }}', $('#progressBarTweetJson'), $('#progressBarStatusTweetJson'));
+                            });
+                        </script>
+                    {% endif %}
+                    {% if tweet_csv_task_id %}
+                        <h3>Tweet CSV</h3>
+                        <div class="progress">
+                            <div id="progressBarTweetCsv" class="progress-bar" role="progressbar" aria-valuenow="45" aria-valuemin="0" aria-valuemax="100" style="width: 0%">
+                            </div>
+                        </div>
+                        <p id="progressBarStatusTweetCsv" />
+                        <script>
+                            $( document ).ready(function() {
+                                update_progress('/status/{{ tweet_csv_task_id }}', $('#progressBarTweetCsv'), $('#progressBarStatusTweetCsv'));
                             });
                         </script>
                     {% endif %}
@@ -434,6 +447,12 @@
                                                 <p class="help-block">Generate files containing the tweet JSON of the dataset.</p>
                                             </form>
                                         {% endif %}
+                                        {% if is_local_mode and not tweet_csv_task_id %}
+                                            <form class="form-horizontal" action="{{ url_for('dataset', dataset_id=dataset_id) }}" method="POST">
+                                                <button type="submit" name="generate_tweet_csv" value="true" class="btn btn-primary">Generate tweet CSV</button>
+                                                <p class="help-block">Generate files containing tweet text and select metadata in CSV (can be used with Excel).</p>
+                                            </form>
+                                        {% endif %}
                                         {% if not tweet_id_task_id %}
                                             <form class="form-horizontal" action="{{ url_for('dataset', dataset_id=dataset_id) }}" method="POST">
                                                 <button type="submit" name="generate_tweet_ids" value="true" class="btn btn-primary">Generate tweet ids</button>
@@ -482,6 +501,20 @@
                                 <div class="panel-body">
                                     <ul class="list-group">
                                     {% for filename in tweet_json_filenames %}
+                                        <li class="list-group-item"><a href="{{ url_for('dataset_file', dataset_id=dataset_id, filename=filename) }}">{{ filename }}</a></li>
+                                    {% endfor %}
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+                    {% if tweet_csv_filenames %}
+                        <div class="row">
+                            <div class="panel panel-default" id="tweetCsvFiles">
+                                <div class="panel-heading"><h2 class="panel-title">Generated tweet CSV files</h2></div>
+                                <div class="panel-body">
+                                    <ul class="list-group">
+                                    {% for filename in tweet_csv_filenames %}
                                         <li class="list-group-item"><a href="{{ url_for('dataset_file', dataset_id=dataset_id, filename=filename) }}">{{ filename }}</a></li>
                                     {% endfor %}
                                     </ul>

@@ -2,6 +2,11 @@ version: '2'
 services:
   elasticsearch:
       image: docker.elastic.co/elasticsearch/elasticsearch:5.5.2
+      logging:
+          driver: json-file
+          options:
+              max-size: ${DOCKER_LOG_MAX_SIZE}
+              max-file: ${DOCKER_LOG_MAX_FILE}
       ulimits:
         memlock:
           soft: -1
@@ -27,6 +32,11 @@ services:
         - TZ
   redis:
       image: redis:3.0.7
+      logging:
+          driver: json-file
+          options:
+              max-size: ${DOCKER_LOG_MAX_SIZE}
+              max-file: ${DOCKER_LOG_MAX_FILE}
       command: --appendonly yes
       volumes:
           - ${TWEETSETS_DATA_PATH}/redis:/data
@@ -37,6 +47,11 @@ services:
   # For production
   server:
       image: justinlittman/tweetsets-server
+      logging:
+          driver: json-file
+          options:
+              max-size: ${DOCKER_LOG_MAX_SIZE}
+              max-file: ${DOCKER_LOG_MAX_FILE}
       links:
         - redis:redis
         - elasticsearch:elasticsearch
@@ -66,6 +81,11 @@ services:
   # For development
 #  server-flaskrun:
 #      image: justinlittman/tweetsets-flaskrun
+#      logging:
+#          driver: json-file
+#          options:
+#              max-size: ${DOCKER_LOG_MAX_SIZE}
+#              max-file: ${DOCKER_LOG_MAX_FILE}
 #      links:
 #        - redis:redis
 #        - elasticsearch:elasticsearch
@@ -85,6 +105,11 @@ services:
   # This can be duplicated for multiple workers
   worker1:
       image: justinlittman/tweetsets-worker
+      logging:
+          driver: json-file
+          options:
+              max-size: ${DOCKER_LOG_MAX_SIZE}
+              max-file: ${DOCKER_LOG_MAX_FILE}
       links:
         - redis:redis
         - elasticsearch:elasticsearch
@@ -98,6 +123,11 @@ services:
   # This will exit. That's OK.
   loader:
       image: justinlittman/tweetsets-loader
+      logging:
+          driver: json-file
+          options:
+              max-size: ${DOCKER_LOG_MAX_SIZE}
+              max-file: ${DOCKER_LOG_MAX_FILE}
       links:
         - elasticsearch:elasticsearch
       volumes:
@@ -112,6 +142,11 @@ services:
 #    # For more information on configuration of nginx-proxy, see https://github.com/jwilder/nginx-proxy
 #  nginx-proxy:
 #      image: jwilder/nginx-proxy
+#      logging:
+#          driver: json-file
+#          options:
+#              max-size: ${DOCKER_LOG_MAX_SIZE}
+#              max-file: ${DOCKER_LOG_MAX_FILE}
 #      ports:
 #        - "443:443"
 #        - "80:80"
