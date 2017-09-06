@@ -57,6 +57,8 @@ Note:
 
         docker-compose up -d
 
+For HTTPS support, uncomment and configure the nginx-proxy container in `docker-compose.yml`.
+
 ### Cluster installation
 #### Master
 1. Create data directories on a volume with adequate storage:
@@ -82,6 +84,8 @@ Note:
 6. Bring up the containers:
 
         docker-compose up -d
+
+For HTTPS support, uncomment and configure the nginx-proxy container in `docker-compose.yml`.
 
 #### Worker
 1. Create data directories on a volume with adequate storage:

@@ -69,6 +69,9 @@ services:
         - TZ
         - SERVER_MODE
         - IP_RANGE
+        # For ngninx-proxy
+        - VIRTUAL_HOST=${HOSTNAME}
+        - VIRTUAL_PORT=${SERVER_PORT}
   # For development
 #  server-flaskrun:
       image: justinlittman/tweetsets-flaskrun
@@ -120,7 +123,26 @@ services:
       networks:
         - tweetsets
       environment:
-       - TZ
-       - STORE_TWEET
+        - TZ
+        - STORE_TWEET
+#    # For running with HTTPS
+#    # When using this set SERVER_PORT in .env to 8080. Also, make sure HOSTNAME is set correctly.
+#    # For more information on configuration of nginx-proxy, see https://github.com/jwilder/nginx-proxy
+#  nginx-proxy:
+#      image: jwilder/nginx-proxy
+#      ports:
+#        - "443:443"
+#        - "80:80"
+#      networks:
+#        - tweetsets
+#      environment:
+#        - DEFAULT_HOST=${HOSTNAME}
+#      volumes:
+#        - /var/run/docker.sock:/tmp/docker.sock:ro
+#        # This should point to your local key and certificate
+#        # Make sure in the cert that the server cert comes before the intermediate certs.
+#        - "./server.crt:/etc/nginx/certs/${HOSTNAME}.crt"
+#        - "./server.key:/etc/nginx/certs/${HOSTNAME}.key"
+#      restart: always
 networks:
   tweetsets:
