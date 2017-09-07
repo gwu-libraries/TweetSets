@@ -215,24 +215,28 @@ def generate_top_mentions_task(self, dataset_params, total_tweets, dataset_path,
             break
         if hasattr(hit, 'mention_user_ids'):
             for i, mention_user_id in enumerate(hit.mention_user_ids):
-                mention_count += 1
-                mention_screen_name = hit.mention_screen_names[i]
+                # Encountered unexpected blank user ids
+                if mention_user_id:
+                    mention_count += 1
+                    mention_screen_name = hit.mention_screen_names[i]
 
-                if mention_user_id in buf:
-                    buf[mention_user_id][0] += 1
-                else:
-                    cur = conn.cursor()
-                    cur.execute('update mentions set mention_count=mention_count+1 where user_id=?', (mention_user_id,))
-                    if not cur.rowcount:
-                        buf[mention_user_id] = [1, mention_screen_name]
-                    conn.commit()
+                    if mention_user_id in buf:
+                        buf[mention_user_id][0] += 1
+                    else:
+                        cur = conn.cursor()
+                        cur.execute('update mentions set mention_count=mention_count+1 where user_id=?',
+                                    (mention_user_id,))
+                        if not cur.rowcount:
+                            buf[mention_user_id] = [1, mention_screen_name]
+                        conn.commit()
 
-                if len(buf) and len(buf) % 1000 == 0:
-                    with conn:
-                        conn.executemany('insert into mentions(user_id, screen_name, mention_count) values (?, ?, ?);',
-                                         _mention_iter(buf))
-                    total_user_count += len(buf)
-                    buf = dict()
+                    if len(buf) and len(buf) % 1000 == 0:
+                        with conn:
+                            conn.executemany(
+                                'insert into mentions(user_id, screen_name, mention_count) values (?, ?, ?);',
+                                _mention_iter(buf))
+                        total_user_count += len(buf)
+                        buf = dict()
 
         if (tweet_count + 1) % generate_update_increment == 0:
             self.update_state(state='PROGRESS',
