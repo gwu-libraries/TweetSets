@@ -30,6 +30,7 @@ services:
         - xpack.security.enabled=false
         - node.master=true
         - TZ
+      restart: always
   redis:
       image: redis:3.0.7
       logging:
@@ -44,6 +45,7 @@ services:
         - tweetsets
       environment:
        - TZ
+      restart: always
   # For production
   server:
       image: justinlittman/tweetsets-server
@@ -81,6 +83,7 @@ services:
         - ADMIN_EMAIL
         - USE_TLS
         - HOST=${HOSTNAME}
+      restart: always
   # For development
 #  server-flaskrun:
 #      image: justinlittman/tweetsets-flaskrun
@@ -108,8 +111,7 @@ services:
 #        - TZ
 #        - SERVER_MODE
 #        - IP_RANGE
-  # This can be duplicated for multiple workers
-  worker1:
+  worker:
       image: justinlittman/tweetsets-worker
       logging:
           driver: json-file
@@ -126,6 +128,7 @@ services:
       environment:
         - LOGGING_LEVEL=${WORKER_LOGGING_LEVEL}
         - TZ
+      restart: always
   # This will exit. That's OK.
   loader:
       image: justinlittman/tweetsets-loader

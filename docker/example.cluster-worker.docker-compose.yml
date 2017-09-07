@@ -29,5 +29,6 @@ services:
         - xpack.security.enabled=false
         - node.master=false
         - TZ
+      restart: always
 networks:
   tweetsets:

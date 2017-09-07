@@ -25,6 +25,7 @@ services:
         - "ES_JAVA_OPTS=-Xms${ES_JAVA_MEM} -Xmx${ES_JAVA_MEM}"
         - xpack.security.enabled=false
         - TZ
+      restart: always
   elasticsearch2:
       image: docker.elastic.co/elasticsearch/elasticsearch:5.4.0
       container_name: elasticsearch2
@@ -50,6 +51,7 @@ services:
         - "discovery.zen.ping.unicast.hosts=elasticsearch1"
         - xpack.security.enabled=false
         - TZ
+      restart: always
   redis:
       image: redis:3.0.7
       logging:
@@ -64,6 +66,7 @@ services:
         - tweetsets
       environment:
        - TZ
+      restart: always
   # For production
   server:
       image: justinlittman/tweetsets-server
@@ -104,6 +107,7 @@ services:
         - ADMIN_EMAIL
         - USE_TLS
         - HOST=${HOSTNAME}
+      restart: always
   # For development
 #  server-flaskrun:
       image: justinlittman/tweetsets-flaskrun
@@ -134,8 +138,7 @@ services:
 #        - TZ
 #        - SERVER_MODE
 #        - IP_RANGE
-  # This can be duplicated for multiple workers
-  worker1:
+  worker:
       image: justinlittman/tweetsets-worker
 #      build:
 #          context: ..
@@ -155,6 +158,7 @@ services:
       environment:
         - LOGGING_LEVEL=${WORKER_LOGGING_LEVEL}
         - TZ
+      restart: always
   # This will exit. That's OK.
   loader:
       image: justinlittman/tweetsets-loader
