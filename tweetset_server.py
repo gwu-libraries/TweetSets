@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, send_file, jsonify, redirect, url_for, flash, make_response, session
 from elasticsearch_dsl import Search, Q
 from elasticsearch_dsl.connections import connections as es_connections
+from elasticsearch.exceptions import ElasticsearchException
 import os
 from celery import Celery
 import requests
@@ -352,6 +353,11 @@ def stats():
                            source_dataset_stats=source_dataset_stats,
                            source_dataset_names=source_dataset_names,
                            derivatives_stats=ts_stats.derivatives_merge_stats(since_datetime=since))
+
+
+@app.errorhandler(ElasticsearchException)
+def handle_bad_request(e):
+    return render_template('es_error.html')
 
 
 def _prepare_dataset_view(dataset_params):
