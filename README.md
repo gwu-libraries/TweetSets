@@ -53,7 +53,12 @@ Note:
         cp example.env .env
 
 5. Edit `.env`. This file is annotated to help you select appropriate values.
-6. Bring up the containers:
+6. Create `dataset_list_msg.txt`. The contents of this file will be displayed on the dataset list page. It can 
+be used to list other datasets that are available, but not yet loaded. If leaving the file empty then:
+
+        touch dataset_list_msg.txt
+
+7. Bring up the containers:
 
         docker-compose up -d
 
@@ -81,7 +86,12 @@ For HTTPS support, uncomment and configure the nginx-proxy container in `docker-
         cp example.env .env
 
 5. Edit `.env`. This file is annotated to help you select appropriate values.
-6. Bring up the containers:
+6. Create `dataset_list_msg.txt`. The contents of this file will be displayed on the dataset list page. It can 
+be used to list other datasets that are available, but not yet loaded. If leaving the file empty then:
+
+        touch dataset_list_msg.txt
+
+7. Bring up the containers:
 
         docker-compose up -d
 

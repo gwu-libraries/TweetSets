@@ -106,6 +106,7 @@ ENV/
 # Docker files
 docker/docker-compose.yml
 docker/.env
+docker/dataset_list_msg.txt
 
 # OS X
 .DS_Store

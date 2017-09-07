@@ -29,6 +29,14 @@
             <p class="help-block">Select the source datasets from which to create a new dataset.</p>
         </div>
     </div>
+    {% if dataset_list_msg %}
+    <div class="row">
+        <div class="alert alert-info alert-dismissible" role="alert">
+          <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+          {{ dataset_list_msg | safe}}
+        </div>
+    </div>
+    {% endif %}
     <div class="row">
         <form class="form-horizontal" action="{{ url_for('limit_dataset') }}" method="POST">
             <div class="panel-group" id="accordion" role="tablist" aria-multiselectable="true">

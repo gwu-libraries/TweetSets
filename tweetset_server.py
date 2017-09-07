@@ -91,7 +91,13 @@ def dataset_list():
     if not _is_local_mode(request):
         search = search.filter('term', local_only=False)
 
+    dataset_list_msg = None
+    if os.path.exists('dataset_list_msg.txt'):
+        with open('dataset_list_msg.txt') as f:
+            dataset_list_msg = f.read()
+
     return render_template('dataset_list.html',
+                           dataset_list_msg=dataset_list_msg,
                            is_local_mode=_is_local_mode(request),
                            server_mode=app.config['SERVER_MODE'],
                            datasets=search.execute(),
