@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block css %}
+<style>
+    img {
+        border:2px solid #eee;
+    }
+</style>
+{% endblock %}
+{% block body %}
+<div class="container">
+    <div class="row">
+        <h2>Step-by-step guide to TweetSets</h2>
+        <br />
+        <div class="panel panel-info">
+            <div class="panel-heading"><h3>Step 1: Select one or more source datasets and click Select.</h3></div>
+            <div class="panel-body">
+                <img src="{{ url_for('static', filename='images/help/select_source_dataset.png') }}" />
+                <h4>Tip: Click on a dataset name to get more information.</h4>
+                <img src="{{ url_for('static', filename='images/help/source_dataset_info.png') }}" />
+            </div>
+        </div>
+        <div class="panel panel-info">
+            <div class="panel-heading"><h3>Step 2: Limit the dataset by entering on keywords, hashtags, and other parameters and then click Preview. Repeat until you've created the desired dataset.</h3></div>
+            <div class="panel-body">
+                <img src="{{ url_for('static', filename='images/help/source_dataset_info.png') }}" />
+                <h4>Tip: For stats on your dataset, see the Dataset statistics tab.</h4>
+                <img src="{{ url_for('static', filename='images/help/dataset_statistics.png') }}" />
+                <h4>Tip: To view some sample tweets, see the Sample tweets tab.</h4>
+                <img src="{{ url_for('static', filename='images/help/sample_tweets.png') }}" />
+            </div>
+        </div>
+        <div class="panel panel-info">
+            <div class="panel-heading"><h3>Step 3: Click Create dataset to create the dataset.</h3></div>
+            <div class="panel-body">
+                <p>This freezes the dataset parameters.</p>
+                <h4>Tip: Your dataset now has a URL.</h4>
+                <img src="{{ url_for('static', filename='images/help/dataset_link.png') }}" />
+                <h4>Tip: You can find your datasets under Previous datasets.</h4>
+                <img src="{{ url_for('static', filename='images/help/previous_datasets.png') }}" />
+            </div>
+        </div>
+        <div class="panel panel-info">
+            <div class="panel-heading"><h3>Step 4: From the Dataset derivatives tab, generate and download dataset derivatives.</h3></div>
+            <div class="panel-body">
+                <img src="{{ url_for('static', filename='images/help/derivative_actions.png') }}" />
+                <h4>Tip: Be patient. These make take a while.</h4>
+                <img src="{{ url_for('static', filename='images/help/progress.png') }}" />
+                <h4>Ready for download.</h4>
+                <img src="{{ url_for('static', filename='images/help/derivative_files.png') }}" />
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
