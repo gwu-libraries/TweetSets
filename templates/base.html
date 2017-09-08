@@ -7,6 +7,8 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='bootstrap/3.3.7/css/bootstrap-theme.min.css') }}" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp">
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='datatables/1.10.15/css/jquery.dataTables.min.css') }}"/>
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='datatables/1.10.15/css/dataTables.bootstrap.min.css') }}"/>
+    {% block css %}
+    {% endblock %}
 
     <!-- Latest compiled and minified JavaScript -->
     <script src="{{ url_for('static', filename='jquery/1.12.4/jquery.min.js') }}"></script>
@@ -27,7 +29,7 @@
             <div class="row">
                 <footer>
                     <hr>
-                    <a href="{{ url_for('about') }}">Home</a>  |  <a href="{{ url_for('stats') }}">Statistics</a>  |  <a href="https://github.com/justinlittman/TweetSets">Github</a>  |  <a href="mailto:justinlittman@gwu.edu">Contact</a>
+                    <a href="{{ url_for('about') }}">Home</a>  |  <a href="{{ url_for('help') }}">Help</a>  |  <a href="{{ url_for('stats') }}">Statistics</a>  |  <a href="https://github.com/justinlittman/TweetSets">Github</a>  |  <a href="mailto:justinlittman@gwu.edu">Contact</a>
                 </footer>
             </div>
         </div>

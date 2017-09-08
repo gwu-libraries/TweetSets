@@ -355,6 +355,11 @@ def stats():
                            derivatives_stats=ts_stats.derivatives_merge_stats(since_datetime=since))
 
 
+@app.route('/help')
+def help():
+    return render_template('help.html')
+
+
 @app.errorhandler(ElasticsearchException)
 def handle_bad_request(e):
     return render_template('es_error.html')
