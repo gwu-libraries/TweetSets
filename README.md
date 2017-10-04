@@ -147,14 +147,12 @@ To see other loader commands:
 ## TODO
 * Loading:
   * Hydration of tweet ids lists.
-  * Normalize http/https in urls.
 * Limiting:
   * Limit by mention user ids, screen names
   * Limit by user ids, screen names
   * Limit by verified users
 * Scroll additional sample tweets
 * Dataset derivatives:
-  * For local users, generate CSV with key fields.
   * Additional top derivatives:
     * URL
     * Quotes/retweets

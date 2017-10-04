@@ -425,7 +425,7 @@ original_tweet_with_url = {
           28,
           50
         ],
-        "expanded_url": "http://www.gwu.edu/",
+        "expanded_url": "https://www.gwu.edu/",
         "display_url": "gwu.edu"
       }
     ]

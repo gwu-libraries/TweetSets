@@ -136,7 +136,8 @@ def urls(entities, type):
     for url_obj in entities['urls']:
         url = url_obj.get('expanded_url') or url_obj['url']
         if url and (not type == 'quote' or not url.startswith('https://twitter.com/')):
-            urls.append(url.lower())
+            # Normalize to lower case and http
+            urls.append(url.lower().replace('https://', 'http://'))
     return urls
 
 

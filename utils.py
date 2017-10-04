@@ -93,7 +93,8 @@ def dataset_params_to_search(dataset_params):
     if dataset_params.get('url_any'):
         any_q = None
         for url_prefix in re.split(', *', dataset_params['url_any']):
-            any_q = _or(any_q, Q('prefix', urls=url_prefix))
+            # Normalize to lower case and http
+            any_q = _or(any_q, Q('prefix', urls=url_prefix.lower().replace('https://', 'http://')))
         q = _and(q, any_q)
 
     # Has geotag
