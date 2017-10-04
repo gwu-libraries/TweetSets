@@ -207,7 +207,7 @@ if __name__ == '__main__':
         # In testing, 500k tweets (not storing tweet) = 145MB
         # Thus, 138 million tweets per shard to have a max shard size of 40GB
         tweets_per_shard = 32500000 if store_tweet else 138000000
-        shards = args.shards or math.ceil(float(tweet_count) / tweets_per_shard) or 1
+        shards = (args.shards if hasattr(args, 'shards') else None) or math.ceil(float(tweet_count) / tweets_per_shard) or 1
         log.info('Using %s shards for index.', shards)
         create_tweet_index(dataset_id, shards)
 
