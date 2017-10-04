@@ -3,6 +3,7 @@ import uuid
 from datetime import datetime
 import re
 from elasticsearch_dsl import Search, Q
+from models import get_tweets_index_name
 
 
 def write_json(filepath, obj):
@@ -24,13 +25,16 @@ def short_uid(length, exists_func):
 
 
 def dataset_params_to_search(dataset_params):
-    search = Search(index='tweets')
+    indexes = []
+    for source_dataset in dataset_params.get('source_datasets'):
+        indexes.append(get_tweets_index_name(source_dataset))
+    search = Search(index=indexes)
 
     # Query
     q = None
-    # Source datasets
-    if dataset_params.get('source_datasets'):
-        q = _and(q, Q('terms', dataset_id=dataset_params.get('source_datasets')))
+    # # Source datasets
+    # if dataset_params.get('source_datasets'):
+    #     q = _and(q, Q('terms', dataset_id=dataset_params.get('source_datasets')))
     # Text
     if dataset_params.get('tweet_text_all'):
         for term in re.split(', *', dataset_params['tweet_text_all']):

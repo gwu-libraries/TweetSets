@@ -42,7 +42,6 @@ def to_dataset(dataset_json, dataset=None, dataset_id=None):
 
 
 class TweetDocType(DocType):
-    tweet_id = Keyword()
     dataset_id = Keyword()
     text = Text()
     tweet_type = Keyword()
@@ -63,7 +62,6 @@ class TweetDocType(DocType):
 
     class Meta:
         all = MetaField(enabled=False)
-        index = 'tweets'
         # Exclude storing the text field
         source = MetaField(excludes=['text'])
 
@@ -72,8 +70,8 @@ def to_tweet(tweet_json, dataset_id, store_tweet=False):
     entities = tweet_json.get('extended_tweet', {}).get('entities') or tweet_json['entities']
 
     tweet = TweetDocType()
-    tweet.meta.id = ':'.join([dataset_id, tweet_json['id_str']])
-    tweet.tweet_id = tweet_json['id_str']
+    tweet.meta.id = tweet_json['id_str']
+    tweet.meta.index = get_tweets_index_name(dataset_id)
     tweet.dataset_id = dataset_id
     type = tweet_type(tweet_json)
     tweet.tweet_type = type
@@ -142,14 +140,24 @@ def urls(entities, type):
 
 
 class TweetIndex(Index):
-    def __init__(self):
-        Index.__init__(self, 'tweets')
+    def __init__(self, dataset_id, shards=1):
+        Index.__init__(self, get_tweets_index_name(dataset_id))
+        self.settings(
+            number_of_shards=shards
+        )
         # register a doc_type with the index
         self.doc_type(TweetDocType)
+
+
+def get_tweets_index_name(dataset_id):
+    return 'tweets-{}'.format(dataset_id)
 
 
 class DatasetIndex(Index):
     def __init__(self):
         Index.__init__(self, 'datasets')
+        self.settings(
+            number_of_shards=1
+        )
         # register a doc_type with the index
         self.doc_type(DatasetDocType)

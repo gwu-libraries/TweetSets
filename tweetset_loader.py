@@ -11,8 +11,9 @@ from datetime import datetime
 from time import sleep
 import os
 import itertools
+import math
 
-from models import TweetIndex, to_tweet, DatasetIndex, to_dataset, DatasetDocType
+from models import TweetIndex, to_tweet, DatasetIndex, to_dataset, DatasetDocType, get_tweets_index_name
 from utils import read_json, short_uid
 
 log = logging.getLogger(__name__)
@@ -87,6 +88,17 @@ def _chunker(iterable, chunk_size=500):
         yield chunk
 
 
+def delete_tweet_index(dataset_identifier):
+    tweet_index = TweetIndex(dataset_identifier)
+    tweet_index.delete(ignore=404)
+    log.info('Deleted tweets from {}'.format(dataset_identifier))
+
+
+def create_tweet_index(dataset_id, shards):
+    tweet_index = TweetIndex(dataset_id, shards=shards)
+    tweet_index.create(ignore=400)
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('tweetset_loader')
     parser.add_argument('--debug', action='store_true')
@@ -97,6 +109,7 @@ if __name__ == '__main__':
     create_parser = subparsers.add_parser('create', help='create a dataset')
     create_parser.add_argument('--path', help='path of dataset', default='/dataset')
     create_parser.add_argument('--filename', help='filename of dataset file', default='dataset.json')
+    create_parser.add_argument('--shards', type=int, help='number of shards for this dataset')
 
     update_parser = subparsers.add_parser('update', help='update dataset metadata')
     update_parser.add_argument('dataset_identifier', help='identifier (a UUID) for the dataset')
@@ -122,6 +135,7 @@ if __name__ == '__main__':
     dataset_parser.add_argument('--limit', type=int, help='limit the number of tweets to load')
     dataset_parser.add_argument('--skip-count', action='store_true', help='skip count the tweets')
     dataset_parser.add_argument('--store-tweet', action='store_true', help='store the entire tweet')
+    dataset_parser.add_argument('--shards', type=int, help='number of shards for this dataset')
 
     subparsers.add_parser('clear', help='delete all indexes')
 
@@ -141,8 +155,6 @@ if __name__ == '__main__':
     # Create indexs if they doesn't exist
     dataset_index = DatasetIndex()
     dataset_index.create(ignore=400)
-    tweet_index = TweetIndex()
-    tweet_index.create(ignore=400)
 
     dataset_id = None
     if args.command in ('create', 'dataset'):
@@ -152,8 +164,10 @@ if __name__ == '__main__':
                                                                                              ignore=404) is not None))
         dataset.save()
         dataset_id = dataset.meta.id
-        log.info('Created {}'.format(dataset.meta.id))
-        print('Dataset id is {}'.format(dataset.meta.id))
+        log.info('Created {}'.format(dataset_id))
+        print('Dataset id is {}'.format(dataset_id))
+    if args.command == 'create' and args.shards:
+        create_tweet_index(dataset_id, args.shards)
     if args.command == 'update':
         dataset = DatasetDocType.get(args.dataset_identifier)
         if not dataset:
@@ -167,15 +181,9 @@ if __name__ == '__main__':
             raise Exception('{} not found'.format(args.dataset_identifier))
         dataset.delete()
         log.info('Deleted {}'.format(dataset.meta.id))
-        search = Search(index='tweets')
-        search = search.query('term', dataset_id=args.dataset_identifier)
-        search.delete()
-        log.info('Deleted tweets from {}'.format(dataset.meta.id))
+        delete_tweet_index(args.dataset_identifier)
     if args.command == 'truncate':
-        search = Search(index='tweets')
-        search = search.query('term', dataset_id=args.dataset_identifier)
-        search.delete()
-        log.info('Deleted tweets from {}'.format(args.dataset_identifier))
+        delete_tweet_index(args.dataset_identifier)
     if args.command in ('tweets', 'dataset'):
         if dataset_id is None:
             dataset_id = args.dataset_identifier
@@ -187,11 +195,22 @@ if __name__ == '__main__':
             raise Exception('{} not found'.format(dataset_id))
         filepaths = find_files(args.path)
         file_count = count_files(*filepaths)
-        tweet_count = None
+        tweet_count = 0
         if not args.skip_count:
             log.info('Counting tweets in %s files.', file_count)
             tweet_count = count_lines(*filepaths)
             log.info('{:,} total tweets'.format(tweet_count))
+
+        # Create the index
+        # In testing, 500K tweets (storing tweet) = 615MB
+        # Thus, 32.5 million tweets per shard to have a max shard size of 40GB
+        # In testing, 500k tweets (not storing tweet) = 145MB
+        # Thus, 138 million tweets per shard to have a max shard size of 40GB
+        tweets_per_shard = 32500000 if store_tweet else 138000000
+        shards = args.shards or math.ceil(float(tweet_count) / tweets_per_shard) or 1
+        log.info('Using %s shards for index.', shards)
+        create_tweet_index(dataset_id, shards)
+
         # Doing this in chunks so that can retry if error
         connection = connections.get_connection()
         for chunk in _chunker(to_tweet(tweet_json, dataset_id, store_tweet=store_tweet).to_dict(include_meta=True) for
@@ -213,7 +232,7 @@ if __name__ == '__main__':
 
         # Get number of tweets in dataset and update
         sleep(5)
-        search = Search(index='tweets')
+        search = Search(index=get_tweets_index_name(dataset_id))
         search = search.query('term', dataset_id=dataset_id)[0:0]
         search.aggs.metric('created_at_min', 'min', field='created_at')
         search.aggs.metric('created_at_max', 'max', field='created_at')
@@ -225,6 +244,8 @@ if __name__ == '__main__':
         dataset.tweet_count = search_response.hits.total
         dataset.save()
     if args.command == 'clear':
+        search = DatasetDocType.search()
+        for dataset in search.execute():
+            delete_tweet_index(dataset.meta.id)
         dataset_index.delete()
-        tweet_index.delete()
         log.info("Deleted indexes")

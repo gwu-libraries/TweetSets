@@ -142,7 +142,20 @@ the format of the file.
     
 To see other loader commands:
 
-        python dataset_loader.py
+        python tweetset_loader.py
+        
+### Adding to a dataset
+Under the hood, each dataset has its own index. Each index is composed of a number of shards and that number is fixed 
+when the index is created. TweetSets attempts to select the optimal number of shards based on the number
+of tweets. If you add too many tweets to an existing dataset, you may cause sharding problems.
+
+If the total number of tweets in a collection are less than 32.5 million when storing tweets or 138 million
+when not storing tweets, then don't worry about sharding. You can use `python tweetset_loader.py tweets` to
+add more tweets to an existing collection.
+
+If the total number of tweets in a collection is greater than the above limits, then it is recommended to
+delete the collection's index first with `python tweetset_loader truncate` and then reload all tweets with
+`python tweetset_loader.py tweets`.
 
 ## TODO
 * Loading:

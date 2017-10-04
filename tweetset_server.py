@@ -376,7 +376,7 @@ def _prepare_dataset_view(dataset_params):
     sample_tweet_html = []
     oembed_error = False
     for hit in search_response:
-        tweet_id = hit.meta.id[7:]
+        tweet_id = hit.meta.id
         sample_tweet_ids.append(tweet_id)
         if not oembed_error:
             try:
@@ -450,10 +450,10 @@ def _form_to_dataset_params(form):
 def _tweet_count():
     tweet_count_str = redis.get('tweet_count')
     if not tweet_count_str:
-        search = Search(index='tweets')
-        search.query = Q()
-        search_response = search.execute()
-        tweet_count = search_response.hits.total
+        tweet_count = 0
+        search = DatasetDocType.search()
+        for dataset in search.execute():
+            tweet_count += dataset.tweet_count
         redis.set('tweet_count', tweet_count, ex=24 * 60 * 60)
     else:
         tweet_count = int(tweet_count_str)

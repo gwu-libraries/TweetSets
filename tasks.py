@@ -37,7 +37,7 @@ def generate_tweet_ids_task(self, dataset_params, total_tweets, dataset_path, ma
                     os.path.join(dataset_path, 'tweet-ids-{}.txt.gz'.format(str(file_count).zfill(3))), 'wb')
                 file_count += 1
             # Write to tweet id file
-            file.write(bytes(hit.meta.id[7:], 'utf-8'))
+            file.write(bytes(hit.meta.id, 'utf-8'))
             file.write(bytes('\n', 'utf-8'))
             if (tweet_count + 1) % generate_update_increment == 0:
                 self.update_state(state='PROGRESS',
