@@ -453,7 +453,7 @@ def _tweet_count():
         tweet_count = 0
         search = DatasetDocType.search()
         for dataset in search.execute():
-            tweet_count += dataset.tweet_count
+            tweet_count += (dataset.tweet_count or 0)
         redis.set('tweet_count', tweet_count, ex=24 * 60 * 60)
     else:
         tweet_count = int(tweet_count_str)
