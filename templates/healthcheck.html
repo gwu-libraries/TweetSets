@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="container">
+    <div class="row">
+        <h2>Cluster</h2>
+        <table class="table">
+            <thead>
+                <td>Cluster status</td>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>{{ cluster_status | status }}</td>
+                </tr>
+            </tbody>
+        </table>
+        <br />
+        <h2>Nodes</h2>
+        <table class="table">
+            <thead>
+                <td>Name</td>
+                <td>Storage status</td>
+                <td>Total storage</td>
+                <td>Available storage</td>
+            </thead>
+            <tbody>
+                {% for node in nodes %}
+                    <tr>
+                        <td>{{ node.name }}</td>
+                        <td>{{ node.storage_status | status }}</td>
+                        <td>{{ node.total_storage | filesizeformat }}</td>
+                        <td>{{ node.available_storage | filesizeformat }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <br>
+    </div>
+
+</div>
+{% endblock %}

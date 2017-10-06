@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, send_file, jsonify, redirect, url_for, flash, make_response, session
-from elasticsearch_dsl import Search, Q
+from jinja2 import evalcontextfilter, Markup
 from elasticsearch_dsl.connections import connections as es_connections
 from elasticsearch.exceptions import ElasticsearchException
 import os
@@ -11,6 +11,7 @@ import redis as redispy
 from datetime import date, datetime, timedelta
 import json
 import ipaddress
+from collections import namedtuple
 
 from utils import read_json, write_json, short_uid, dataset_params_to_search
 from stats import TweetSetStats
@@ -359,6 +360,47 @@ def stats():
 def help():
     return render_template('help.html')
 
+Node = namedtuple('Node', ['name', 'total_storage', 'available_storage', 'storage_status'])
+
+
+@app.route('/healthcheck')
+def healthcheck():
+    # Return 200 if all green, 503 if any yellow, 500 if any red.
+    cluster_status = 'red'
+    nodes = []
+    statuses = []
+    try:
+        r = requests.get('http://elasticsearch:9200/_cluster/stats', timeout=10)
+        if r:
+            stats = r.json()
+            cluster_status = stats['status']
+            statuses.append(cluster_status)
+        r = requests.get('http://elasticsearch:9200/_nodes/stats/fs', timeout=10)
+        if r:
+            stats = r.json()
+            for _, node_stats in stats['nodes'].items():
+                node_name = node_stats['name']
+                total_storage = node_stats['fs']['total']['total_in_bytes']
+                available_storage = node_stats['fs']['total']['available_in_bytes']
+                available = available_storage / total_storage
+                storage_status = 'green'
+                if .05 < available <= .2:
+                    storage_status = 'yellow'
+                elif available <= .05:
+                    storage_status = 'red'
+                statuses.append(storage_status)
+                nodes.append(Node(node_name, total_storage, available_storage, storage_status))
+    except requests.exceptions.ConnectionError:
+        pass
+    response_code = 200
+    if 'yellow' in statuses:
+        response_code = 503
+    if 'red' in statuses:
+        response_code = 500
+    return render_template('healthcheck.html',
+                           cluster_status=cluster_status,
+                           nodes=nodes), response_code
+
 
 @app.errorhandler(ElasticsearchException)
 def handle_bad_request(e):
@@ -535,6 +577,28 @@ def number_format_filter(num):
     A filter for formatting numbers with commas.
     """
     return '{:,}'.format(num) if num else 0
+
+
+@app.template_filter('status')
+@evalcontextfilter
+def status_filter(eval_ctx, status):
+    """
+    Format a status.
+    """
+    result = None
+    if status:
+        if status.lower() == 'green':
+            result = '<p class="text-success">{}</p>'.format(status)
+        if status.lower() == 'yellow':
+            result = '<p class="text-warning">{}</p>'.format(status)
+        if status.lower() == 'red':
+            result = '<p class="text-danger">{}</p>'.format(status)
+    if result:
+        if eval_ctx.autoescape:
+            return Markup(result)
+        else:
+            return result
+    return status
 
 
 # Task
