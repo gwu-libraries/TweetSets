@@ -34,9 +34,11 @@ app.config['EMAIL_FROM'] = os.environ.get('EMAIL_FROM') or os.environ.get('EMAIL
 app.config['EMAIL_USERNAME'] = os.environ.get('EMAIL_USERNAME')
 app.config['EMAIL_PASSWORD'] = os.environ.get('EMAIL_PASSWORD')
 app.config['ADMIN_EMAIL'] = os.environ.get('ADMIN_EMAIL')
+app.config['ES_TIMEOUT'] = int(os.environ.get('ES_TIMEOUT', '20'))
 
 # ElasticSearch setup
-es_connections.create_connection(hosts=['elasticsearch'], timeout=20)
+es_connections.create_connection(hosts=['elasticsearch'], timeout=app.config['ES_TIMEOUT'])
+app.logger.debug('ElasticSearch timeout is %s', app.config['ES_TIMEOUT'])
 
 # Celery setup
 app.config['CELERY_BROKER_URL'] = 'redis://redis:6379/0'

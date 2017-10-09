@@ -107,6 +107,7 @@ services:
         - ADMIN_EMAIL
         - USE_TLS
         - HOST=${HOSTNAME}
+        - ES_TIMEOUT
       restart: always
   # For development
 #  server-flaskrun:
@@ -138,6 +139,7 @@ services:
 #        - TZ
 #        - SERVER_MODE
 #        - IP_RANGE
+#        - ES_TIMEOUT
   worker:
       image: justinlittman/tweetsets-worker
 #      build:
