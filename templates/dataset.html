@@ -213,6 +213,22 @@
                                         <p class="help-block">Text must contain one of these hashtags (OR). # is optional. Case insensitive.</p>
                                     </div>
                                 </div>
+                                <h4 class="col-sm-offset-1">Mentions</h4>
+                                <div class="form-group">
+                                    <label for="mentionContainsAny" class="col-sm-2 control-label">Contains any</label>
+                                    <div class="col-sm-10">
+                                        <textarea class="form-control" rows="2" id="mentionContainsAny" name="limit_mention_any">{{ limit_mention_any }}</textarea>
+                                        <p class="help-block">Any of these screen names must be mentioned (OR). @ is optional. Case sensitive.</p>
+                                    </div>
+                                </div>
+                                <h4 class="col-sm-offset-1">Posted by</h4>
+                                <div class="form-group">
+                                    <label for="posterContainsAny" class="col-sm-2 control-label">Contains any</label>
+                                    <div class="col-sm-10">
+                                        <textarea class="form-control" rows="2" id="posterContainsAny" name="limit_poster_any">{{ limit_poster_any }}</textarea>
+                                        <p class="help-block">Tweet posted by any of these screen names (OR). @ is optional. Case sensitive.</p>
+                                    </div>
+                                </div>
                                 <h4 class="col-sm-offset-1">Tweet types</h4>
                                 <div class="form-group">
                                     <div class="checkbox col-sm-offset-2">

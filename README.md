@@ -161,8 +161,8 @@ delete the collection's index first with `python tweetset_loader truncate` and t
 * Loading:
   * Hydration of tweet ids lists.
 * Limiting:
-  * Limit by mention user ids, screen names
-  * Limit by user ids, screen names
+  * Limit by mention user ids
+  * Limit by user ids
   * Limit by verified users
 * Scroll additional sample tweets
 * Dataset derivatives:

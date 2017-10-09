@@ -65,6 +65,22 @@ def dataset_params_to_search(dataset_params):
         if hashtags:
             q = _and(q, Q('terms', hashtags=hashtags))
 
+    # Mentions
+    if dataset_params.get('mention_any'):
+        mentions = []
+        for mention in re.split(', *', dataset_params['mention_any']):
+            mentions.append(mention.lstrip('@'))
+        if mentions:
+            q = _and(q, Q('terms', mention_screen_names=mentions))
+
+    # Posted by
+    if dataset_params.get('poster_any'):
+        screen_names = []
+        for screen_name in re.split(', *', dataset_params['poster_any']):
+            screen_names.append(screen_name.lstrip('@'))
+        if screen_names:
+            q = _and(q, Q('terms', user_screen_name=screen_names))
+
     # Tweet types
     tweet_types = []
     if dataset_params.get('tweet_type_original', '').lower() == 'true':
