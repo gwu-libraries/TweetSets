@@ -84,6 +84,7 @@ services:
         - USE_TLS
         - HOST=${HOSTNAME}
         - ES_TIMEOUT
+        - SERVER_TIMEOUT
       restart: always
   # For development
 #  server-flaskrun:
@@ -171,6 +172,9 @@ services:
 #        # Make sure in the cert that the server cert comes before the intermediate certs.
 #        - "./server.crt:/etc/nginx/certs/${HOSTNAME}.crt"
 #        - "./server.key:/etc/nginx/certs/${HOSTNAME}.key"
+#        # To include a custom configuration file for nginx, e.g., to increase proxy timeout.
+#        # See example.vhost.conf.
+#        - "./vhost.conf:/etc/nginx/vhost.d/${HOSTNAME}"
 #      restart: always
 networks:
   tweetsets:
