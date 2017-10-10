@@ -6,7 +6,7 @@ import uuid
 
 
 class DatasetDocType(DocType):
-    name = Text()
+    name = Keyword()
     description = Text()
     tags = Keyword()
     creators = Text()

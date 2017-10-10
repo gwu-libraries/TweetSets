@@ -90,8 +90,7 @@ def about():
 
 @app.route('/datasets')
 def dataset_list():
-    search = DatasetDocType.search()
-    search.sort('name')
+    search = DatasetDocType.search().sort('name')
     if not _is_local_mode(request):
         search = search.filter('term', local_only=False)
 

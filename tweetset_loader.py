@@ -1,7 +1,7 @@
 from elasticsearch_dsl.connections import connections
 from elasticsearch import helpers
 from elasticsearch_dsl import Search
-from elasticsearch.exceptions import ConnectionError
+from elasticsearch.exceptions import ConnectionError, NotFoundError
 from glob import glob
 import gzip
 import logging
@@ -99,6 +99,20 @@ def create_tweet_index(dataset_id, shards):
     tweet_index.create(ignore=400)
 
 
+def update_dataset_stats(dataset):
+    search = Search(index=get_tweets_index_name(dataset.meta.id))
+    search = search.query('term', dataset_id=dataset.meta.id)[0:0]
+    search.aggs.metric('created_at_min', 'min', field='created_at')
+    search.aggs.metric('created_at_max', 'max', field='created_at')
+    search_response = search.execute()
+    dataset.first_tweet_created_at = datetime.utcfromtimestamp(
+        search_response.aggregations.created_at_min.value / 1000.0)
+    dataset.last_tweet_created_at = datetime.utcfromtimestamp(
+        search_response.aggregations.created_at_max.value / 1000.0)
+    dataset.tweet_count = search_response.hits.total
+    dataset.save()
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('tweetset_loader')
     parser.add_argument('--debug', action='store_true')
@@ -115,6 +129,8 @@ if __name__ == '__main__':
     update_parser.add_argument('dataset_identifier', help='identifier (a UUID) for the dataset')
     update_parser.add_argument('--path', help='path of dataset', default='/dataset')
     update_parser.add_argument('--filename', help='filename of dataset file', default='dataset.json')
+    update_parser.add_argument('--stats', action='store_true', help='Also update dataset statistics')
+    update_parser.add_argument('--create', action='store_true', help='Create if does not exist.')
 
     delete_parser = subparsers.add_parser('delete', help='delete dataset and tweets')
     delete_parser.add_argument('dataset_identifier', help='identifier (a UUID) for the dataset')
@@ -169,12 +185,18 @@ if __name__ == '__main__':
     if args.command == 'create' and args.shards:
         create_tweet_index(dataset_id, args.shards)
     if args.command == 'update':
-        dataset = DatasetDocType.get(args.dataset_identifier)
-        if not dataset:
-            raise Exception('{} not found'.format(args.dataset_identifier))
-        updated_dataset = to_dataset(read_json(os.path.join(args.path, args.filename)), dataset)
+        dataset = None
+        if not args.create:
+            try:
+                dataset = DatasetDocType.get(args.dataset_identifier)
+            except NotFoundError:
+                raise Exception('{} not found'.format(args.dataset_identifier))
+        updated_dataset = to_dataset(read_json(os.path.join(args.path, args.filename)), dataset=dataset,
+                                     dataset_id=args.dataset_identifier)
         updated_dataset.save()
-        log.info('Updated {}'.format(dataset.meta.id))
+        if args.stats:
+            update_dataset_stats(updated_dataset)
+        log.info('Updated {}'.format(updated_dataset.meta.id))
     if args.command == 'delete':
         dataset = DatasetDocType.get(args.dataset_identifier)
         if not dataset:
@@ -207,7 +229,8 @@ if __name__ == '__main__':
         # In testing, 500k tweets (not storing tweet) = 145MB
         # Thus, 138 million tweets per shard to have a max shard size of 40GB
         tweets_per_shard = 32500000 if store_tweet else 138000000
-        shards = (args.shards if hasattr(args, 'shards') else None) or math.ceil(float(tweet_count) / tweets_per_shard) or 1
+        shards = (args.shards if hasattr(args, 'shards') else None) or math.ceil(
+            float(tweet_count) / tweets_per_shard) or 1
         log.info('Using %s shards for index.', shards)
         create_tweet_index(dataset_id, shards)
 
@@ -232,17 +255,7 @@ if __name__ == '__main__':
 
         # Get number of tweets in dataset and update
         sleep(5)
-        search = Search(index=get_tweets_index_name(dataset_id))
-        search = search.query('term', dataset_id=dataset_id)[0:0]
-        search.aggs.metric('created_at_min', 'min', field='created_at')
-        search.aggs.metric('created_at_max', 'max', field='created_at')
-        search_response = search.execute()
-        dataset.first_tweet_created_at = datetime.utcfromtimestamp(
-            search_response.aggregations.created_at_min.value / 1000.0)
-        dataset.last_tweet_created_at = datetime.utcfromtimestamp(
-            search_response.aggregations.created_at_max.value / 1000.0)
-        dataset.tweet_count = search_response.hits.total
-        dataset.save()
+        update_dataset_stats(dataset)
     if args.command == 'clear':
         search = DatasetDocType.search()
         for dataset in search.execute():
