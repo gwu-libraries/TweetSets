@@ -83,14 +83,14 @@ def about():
     if 'error' in request.args:
         raise Exception('Test exception')
     return render_template('about.html',
-                           tweet_count=_tweet_count(),
+                           tweet_count=_tweet_count(clear_cache='clear_cache' in request.args),
                            prev_datasets=json.loads(request.cookies.get('prev_datasets', '[]')),
                            is_local_mode=_is_local_mode(request))
 
 
 @app.route('/datasets')
 def dataset_list():
-    search = DatasetDocType.search().sort('name')
+    search = DatasetDocType.search().sort('name')[:1000]
     if not _is_local_mode(request):
         search = search.filter('term', local_only=False)
 
@@ -490,13 +490,14 @@ def _form_to_dataset_params(form):
     return dataset_params
 
 
-def _tweet_count():
+def _tweet_count(clear_cache=False):
     tweet_count_str = redis.get('tweet_count')
-    if not tweet_count_str:
+    if not tweet_count_str or clear_cache:
         tweet_count = 0
         search = DatasetDocType.search()
-        for dataset in search.execute():
+        for dataset in search.scan():
             tweet_count += (dataset.tweet_count or 0)
+        app.logger.info('Counted %s tweets', tweet_count)
         redis.set('tweet_count', tweet_count, ex=24 * 60 * 60)
     else:
         tweet_count = int(tweet_count_str)
