@@ -200,7 +200,9 @@ def generate_top_mentions_task(self, dataset_params, total_tweets, dataset_path,
         os.remove(db_filepath)
     conn = sqlite3.connect(db_filepath)
     with conn:
-        conn.execute('create table mentions(user_id primary key, screen_name text, mention_count int);')
+        conn.execute('create table mentions(user_id primary key, mention_count int);')
+        conn.execute('create table users(user_id int primary key, screen_name text);')
+        conn.execute('create unique index users_idx on users(user_id, screen_name);')
 
     self.update_state(state='PROGRESS',
                       meta={'current': 0, 'total': 1,
@@ -208,7 +210,8 @@ def generate_top_mentions_task(self, dataset_params, total_tweets, dataset_path,
 
     mention_count = 0
     total_user_count = 0
-    buf = dict()
+    count_buf = dict()
+    user_buf = set()
     for tweet_count, hit in enumerate(search.scan()):
         # This is to support limiting the number of tweets
         if tweet_count + 1 > total_tweets:
@@ -220,23 +223,32 @@ def generate_top_mentions_task(self, dataset_params, total_tweets, dataset_path,
                     mention_count += 1
                     mention_screen_name = hit.mention_screen_names[i]
 
-                    if mention_user_id in buf:
-                        buf[mention_user_id][0] += 1
+                    if mention_user_id in count_buf:
+                        count_buf[mention_user_id] += 1
                     else:
                         cur = conn.cursor()
                         cur.execute('update mentions set mention_count=mention_count+1 where user_id=?',
                                     (mention_user_id,))
                         if not cur.rowcount:
-                            buf[mention_user_id] = [1, mention_screen_name]
+                            count_buf[mention_user_id] = 1
                         conn.commit()
 
-                    if len(buf) and len(buf) % 1000 == 0:
+                    user_buf.add((mention_user_id, mention_screen_name))
+
+                    if len(count_buf) and len(count_buf) % 1000 == 0:
                         with conn:
                             conn.executemany(
-                                'insert into mentions(user_id, screen_name, mention_count) values (?, ?, ?);',
-                                _mention_iter(buf))
-                        total_user_count += len(buf)
-                        buf = dict()
+                                'insert into mentions(user_id, mention_count) values (?, ?);',
+                                _mention_iter(count_buf))
+                        total_user_count += len(count_buf)
+                        count_buf = dict()
+
+                    if len(user_buf) and len(user_buf) % 1000 == 0:
+                        with conn:
+                            conn.executemany(
+                                'insert or ignore into users(user_id, screen_name) values (?, ?);',
+                                user_buf)
+                        user_buf = set()
 
         if (tweet_count + 1) % generate_update_increment == 0:
             self.update_state(state='PROGRESS',
@@ -245,11 +257,15 @@ def generate_top_mentions_task(self, dataset_params, total_tweets, dataset_path,
                                         mention_count, tweet_count + 1, total_tweets)})
 
     # Final write of buffer
-    if len(buf):
+    if len(count_buf):
         with conn:
-            conn.executemany('insert into mentions(user_id, screen_name, mention_count) values (?, ?, ?);',
-                             _mention_iter(buf))
-        total_user_count += len(buf)
+            conn.executemany('insert into mentions(user_id, mention_count) values (?, ?);',
+                             _mention_iter(count_buf))
+        total_user_count += len(count_buf)
+    if len(user_buf):
+        with conn:
+            conn.executemany('insert or ignore into users(user_id, screen_name) values (?, ?);',
+                             user_buf)
 
     file_count = 1
     file = None
@@ -257,7 +273,9 @@ def generate_top_mentions_task(self, dataset_params, total_tweets, dataset_path,
     try:
         cur = conn.cursor()
         for user_count, row in enumerate(
-                cur.execute("select user_id, screen_name, mention_count from mentions order by mention_count desc")):
+                cur.execute("select user_id, mention_count from mentions order by mention_count desc")):
+            user_id = row[0]
+            mention_count = row[1]
             # Cycle tweet id files
             if user_count % max_per_file == 0:
                 if file:
@@ -265,8 +283,15 @@ def generate_top_mentions_task(self, dataset_params, total_tweets, dataset_path,
                 file = gzip.open(
                     os.path.join(dataset_path, 'top-mentions-{}.csv.gz'.format(str(file_count).zfill(3))), 'wb')
                 file_count += 1
+            # Get screen names
+            screen_names = []
+            for user_row in conn.execute("select screen_name from users where user_id=?", (user_id,)):
+                screen_names.append(user_row[0])
+
             # Write to mentions to file
-            file.write(bytes(','.join([row[0], row[1], str(row[2])]), 'utf-8'))
+            line = [user_id, str(mention_count)]
+            line.extend(screen_names)
+            file.write(bytes(','.join(line), 'utf-8'))
             file.write(bytes('\n', 'utf-8'))
 
             if (user_count + 1) % generate_update_increment == 0:
@@ -289,8 +314,8 @@ def generate_top_mentions_task(self, dataset_params, total_tweets, dataset_path,
 
 
 def _mention_iter(buf):
-    for mention_user_id, (count, screen_name) in buf.items():
-        yield mention_user_id, screen_name, count
+    for mention_user_id, count in buf.items():
+        yield mention_user_id, count
 
 
 def generate_tweet_csv_task(self, dataset_params, total_tweets, dataset_path, max_per_file=None,
