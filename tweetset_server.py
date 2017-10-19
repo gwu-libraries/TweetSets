@@ -114,7 +114,7 @@ def dataset(dataset_id):
     # Read dataset_params
     dataset_params = read_json(os.path.join(dataset_path, 'dataset_params.json'))
     # Create context
-    context = _prepare_dataset_view(dataset_params)
+    context = _prepare_dataset_view(dataset_params, clear_cache='clear_cache' in request.args)
 
     # Generate tweet ids
     generate_tweet_ids_task_filepath = os.path.join(dataset_path, 'generate_tweet_ids_task.json')
@@ -257,11 +257,11 @@ def dataset(dataset_id):
         app.logger.info('Generating top users for {}'.format(dataset_id))
         flash('Started generating top users')
         generate_top_users_task = _generate_top_users_task.delay(dataset_params, context['total_tweets'],
-                                                                       dataset_path,
-                                                                       max_per_file=app.config[
-                                                                           'MAX_PER_FILE'],
-                                                                       generate_update_increment=app.config[
-                                                                           'GENERATE_UPDATE_INCREMENT'])
+                                                                 dataset_path,
+                                                                 max_per_file=app.config[
+                                                                     'MAX_PER_FILE'],
+                                                                 generate_update_increment=app.config[
+                                                                     'GENERATE_UPDATE_INCREMENT'])
 
         # Write task.json
         write_json(generate_top_users_task_filepath, {'id': generate_top_users_task.id})
@@ -388,6 +388,7 @@ def stats():
 def help():
     return render_template('help.html')
 
+
 Node = namedtuple('Node', ['name', 'total_storage', 'available_storage', 'storage_status'])
 
 
@@ -435,41 +436,25 @@ def handle_bad_request(e):
     return render_template('es_error.html')
 
 
-def _prepare_dataset_view(dataset_params):
+def _prepare_dataset_view(dataset_params, clear_cache=False):
     context = _dataset_params_to_context(dataset_params)
 
     search = dataset_params_to_search(dataset_params)
-    search_response = search.execute()
-    context['total_tweets'] = search_response.hits.total if not dataset_params.get('tweet_limit') else min(
-        search_response.hits.total, int(dataset_params['tweet_limit']))
-    sample_tweet_ids = []
-    sample_tweet_html = []
+    search_context = _search_response_to_search_context(search.execute(), dataset_params,
+                                                        tweet_limit=int(dataset_params.get('tweet_limit', '0') or '0'),
+                                                        clear_cache=clear_cache)
+    context.update(search_context)
+    context['sample_tweet_html'] = []
     oembed_error = False
-    for hit in search_response:
-        tweet_id = hit.meta.id
-        sample_tweet_ids.append(tweet_id)
+    for tweet_id in context['sample_tweet_ids']:
         if not oembed_error:
             try:
-                tweet_html = _oembed(tweet_id)
+                tweet_html = _oembed(tweet_id, clear_cache=clear_cache)
                 if tweet_html:
-                    sample_tweet_html.append(tweet_html)
+                    context['sample_tweet_html'].append(tweet_html)
             except OembedException:
                 # Skip further Oembed attemts
                 oembed_error = True
-
-    context['sample_tweet_ids'] = sample_tweet_ids
-    context['sample_tweet_html'] = sample_tweet_html
-    context['top_users'] = search_response.aggregations.top_users.buckets
-    context['top_mentions'] = search_response.aggregations.top_mentions.buckets
-    context['top_hashtags'] = search_response.aggregations.top_hashtags.buckets
-    context['top_urls'] = search_response.aggregations.top_urls.buckets
-    context['tweet_types'] = search_response.aggregations.tweet_types.buckets
-    context['created_at_min'] = datetime.utcfromtimestamp(
-        search_response.aggregations.created_at_min.value / 1000.0) \
-        if search_response.aggregations.created_at_min.value else None
-    context['created_at_max'] = datetime.utcfromtimestamp(
-        search_response.aggregations.created_at_max.value / 1000.0) \
-        if search_response.aggregations.created_at_max.value else None
     source_datasets = DatasetDocType.mget(dataset_params['source_datasets'])
     context['source_datasets'] = source_datasets
     dataset_created_at_min = None
@@ -491,6 +476,46 @@ def _prepare_dataset_view(dataset_params):
     context['is_local_mode'] = _is_local_mode(request)
     return context
 
+
+def _search_response_to_search_context(search_response, dataset_params, tweet_limit=None, clear_cache=False):
+    cache_context = redis.get(dataset_params)
+    context = dict()
+    if not cache_context or clear_cache:
+        app.logger.info('Not using cache')
+        context['total_tweets'] = search_response.hits.total if not tweet_limit else min(
+            search_response.hits.total, tweet_limit)
+        context['top_users'] = _buckets_to_list(search_response.aggregations.top_users.buckets)
+        context['top_mentions'] = _buckets_to_list(search_response.aggregations.top_mentions.buckets)
+        context['top_hashtags'] = _buckets_to_list(search_response.aggregations.top_hashtags.buckets)
+        context['top_urls'] = _buckets_to_list(search_response.aggregations.top_urls.buckets)
+        context['tweet_types'] = _buckets_to_list(search_response.aggregations.tweet_types.buckets)
+        context['created_at_min_value'] = search_response.aggregations.created_at_min.value
+        context['created_at_max_value'] = search_response.aggregations.created_at_max.value
+        context['sample_tweet_ids'] = []
+        for hit in search_response:
+            tweet_id = hit.meta.id
+            context['sample_tweet_ids'].append(tweet_id)
+        redis.set(dataset_params, json.dumps(context), ex=24 * 60 * 60)
+    else:
+        context = json.loads(cache_context)
+    context['created_at_min'] = datetime.utcfromtimestamp(
+        context['created_at_min_value'] / 1000.0) \
+        if context['created_at_min_value'] else None
+    context['created_at_max'] = datetime.utcfromtimestamp(
+        context['created_at_max_value'] / 1000.0) \
+        if context['created_at_max_value'] else None
+
+    return context
+
+
+def _buckets_to_list(buckets):
+    bucket_list = []
+    for bucket in buckets:
+        bucket_list.append({
+            'key': bucket.key,
+            'doc_count': bucket.doc_count
+        })
+    return bucket_list
 
 def _dataset_path(dataset_id):
     return os.path.join(app.config['DATASETS_PATH'], dataset_id)
@@ -531,7 +556,7 @@ def _tweet_count(clear_cache=False):
     return tweet_count
 
 
-def _oembed(tweet_id):
+def _oembed(tweet_id, clear_cache=False):
     """
     Returns the HTML snippet for embedding the tweet.
 
@@ -540,7 +565,7 @@ def _oembed(tweet_id):
     Raises OembedException if problem retrieving from Twitter API.
     """
     tweet_html = redis.get(tweet_id)
-    if tweet_html:
+    if tweet_html and not clear_cache:
         return tweet_html
     try:
         r = requests.get('https://publish.twitter.com/oembed',
@@ -665,8 +690,9 @@ def _generate_top_mentions_task(self, dataset_params, total_tweets, dataset_path
     return tasks.generate_top_mentions_task(self, dataset_params, total_tweets, dataset_path, max_per_file,
                                             generate_update_increment)
 
+
 @celery.task(bind=True)
 def _generate_top_users_task(self, dataset_params, total_tweets, dataset_path, max_per_file=None,
-                                generate_update_increment=None):
+                             generate_update_increment=None):
     return tasks.generate_top_users_task(self, dataset_params, total_tweets, dataset_path, max_per_file,
-                                            generate_update_increment)
+                                         generate_update_increment)
