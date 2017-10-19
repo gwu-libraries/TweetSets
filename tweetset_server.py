@@ -250,6 +250,33 @@ def dataset(dataset_id):
         # Check for existing derivatives
         context['top_mentions_filenames'] = fnmatch.filter(os.listdir(dataset_path), "top-mentions-*.csv.gz")
 
+    # Generate top users
+    generate_top_users_task_filepath = os.path.join(dataset_path, 'generate_top_users_task.json')
+    if request.form.get('generate_top_users', '').lower() == 'true' and not os.path.exists(
+            generate_top_users_task_filepath):
+        app.logger.info('Generating top users for {}'.format(dataset_id))
+        flash('Started generating top users')
+        generate_top_users_task = _generate_top_users_task.delay(dataset_params, context['total_tweets'],
+                                                                       dataset_path,
+                                                                       max_per_file=app.config[
+                                                                           'MAX_PER_FILE'],
+                                                                       generate_update_increment=app.config[
+                                                                           'GENERATE_UPDATE_INCREMENT'])
+
+        # Write task.json
+        write_json(generate_top_users_task_filepath, {'id': generate_top_users_task.id})
+        context['top_users_task_id'] = generate_top_users_task.id
+
+        # Record stats
+        if not session.get("demo_mode", False):
+            ts_stats.add_derivative('top users', _is_local(request))
+
+    elif os.path.exists(generate_top_users_task_filepath):
+        context['top_users_task_id'] = read_json(generate_top_users_task_filepath)['id']
+    else:
+        # Check for existing derivatives
+        context['top_users_filenames'] = fnmatch.filter(os.listdir(dataset_path), "top-users-*.csv.gz")
+
     context['dataset_id'] = dataset_id
     return render_template('dataset.html', **context)
 
@@ -636,4 +663,10 @@ def _generate_mentions_task(self, dataset_params, total_tweets, dataset_path, ma
 def _generate_top_mentions_task(self, dataset_params, total_tweets, dataset_path, max_per_file=None,
                                 generate_update_increment=None):
     return tasks.generate_top_mentions_task(self, dataset_params, total_tweets, dataset_path, max_per_file,
+                                            generate_update_increment)
+
+@celery.task(bind=True)
+def _generate_top_users_task(self, dataset_params, total_tweets, dataset_path, max_per_file=None,
+                                generate_update_increment=None):
+    return tasks.generate_top_users_task(self, dataset_params, total_tweets, dataset_path, max_per_file,
                                             generate_update_increment)

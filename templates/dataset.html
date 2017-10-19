@@ -47,7 +47,7 @@
         <div class="well well-sm">Link for this dataset: <a href="{{ request.base_url }}">{{ request.base_url }}</a></div>
     {% endif %}
 
-    {% if tweet_id_task_id or mentions_task_id or top_mentions_task_id or tweet_json_task_id or tweet_csv_task_id %}
+    {% if tweet_id_task_id or mentions_task_id or top_mentions_task_id or tweet_json_task_id or tweet_csv_task_id or top_users_task_id %}
        <script>
             function update_progress(url, progressBar, progressBarStatus) {
                 // send GET request to status URL
@@ -138,6 +138,19 @@
                         <script>
                             $( document ).ready(function() {
                                 update_progress('/status/{{ top_mentions_task_id }}', $('#progressBarTopMention'), $('#progressBarStatusTopMention'));
+                            });
+                        </script>
+                    {% endif %}
+                    {% if top_users_task_id %}
+                        <h3>Top Users</h3>
+                        <div class="progress">
+                            <div id="progressBarTopUser" class="progress-bar" role="progressbar" aria-valuenow="45" aria-valuemin="0" aria-valuemax="100" style="width: 0%">
+                            </div>
+                        </div>
+                        <p id="progressBarStatusTopUser" />
+                        <script>
+                            $( document ).ready(function() {
+                                update_progress('/status/{{ top_users_task_id }}', $('#progressBarTopUser'), $('#progressBarStatusTopUser'));
                             });
                         </script>
                     {% endif %}
@@ -487,6 +500,12 @@
                                                 <p class="help-block">Generate files containing an ordered count of mentioned user ids and screen names.</p>
                                             </form>
                                         {% endif %}
+                                        {% if not top_users_task_id %}
+                                            <form class="form-horizontal" action="{{ url_for('dataset', dataset_id=dataset_id) }}" method="POST">
+                                                <button type="submit" name="generate_top_users" value="true" class="btn btn-primary">Generate top users</button>
+                                                <p class="help-block">Generate files containing an ordered count of tweets by user ids and screen names.</p>
+                                            </form>
+                                        {% endif %}
                                         {% if tweet_id_task_id and mentions_task_id %}
                                             <p>No actions available. Wait for the current tasks to complete.</p>
                                         {% endif %}
@@ -559,6 +578,20 @@
                                 <div class="panel-body">
                                     <ul class="list-group">
                                     {% for filename in top_mentions_filenames %}
+                                        <li class="list-group-item"><a href="{{ url_for('dataset_file', dataset_id=dataset_id, filename=filename) }}">{{ filename }}</a></li>
+                                    {% endfor %}
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+                    {% if top_users_filenames %}
+                        <div class="row">
+                            <div class="panel panel-default" id="topUsersFiles">
+                                <div class="panel-heading"><h2 class="panel-title">Generated top user files</h2></div>
+                                <div class="panel-body">
+                                    <ul class="list-group">
+                                    {% for filename in top_users_filenames %}
                                         <li class="list-group-item"><a href="{{ url_for('dataset_file', dataset_id=dataset_id, filename=filename) }}">{{ filename }}</a></li>
                                     {% endfor %}
                                     </ul>

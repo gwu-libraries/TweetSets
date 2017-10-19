@@ -188,7 +188,7 @@ def generate_top_mentions_task(self, dataset_params, total_tweets, dataset_path,
     generate_update_increment = generate_update_increment or 10000
 
     search = dataset_params_to_search(dataset_params)
-    search.source(['mention_user_ids', 'user_id'])
+    search.source(['mention_user_ids', 'mention_screen_names'])
 
     # Delete existing files
     for filename in fnmatch.filter(os.listdir(dataset_path), "top-mentions-*.csv.gz"):
@@ -408,3 +408,126 @@ def _csv_row(tweet):
     else:
         row += ['']
     return row
+
+def generate_top_users_task(self, dataset_params, total_tweets, dataset_path, max_per_file=None,
+                               generate_update_increment=None):
+    max_per_file = max_per_file or 1000000
+    generate_update_increment = generate_update_increment or 10000
+
+    search = dataset_params_to_search(dataset_params)
+    search.source(['user_id', 'user_screen_name'])
+
+    # Delete existing files
+    for filename in fnmatch.filter(os.listdir(dataset_path), "top-users-*.csv.gz"):
+        os.remove(os.path.join(dataset_path, filename))
+
+    # Create db
+    db_filepath = os.path.join(dataset_path, "top-users.db")
+    if os.path.exists(db_filepath):
+        os.remove(db_filepath)
+    conn = sqlite3.connect(db_filepath)
+    with conn:
+        conn.execute('create table tweets(user_id primary key, tweet_count int);')
+        conn.execute('create table users(user_id int primary key, screen_name text);')
+        conn.execute('create unique index users_idx on users(user_id, screen_name);')
+
+    self.update_state(state='PROGRESS',
+                      meta={'current': 0, 'total': 1,
+                            'status': 'Querying'})
+
+    # mention_count = 0
+    total_user_count = 0
+    count_buf = dict()
+    user_buf = set()
+    for tweet_count, hit in enumerate(search.scan()):
+        # This is to support limiting the number of tweets
+        if tweet_count + 1 > total_tweets:
+            break
+        screen_name = hit.user_screen_name
+        user_id = hit.user_id
+        if user_id in count_buf:
+            count_buf[user_id] += 1
+        else:
+            cur = conn.cursor()
+            cur.execute('update tweets set tweet_count=tweet_count+1 where user_id=?',
+                        (user_id,))
+            if not cur.rowcount:
+                count_buf[user_id] = 1
+            conn.commit()
+
+        user_buf.add((user_id, screen_name))
+
+        if len(count_buf) and len(count_buf) % 1000 == 0:
+            with conn:
+                conn.executemany(
+                    'insert into tweets(user_id, tweet_count) values (?, ?);', count_buf.items)
+            total_user_count += len(count_buf)
+            count_buf = dict()
+
+        if len(user_buf) and len(user_buf) % 1000 == 0:
+            with conn:
+                conn.executemany(
+                    'insert or ignore into users(user_id, screen_name) values (?, ?);',
+                    user_buf)
+            user_buf = set()
+
+        if (tweet_count + 1) % generate_update_increment == 0:
+            self.update_state(state='PROGRESS',
+                              meta={'current': tweet_count + 1, 'total': total_tweets,
+                                    'status': 'Counted {:,d} users in {:,d} of {:,d} tweets'.format(
+                                        total_user_count, tweet_count + 1, total_tweets)})
+
+    # Final write of buffer
+    if len(count_buf):
+        with conn:
+            conn.executemany('insert into tweets(user_id, tweet_count) values (?, ?);', count_buf.items())
+        total_user_count += len(count_buf)
+    if len(user_buf):
+        with conn:
+            conn.executemany('insert or ignore into users(user_id, screen_name) values (?, ?);',
+                             user_buf)
+
+    file_count = 1
+    file = None
+    user_count = 0
+    try:
+        cur = conn.cursor()
+        for user_count, row in enumerate(
+                cur.execute("select user_id, tweet_count from tweets order by tweet_count desc")):
+            user_id = row[0]
+            tweet_count = row[1]
+            # Cycle tweet id files
+            if user_count % max_per_file == 0:
+                if file:
+                    file.close()
+                file = gzip.open(
+                    os.path.join(dataset_path, 'top-users-{}.csv.gz'.format(str(file_count).zfill(3))), 'wb')
+                file_count += 1
+            # Get screen names
+            screen_names = []
+            for user_row in conn.execute("select screen_name from users where user_id=?", (user_id,)):
+                screen_names.append(user_row[0])
+
+            # Write to mentions to file
+            line = [user_id, str(tweet_count)]
+            line.extend(screen_names)
+            file.write(bytes(','.join(line), 'utf-8'))
+            file.write(bytes('\n', 'utf-8'))
+
+            if (user_count + 1) % generate_update_increment == 0:
+                self.update_state(state='PROGRESS',
+                                  meta={'current': user_count + 1, 'total': total_user_count,
+                                        'status': '{:,d} of {:,d} users in {:,d} files'.format(
+                                            user_count + 1, total_user_count, file_count)})
+    finally:
+        if file:
+            file.close()
+
+    generate_task_filepath = os.path.join(dataset_path, 'generate_top_users_task.json')
+    if os.path.exists(generate_task_filepath):
+        os.remove(generate_task_filepath)
+    conn.close()
+    os.remove(db_filepath)
+
+    return {'current': user_count + 1, 'total': total_user_count,
+            'status': 'Completed.'}
