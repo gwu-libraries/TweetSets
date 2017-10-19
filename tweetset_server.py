@@ -438,11 +438,9 @@ def handle_bad_request(e):
 
 def _prepare_dataset_view(dataset_params, clear_cache=False):
     context = _dataset_params_to_context(dataset_params)
-
-    search = dataset_params_to_search(dataset_params)
-    search_context = _search_response_to_search_context(search.execute(), dataset_params,
-                                                        tweet_limit=int(dataset_params.get('tweet_limit', '0') or '0'),
-                                                        clear_cache=clear_cache)
+    search_context = _search_to_search_context(dataset_params_to_search(dataset_params), dataset_params,
+                                               tweet_limit=int(dataset_params.get('tweet_limit', '0') or '0'),
+                                               clear_cache=clear_cache)
     context.update(search_context)
     context['sample_tweet_html'] = []
     oembed_error = False
@@ -477,11 +475,11 @@ def _prepare_dataset_view(dataset_params, clear_cache=False):
     return context
 
 
-def _search_response_to_search_context(search_response, dataset_params, tweet_limit=None, clear_cache=False):
+def _search_to_search_context(search, dataset_params, tweet_limit=None, clear_cache=False):
     cache_context = redis.get(dataset_params)
     context = dict()
     if not cache_context or clear_cache:
-        app.logger.info('Not using cache')
+        search_response = search.execute()
         context['total_tweets'] = search_response.hits.total if not tweet_limit else min(
             search_response.hits.total, tweet_limit)
         context['top_users'] = _buckets_to_list(search_response.aggregations.top_users.buckets)
