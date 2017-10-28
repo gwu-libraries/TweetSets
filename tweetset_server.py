@@ -289,7 +289,7 @@ def limit_dataset():
         dataset_params['tweet_type_retweet'] = 'true'
         dataset_params['tweet_type_quote'] = 'true'
         dataset_params['tweet_type_reply'] = 'true'
-    context = _prepare_dataset_view(dataset_params)
+    context = _prepare_dataset_view(dataset_params, clear_cache='clear_cache' in request.args)
     if request.form.get('dataset_name'):
         dataset_name = request.form['dataset_name']
         dataset_id = short_uid(8, lambda uid: os.path.exists(_dataset_path(uid)))

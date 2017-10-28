@@ -32,9 +32,7 @@ def dataset_params_to_search(dataset_params):
 
     # Query
     q = None
-    # # Source datasets
-    # if dataset_params.get('source_datasets'):
-    #     q = _and(q, Q('terms', dataset_id=dataset_params.get('source_datasets')))
+
     # Text
     if dataset_params.get('tweet_text_all'):
         for term in re.split(', *', dataset_params['tweet_text_all']):
@@ -79,7 +77,34 @@ def dataset_params_to_search(dataset_params):
         for screen_name in re.split(', *', dataset_params['poster_any']):
             screen_names.append(screen_name.lstrip('@'))
         if screen_names:
-            q = _and(q, Q('terms', user_screen_name=screen_names))
+            any_q = Q('terms', user_screen_name=screen_names)
+            if dataset_params.get('poster_retweets_also', '').lower() == 'true':
+                any_q = _or(any_q, Q('terms', retweeted_quoted_screen_name=screen_names))
+            q = _and(q, any_q)
+    if dataset_params.get('poster_user_id_any'):
+        user_ids = []
+        for user_id in re.split(', *', dataset_params['poster_user_id_any']):
+            user_ids.append(user_id)
+        if user_ids:
+            any_q = Q('terms', user_id=user_ids)
+            if dataset_params.get('poster_user_id_retweets_also', '').lower() == 'true':
+                any_q = _or(any_q, Q('terms', retweeted_quoted_user_id=user_ids))
+            q = _and(q, any_q)
+
+    # In reply to
+    if dataset_params.get('in_reply_to_any'):
+        screen_names = []
+        for screen_name in re.split(', *', dataset_params['in_reply_to_any']):
+            screen_names.append(screen_name.lstrip('@'))
+        if screen_names:
+            q = _and(q, Q('terms', in_reply_to_screen_name=screen_names))
+
+    if dataset_params.get('in_reply_to_user_id_any'):
+        user_ids = []
+        for user_id in re.split(', *', dataset_params['in_reply_to_user_id_any']):
+            user_ids.append(user_id)
+        if user_ids:
+            q = _and(q, Q('terms', in_reply_to_user_id=user_ids))
 
     # Tweet types
     tweet_types = []

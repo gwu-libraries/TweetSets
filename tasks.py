@@ -6,6 +6,7 @@ import json
 import csv
 from utils import dataset_params_to_search
 from dateutil.parser import parse as date_parse
+from models import tweet_type
 import logging
 
 logger = logging.getLogger(__name__)
@@ -368,10 +369,11 @@ def generate_tweet_csv_task(self, dataset_params, total_tweets, dataset_path, ma
 
 
 def _csv_header_row():
-    return ['created_at', 'twitter_id', 'screen_name', 'location', 'followers_count',
+    return ['created_at', 'twitter_id', 'screen_name', 'user_id', 'location', 'followers_count',
             'friends_count', 'favorite_count/like_count', 'retweet_count',
-            'hashtags', 'mentions', 'in_reply_to_screen_name',
-            'twitter_url', 'text', 'is_retweet', 'is_quote', 'coordinates',
+            'hashtags', 'mentions', 'in_reply_to_screen_name', 'in_reply_to_user_id',
+            'retweet/quote_of_screen_name', 'retweet/quote_of_user_id',
+            'twitter_url', 'text', 'tweet_type', 'coordinates',
             'url1', 'url1_expanded', 'url2', 'url2_expanded', 'media_url']
 
 
@@ -379,6 +381,7 @@ def _csv_row(tweet):
     row = [date_parse(tweet['created_at']),
            tweet['id_str'],
            tweet['user']['screen_name'],
+           tweet['user']['id_str'],
            tweet['user']['location'],
            tweet['user']['followers_count'],
            tweet['user']['friends_count'],
@@ -387,11 +390,17 @@ def _csv_row(tweet):
            ', '.join([hashtag['text'] for hashtag in tweet['entities']['hashtags']]),
            ', '.join([user_mentions['screen_name'] for user_mentions in tweet['entities']['user_mentions']]),
            tweet.get('in_reply_to_screen_name', ''),
+           tweet.get('in_reply_to_user_id', ''),
+           tweet.get('retweeted_status', {}).get('user', {}).get('screen_name') or tweet.get('quoted_status',
+                                                                                             {}).get('user', {}).get(
+               'screen_name') or '',
+           tweet.get('retweeted_status', {}).get('user', {}).get('id_str') or tweet.get('quoted_status',
+                                                                                        {}).get('user', {}).get(
+               'id_str') or '',
            'http://twitter.com/{}/status/{}'.format(tweet['user']['screen_name'], tweet['id_str']),
            (tweet.get('full_text') or tweet.get('extended_tweet', {}).get('full_text') or tweet['text']).replace('\n',
                                                                                                                  ' '),
-           'Yes' if 'retweeted_status' in tweet else 'No',
-           'Yes' if 'quoted_status_id' in tweet else 'No',
+           tweet_type(tweet),
            str(tweet['coordinates']['coordinates']) if tweet.get('coordinates') else ''
            ]
     # only show up to two urls w/expansions
@@ -409,8 +418,9 @@ def _csv_row(tweet):
         row += ['']
     return row
 
+
 def generate_top_users_task(self, dataset_params, total_tweets, dataset_path, max_per_file=None,
-                               generate_update_increment=None):
+                            generate_update_increment=None):
     max_per_file = max_per_file or 1000000
     generate_update_increment = generate_update_increment or 10000
 

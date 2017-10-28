@@ -236,10 +236,36 @@
                                 </div>
                                 <h4 class="col-sm-offset-1">Posted by</h4>
                                 <div class="form-group">
-                                    <label for="posterContainsAny" class="col-sm-2 control-label">Contains any</label>
+                                    <label for="posterContainsAny" class="col-sm-2 control-label">Contains any screen name</label>
                                     <div class="col-sm-10">
                                         <textarea class="form-control" rows="2" id="posterContainsAny" name="limit_poster_any">{{ limit_poster_any }}</textarea>
                                         <p class="help-block">Tweet posted by any of these screen names (OR). @ is optional. Case sensitive.</p>
+                                            <input type="checkbox" name="limit_poster_retweets_also" value="true" {% if limit_poster_retweets_also == 'true' %}checked{% endif %}>
+                                                Also retweets or quotes of these screen names.
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="posterUserIdContainsAny" class="col-sm-2 control-label">Contains any user id</label>
+                                    <div class="col-sm-10">
+                                        <textarea class="form-control" rows="2" id="posterUserIdContainsAny" name="limit_poster_user_id_any">{{ limit_poster_user_id_any }}</textarea>
+                                        <p class="help-block">Tweet posted by any of these user ids (OR).</p>
+                                            <input type="checkbox" name="limit_poster_user_id_retweets_also" value="true" {% if limit_poster_user_id_retweets_also == 'true' %}checked{% endif %}>
+                                                Also retweets or quotes of these user ids.
+                                    </div>
+                                </div>
+                                <h4 class="col-sm-offset-1">In reply to</h4>
+                                <div class="form-group">
+                                    <label for="inReplyToContainsAny" class="col-sm-2 control-label">Contains any screen name</label>
+                                    <div class="col-sm-10">
+                                        <textarea class="form-control" rows="2" id="inReplyToContainsAny" name="limit_in_reply_to_any">{{ limit_in_reply_to_any }}</textarea>
+                                        <p class="help-block">Tweets in reply to these screen names (OR). @ is optional. Case sensitive.</p>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="inReplyToUserIdContainsAny" class="col-sm-2 control-label">Contains any user id</label>
+                                    <div class="col-sm-10">
+                                        <textarea class="form-control" rows="2" id="inReplyToUserIdContainsAny" name="limit_in_reply_to_user_id_any">{{ limit_in_reply_to_user_id_any }}</textarea>
+                                        <p class="help-block">Tweet in reply to these user ids (OR).</p>
                                     </div>
                                 </div>
                                 <h4 class="col-sm-offset-1">Tweet types</h4>
