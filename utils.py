@@ -24,7 +24,7 @@ def short_uid(length, exists_func):
             return uid
 
 
-def dataset_params_to_search(dataset_params):
+def dataset_params_to_search(dataset_params, skip_aggs=False):
     indexes = []
     for source_dataset in dataset_params.get('source_datasets'):
         indexes.append(get_tweets_index_name(source_dataset))
@@ -91,6 +91,20 @@ def dataset_params_to_search(dataset_params):
                 any_q = _or(any_q, Q('terms', retweeted_quoted_user_id=user_ids))
             q = _and(q, any_q)
 
+    # Source posted by (i.e., the tweet that was retweeted or quoted)
+    if dataset_params.get('source_poster_any'):
+        screen_names = []
+        for screen_name in re.split(', *', dataset_params['source_poster_any']):
+            screen_names.append(screen_name.lstrip('@'))
+        if screen_names:
+            q = _and(q, Q('terms', retweeted_quoted_screen_name=screen_names))
+    if dataset_params.get('source_poster_user_id_any'):
+        user_ids = []
+        for user_id in re.split(', *', dataset_params['source_poster_user_id_any']):
+            user_ids.append(user_id)
+        if user_ids:
+            q = _and(q, Q('terms', retweeted_quoted_user_id=user_ids))
+
     # In reply to
     if dataset_params.get('in_reply_to_any'):
         screen_names = []
@@ -149,13 +163,14 @@ def dataset_params_to_search(dataset_params):
     search.query = Q('bool', filter=q or Q())
 
     # Aggregations
-    search.aggs.bucket('top_users', 'terms', field='user_screen_name', size=10)
-    search.aggs.bucket('top_hashtags', 'terms', field='hashtags', size=10)
-    search.aggs.bucket('top_mentions', 'terms', field='mention_screen_names', size=10)
-    search.aggs.bucket('top_urls', 'terms', field='urls', size=10)
-    search.aggs.bucket('tweet_types', 'terms', field='tweet_type')
-    search.aggs.metric('created_at_min', 'min', field='created_at')
-    search.aggs.metric('created_at_max', 'max', field='created_at')
+    if not skip_aggs:
+        search.aggs.bucket('top_users', 'terms', field='user_screen_name', size=10)
+        search.aggs.bucket('top_hashtags', 'terms', field='hashtags', size=10)
+        search.aggs.bucket('top_mentions', 'terms', field='mention_screen_names', size=10)
+        search.aggs.bucket('top_urls', 'terms', field='urls', size=10)
+        search.aggs.bucket('tweet_types', 'terms', field='tweet_type')
+        search.aggs.metric('created_at_min', 'min', field='created_at')
+        search.aggs.metric('created_at_max', 'max', field='created_at')
 
     # Only get ids
     search.source(False)
