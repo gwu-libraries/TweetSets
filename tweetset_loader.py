@@ -18,7 +18,7 @@ from utils import read_json, short_uid
 
 log = logging.getLogger(__name__)
 
-connections.create_connection(hosts=['elasticsearch'], timeout=20)
+connections.create_connection(hosts=['elasticsearch'], timeout=90)
 
 CONNECTION_ERROR_TRIES = 30
 CONNECTION_ERROR_SLEEP = 30
