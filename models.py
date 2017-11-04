@@ -152,10 +152,11 @@ def urls(entities, type):
 
 
 class TweetIndex(Index):
-    def __init__(self, dataset_id, shards=1):
+    def __init__(self, dataset_id, shards=1, replicas=1):
         Index.__init__(self, get_tweets_index_name(dataset_id))
         self.settings(
-            number_of_shards=shards
+            number_of_shards=shards,
+            number_of_replicas=replicas
         )
         # register a doc_type with the index
         self.doc_type(TweetDocType)

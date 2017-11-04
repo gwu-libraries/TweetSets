@@ -94,8 +94,8 @@ def delete_tweet_index(dataset_identifier):
     log.info('Deleted tweets from {}'.format(dataset_identifier))
 
 
-def create_tweet_index(dataset_id, shards):
-    tweet_index = TweetIndex(dataset_id, shards=shards)
+def create_tweet_index(dataset_id, shards, replicas):
+    tweet_index = TweetIndex(dataset_id, shards=shards, replicas=replicas)
     tweet_index.create(ignore=400)
 
 
@@ -144,6 +144,7 @@ if __name__ == '__main__':
     tweets_parser.add_argument('--limit', type=int, help='limit the number of tweets to load')
     tweets_parser.add_argument('--skip-count', action='store_true', help='skip count the tweets')
     tweets_parser.add_argument('--store-tweet', action='store_true', help='store the entire tweet')
+    tweets_parser.add_argument('--replicas', type=int, default='1', help='number of replicas to make of this dataset')
 
     dataset_parser = subparsers.add_parser('dataset', help='create a dataset and add tweets')
     dataset_parser.add_argument('--path', help='path of dataset', default='/dataset')
@@ -152,6 +153,7 @@ if __name__ == '__main__':
     dataset_parser.add_argument('--skip-count', action='store_true', help='skip count the tweets')
     dataset_parser.add_argument('--store-tweet', action='store_true', help='store the entire tweet')
     dataset_parser.add_argument('--shards', type=int, help='number of shards for this dataset')
+    dataset_parser.add_argument('--replicas', type=int, default='1', help='number of replicas to make of this dataset')
 
     subparsers.add_parser('clear', help='delete all indexes')
 
@@ -231,8 +233,8 @@ if __name__ == '__main__':
         tweets_per_shard = 32500000 if store_tweet else 138000000
         shards = (args.shards if hasattr(args, 'shards') else None) or math.ceil(
             float(tweet_count) / tweets_per_shard) or 1
-        log.info('Using %s shards for index.', shards)
-        create_tweet_index(dataset_id, shards)
+        log.info('Using %s shards and %s replicas for index.', shards, args.replicas)
+        create_tweet_index(dataset_id, shards, args.replicas)
 
         # Doing this in chunks so that can retry if error
         connection = connections.get_connection()
