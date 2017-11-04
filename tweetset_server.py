@@ -22,8 +22,9 @@ import tasks
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'secret')
 app.config['DATASETS_PATH'] = '/tweetsets_data/datasets'
-app.config['MAX_PER_FILE'] = os.environ.get('MAX_PER_FILE')
-app.config['CSV_MAX_PER_FILE'] = os.environ.get('CSV_MAX_PER_FILE')
+app.config['MAX_PER_JSON_FILE'] = os.environ.get('MAX_PER_JSON_FILE', 10000000)
+app.config['MAX_PER_CSV_FILE'] = os.environ.get('MAX_PER_CSV_FILE', 250000)
+app.config['MAX_PER_TXT_FILE'] = os.environ.get('MAX_PER_TXT_FILE', 25000000)
 app.config['GENERATE_UPDATE_INCREMENT'] = os.environ.get('GENERATE_UPDATE_INCREMENT')
 app.config['SERVER_MODE'] = os.environ.get('SERVER_MODE', 'local')
 app.config['IP_RANGE'] = os.environ.get('IP_RANGE')
@@ -120,169 +121,96 @@ def dataset(dataset_id):
     # Create context
     context = _prepare_dataset_view(dataset_params, clear_cache='clear_cache' in request.args)
 
-    # Generate tweet ids
-    generate_tweet_ids_task_filepath = os.path.join(dataset_path, 'generate_tweet_ids_task.json')
-    if request.form.get('generate_tweet_ids', '').lower() == 'true' and not os.path.exists(
-            generate_tweet_ids_task_filepath):
-        app.logger.info('Generating tweet ids for {}'.format(dataset_id))
-        flash('Started generating tweet ids')
-        generate_tweet_ids_task = _generate_tweet_ids_task.delay(dataset_params, context['total_tweets'], dataset_path,
-                                                                 max_per_file=app.config[
-                                                                     'MAX_PER_FILE'],
-                                                                 generate_update_increment=app.config[
-                                                                     'GENERATE_UPDATE_INCREMENT'])
-        # Write task.json
-        write_json(generate_tweet_ids_task_filepath, {'id': generate_tweet_ids_task.id})
-        context['tweet_id_task_id'] = generate_tweet_ids_task.id
-
-        # Record stats
-        if not session.get("demo_mode", False):
-            ts_stats.add_derivative('tweet ids', _is_local(request))
-
-    elif os.path.exists(generate_tweet_ids_task_filepath):
-        context['tweet_id_task_id'] = read_json(generate_tweet_ids_task_filepath)['id']
-    else:
-        # Check for existing derivatives
-        context['tweet_id_filenames'] = fnmatch.filter(os.listdir(dataset_path), "tweet-ids-*.txt.gz")
-
-    # Generate tweet CSV
-    if context['is_local_mode']:
-        generate_tweet_csv_task_filepath = os.path.join(dataset_path, 'generate_tweet_csv_task.json')
-        if request.form.get('generate_tweet_csv', '').lower() == 'true' and not os.path.exists(
-                generate_tweet_csv_task_filepath):
-            app.logger.info('Generating tweet csv for {}'.format(dataset_id))
-            flash('Started generating tweet CSV')
-            generate_tweet_csv_task = _generate_tweet_csv_task.delay(dataset_params, context['total_tweets'],
-                                                                     dataset_path,
-                                                                     max_per_file=app.config[
-                                                                         'CSV_MAX_PER_FILE'],
-                                                                     generate_update_increment=app.config[
-                                                                         'GENERATE_UPDATE_INCREMENT'])
-            # Write task.json
-            write_json(generate_tweet_csv_task_filepath, {'id': generate_tweet_csv_task.id})
-            context['tweet_csv_task_id'] = generate_tweet_csv_task.id
-
+    # Generate tasks
+    generate_tasks_filepath = os.path.join(dataset_path, 'generate_tasks.json')
+    if request.form.get('generate_tasks', '').lower() == 'true' and not os.path.exists(
+            generate_tasks_filepath):
+        app.logger.info('Generating task for {}'.format(dataset_id))
+        task_defs = {}
+        if request.form.get('generate_tweet_ids', '').lower() == 'true':
+            task_defs['tweet_ids'] = {
+                'max_per_file': app.config['MAX_PER_TXT_FILE']
+            }
+            # Record stats
+            if not session.get("demo_mode", False):
+                ts_stats.add_derivative('tweet ids', _is_local(request))
+        if request.form.get('generate_tweet_json', '').lower() == 'true' and context['is_local_mode']:
+            task_defs['tweet_json'] = {
+                'max_per_file': app.config['MAX_PER_JSON_FILE']
+            }
+            # Record stats
+            if not session.get("demo_mode", False):
+                ts_stats.add_derivative('tweet json', _is_local(request))
+        if request.form.get('generate_tweet_csv', '').lower() == 'true' and context['is_local_mode']:
+            task_defs['tweet_csv'] = {
+                'max_per_file': app.config['MAX_PER_CSV_FILE']
+            }
             # Record stats
             if not session.get("demo_mode", False):
                 ts_stats.add_derivative('tweet csv', _is_local(request))
+        if request.form.get('generate_mentions', '').lower() == 'true':
+            task_defs['mentions'] = {
+                'max_per_file': app.config['MAX_PER_CSV_FILE']
+            }
+            # Record stats
+            if not session.get("demo_mode", False):
+                ts_stats.add_derivative('mentions', _is_local(request))
 
-        elif os.path.exists(generate_tweet_csv_task_filepath):
-            context['tweet_csv_task_id'] = read_json(generate_tweet_csv_task_filepath)['id']
+        if request.form.get('generate_top_mentions', '').lower() == 'true':
+            task_defs['top_mentions'] = {
+                'max_per_file': app.config['MAX_PER_CSV_FILE']
+            }
+            # Record stats
+            if not session.get("demo_mode", False):
+                ts_stats.add_derivative('top mentions', _is_local(request))
+
+        if request.form.get('generate_top_users', '').lower() == 'true':
+            task_defs['top_users'] = {
+                'max_per_file': app.config['MAX_PER_CSV_FILE']
+            }
+            # Record stats
+            if not session.get("demo_mode", False):
+                ts_stats.add_derivative('top users', _is_local(request))
+
+        if task_defs:
+            generate_tasks = _generate_tasks.delay(task_defs, dataset_params, context['total_tweets'], dataset_path,
+                                                   generate_update_increment=app.config[
+                                                       'GENERATE_UPDATE_INCREMENT'])
+            flash('Started generating derivatives')
+            # Write task.json
+            write_json(generate_tasks_filepath, {'id': generate_tasks.id})
+            context['task_id'] = generate_tasks.id
+
+    elif os.path.exists(generate_tasks_filepath):
+        task_id = read_json(generate_tasks_filepath)['id']
+        # Make sure task didn't fail
+        task = _generate_tasks.AsyncResult(task_id)
+        if task.state == 'FAILURE':
+            os.remove(generate_tasks_filepath)
+            flash('An error occurred generating derivates. Try again or <a href="mailto:{}">let me know</a>.'.format(
+                app.config['ADMIN_EMAIL']), 'warning')
         else:
-            # Check for existing derivatives
-            context['tweet_csv_filenames'] = fnmatch.filter(os.listdir(dataset_path), "tweets-*.csv")
+            context['task_id'] = task_id
 
-        # Generate tweet json
-        if context['is_local_mode']:
-            generate_tweet_json_task_filepath = os.path.join(dataset_path, 'generate_tweet_json_task.json')
-            if request.form.get('generate_tweet_json', '').lower() == 'true' and not os.path.exists(
-                    generate_tweet_json_task_filepath):
-                app.logger.info('Generating tweet json for {}'.format(dataset_id))
-                flash('Started generating tweet JSON')
-                generate_tweet_json_task = _generate_tweet_json_task.delay(dataset_params, context['total_tweets'],
-                                                                           dataset_path,
-                                                                           max_per_file=app.config[
-                                                                               'MAX_PER_FILE'],
-                                                                           generate_update_increment=app.config[
-                                                                               'GENERATE_UPDATE_INCREMENT'])
-                # Write task.json
-                write_json(generate_tweet_json_task_filepath, {'id': generate_tweet_json_task.id})
-                context['tweet_json_task_id'] = generate_tweet_json_task.id
-
-                # Record stats
-                if not session.get("demo_mode", False):
-                    ts_stats.add_derivative('tweet json', _is_local(request))
-
-            elif os.path.exists(generate_tweet_json_task_filepath):
-                context['tweet_json_task_id'] = read_json(generate_tweet_json_task_filepath)['id']
-            else:
-                # Check for existing derivatives
-                context['tweet_json_filenames'] = fnmatch.filter(os.listdir(dataset_path), "tweets-*.json.gz")
-
-    # Generate mentions
-    generate_mentions_task_filepath = os.path.join(dataset_path, 'generate_mentions_task.json')
-    if request.form.get('generate_mentions', '').lower() == 'true' and not os.path.exists(
-            generate_mentions_task_filepath):
-        app.logger.info('Generating mentions for {}'.format(dataset_id))
-        flash('Started generating mention')
-        generate_mentions_task = _generate_mentions_task.delay(dataset_params, context['total_tweets'], dataset_path,
-                                                               max_per_file=app.config[
-                                                                   'MAX_PER_FILE'],
-                                                               generate_update_increment=app.config[
-                                                                   'GENERATE_UPDATE_INCREMENT'])
-
-        # Write task.json
-        write_json(generate_mentions_task_filepath, {'id': generate_mentions_task.id})
-        context['mentions_task_id'] = generate_mentions_task.id
-
-        # Record stats
-        if not session.get("demo_mode", False):
-            ts_stats.add_derivative('mentions', _is_local(request))
-
-    elif os.path.exists(generate_mentions_task_filepath):
-        context['mentions_task_id'] = read_json(generate_mentions_task_filepath)['id']
-    else:
-        # Check for existing derivatives
-        context['mentions_filenames'] = fnmatch.filter(os.listdir(dataset_path), "mention-*.csv.gz")
-
-    # Generate top mentions
-    generate_top_mentions_task_filepath = os.path.join(dataset_path, 'generate_top_mentions_task.json')
-    if request.form.get('generate_top_mentions', '').lower() == 'true' and not os.path.exists(
-            generate_top_mentions_task_filepath):
-        app.logger.info('Generating top mentions for {}'.format(dataset_id))
-        flash('Started generating top mention')
-        # _generate_top_mentions_task(dataset_params, context['total_tweets'], dataset_path)
-
-        generate_top_mentions_task = _generate_top_mentions_task.delay(dataset_params, context['total_tweets'],
-                                                                       dataset_path,
-                                                                       max_per_file=app.config[
-                                                                           'MAX_PER_FILE'],
-                                                                       generate_update_increment=app.config[
-                                                                           'GENERATE_UPDATE_INCREMENT'])
-
-        # Write task.json
-        write_json(generate_top_mentions_task_filepath, {'id': generate_top_mentions_task.id})
-        context['top_mentions_task_id'] = generate_top_mentions_task.id
-
-        # Record stats
-        if not session.get("demo_mode", False):
-            ts_stats.add_derivative('top mentions', _is_local(request))
-
-    elif os.path.exists(generate_top_mentions_task_filepath):
-        context['top_mentions_task_id'] = read_json(generate_top_mentions_task_filepath)['id']
-    else:
-        # Check for existing derivatives
-        context['top_mentions_filenames'] = fnmatch.filter(os.listdir(dataset_path), "top-mentions-*.csv.gz")
-
-    # Generate top users
-    generate_top_users_task_filepath = os.path.join(dataset_path, 'generate_top_users_task.json')
-    if request.form.get('generate_top_users', '').lower() == 'true' and not os.path.exists(
-            generate_top_users_task_filepath):
-        app.logger.info('Generating top users for {}'.format(dataset_id))
-        flash('Started generating top users')
-        generate_top_users_task = _generate_top_users_task.delay(dataset_params, context['total_tweets'],
-                                                                 dataset_path,
-                                                                 max_per_file=app.config[
-                                                                     'MAX_PER_FILE'],
-                                                                 generate_update_increment=app.config[
-                                                                     'GENERATE_UPDATE_INCREMENT'])
-
-        # Write task.json
-        write_json(generate_top_users_task_filepath, {'id': generate_top_users_task.id})
-        context['top_users_task_id'] = generate_top_users_task.id
-
-        # Record stats
-        if not session.get("demo_mode", False):
-            ts_stats.add_derivative('top users', _is_local(request))
-
-    elif os.path.exists(generate_top_users_task_filepath):
-        context['top_users_task_id'] = read_json(generate_top_users_task_filepath)['id']
-    else:
-        # Check for existing derivatives
-        context['top_users_filenames'] = fnmatch.filter(os.listdir(dataset_path), "top-users-*.csv.gz")
+    # Check for existing derivatives
+    filenames_list = []
+    _add_filenames('Generated tweet JSON files', 'tweets-*.json.gz', dataset_path, filenames_list)
+    _add_filenames('Generated tweet CSV files', 'tweets-*.csv.gz', dataset_path, filenames_list)
+    _add_filenames('Generated tweet id files', 'tweet-ids-*.txt.gz', dataset_path, filenames_list)
+    _add_filenames('Generated mentions files', 'mention-*.csv.gz', dataset_path, filenames_list)
+    _add_filenames('Generated top mentions files', 'top-mentions-*.csv.gz', dataset_path, filenames_list)
+    _add_filenames('Generated top users files', 'top-users-*.csv.gz', dataset_path, filenames_list)
+    context['filenames_list'] = filenames_list
 
     context['dataset_id'] = dataset_id
     return render_template('dataset.html', **context)
+
+
+def _add_filenames(label, filter, dataset_path, filename_list):
+    filenames = fnmatch.filter(os.listdir(dataset_path), filter)
+    if filenames:
+        filenames.sort()
+        filename_list.append((label, filenames))
 
 
 @app.route('/dataset', methods=['POST'])
@@ -334,7 +262,7 @@ def dataset_file(dataset_id, filename):
 
 @app.route('/status/<task_id>')
 def dataset_status(task_id):
-    task = _generate_tweet_ids_task.AsyncResult(task_id)
+    task = _generate_tasks.AsyncResult(task_id)
     if task.state == 'PENDING':
         # Task not started
         response = {
@@ -358,8 +286,10 @@ def dataset_status(task_id):
             'state': task.state,
             'current': 1,
             'total': 1,
-            'status': str(task.info),  # this is the exception raised
+            'status': 'Ooops! Something went wrong: {}'.format(str(task.info)),  # this is the exception raised
         }
+        app.logger.error('Error with task id {}: {}'.format(task_id, str(task.info)))
+
     return jsonify(response)
 
 
@@ -523,6 +453,7 @@ def _buckets_to_list(buckets):
         })
     return bucket_list
 
+
 def _dataset_path(dataset_id):
     return os.path.join(app.config['DATASETS_PATH'], dataset_id)
 
@@ -663,42 +594,6 @@ def status_filter(eval_ctx, status):
 
 # Task
 @celery.task(bind=True)
-def _generate_tweet_ids_task(self, dataset_params, total_tweets, dataset_path, max_per_file=None,
-                             generate_update_increment=None):
-    return tasks.generate_tweet_ids_task(self, dataset_params, total_tweets, dataset_path=dataset_path,
-                                         max_per_file=max_per_file, generate_update_increment=generate_update_increment)
-
-
-@celery.task(bind=True)
-def _generate_tweet_json_task(self, dataset_params, total_tweets, dataset_path, max_per_file=None,
-                              generate_update_increment=None):
-    return tasks.generate_tweet_json_task(self, dataset_params, total_tweets, dataset_path, max_per_file,
-                                          generate_update_increment)
-
-
-@celery.task(bind=True)
-def _generate_tweet_csv_task(self, dataset_params, total_tweets, dataset_path, max_per_file=None,
-                             generate_update_increment=None):
-    return tasks.generate_tweet_csv_task(self, dataset_params, total_tweets, dataset_path, max_per_file,
-                                         generate_update_increment)
-
-
-@celery.task(bind=True)
-def _generate_mentions_task(self, dataset_params, total_tweets, dataset_path, max_per_file=None,
-                            generate_update_increment=None):
-    return tasks.generate_mentions_task(self, dataset_params, total_tweets, dataset_path, max_per_file,
-                                        generate_update_increment)
-
-
-@celery.task(bind=True)
-def _generate_top_mentions_task(self, dataset_params, total_tweets, dataset_path, max_per_file=None,
-                                generate_update_increment=None):
-    return tasks.generate_top_mentions_task(self, dataset_params, total_tweets, dataset_path, max_per_file,
-                                            generate_update_increment)
-
-
-@celery.task(bind=True)
-def _generate_top_users_task(self, dataset_params, total_tweets, dataset_path, max_per_file=None,
-                             generate_update_increment=None):
-    return tasks.generate_top_users_task(self, dataset_params, total_tweets, dataset_path, max_per_file,
-                                         generate_update_increment)
+def _generate_tasks(self, task_defs, dataset_params, total_tweets, dataset_path, generate_update_increment=None):
+    return tasks.generate_tasks(self, task_defs, dataset_params, total_tweets, dataset_path,
+                                generate_update_increment=generate_update_increment)
