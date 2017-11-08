@@ -1,4 +1,5 @@
-from flask import Flask, render_template, request, send_file, jsonify, redirect, url_for, flash, make_response, session
+from flask import Flask, render_template, request, send_file, jsonify, redirect, url_for, flash, make_response, \
+    session, abort
 from jinja2 import evalcontextfilter, Markup
 from elasticsearch_dsl.connections import connections as es_connections
 from elasticsearch.exceptions import ElasticsearchException
@@ -112,7 +113,10 @@ def dataset(dataset_id):
     dataset_path = _dataset_path(dataset_id)
 
     # Read dataset_params
-    dataset_params = read_json(os.path.join(dataset_path, 'dataset_params.json'))
+    try:
+        dataset_params = read_json(os.path.join(dataset_path, 'dataset_params.json'))
+    except FileNotFoundError:
+        abort(404)
     # Create context
     context = _prepare_dataset_view(dataset_params, clear_cache='clear_cache' in request.args)
 
@@ -458,12 +462,16 @@ def _prepare_dataset_view(dataset_params, clear_cache=False):
     dataset_created_at_min = None
     dataset_created_at_max = None
     for dataset in source_datasets:
-        dataset_created_at_min = min(dataset_created_at_min,
-                                     dataset.first_tweet_created_at) \
-            if dataset_created_at_min else dataset.first_tweet_created_at
-        dataset_created_at_max = min(dataset_created_at_max,
-                                     dataset.last_tweet_created_at) \
-            if dataset_created_at_max else dataset.last_tweet_created_at
+        if dataset.first_tweet_created_at:
+            if dataset_created_at_min:
+                dataset_created_at_min = min(dataset_created_at_min, dataset.first_tweet_created_at)
+            else:
+                dataset_created_at_min = dataset.first_tweet_created_at
+        if dataset.last_tweet_created_at:
+            if dataset_created_at_max:
+                dataset_created_at_max = max(dataset_created_at_max, dataset.last_tweet_created_at)
+            else:
+                dataset_created_at_max = dataset.last_tweet_created_at
     context['dataset_created_at_min'] = dataset_created_at_min
     context['dataset_created_at_max'] = dataset_created_at_max
 
