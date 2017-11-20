@@ -161,6 +161,7 @@ services:
       environment:
         - LOGGING_LEVEL=${WORKER_LOGGING_LEVEL}
         - TZ
+        - ES_TIMEOUT
       restart: always
   # This will exit. That's OK.
   loader:
