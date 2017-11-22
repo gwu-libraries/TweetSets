@@ -243,7 +243,7 @@ class GenerateMentionsTask(BaseGenerateTask):
 
 class GenerateTopMentionsTask(BaseGenerateTask):
     def __init__(self, *args, max_per_file=None):
-        super(GenerateTopMentionsTask, self).__init__(*args, file_filter='top-mention-*.csv',
+        super(GenerateTopMentionsTask, self).__init__(*args, file_filter='top-mentions-*.csv',
                                                       source=['mention_user_ids', 'mention_screen_names'])
 
         self.max_per_file = max_per_file or 250000
