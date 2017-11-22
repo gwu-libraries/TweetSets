@@ -387,7 +387,7 @@ class GenerateTopUsersTask(BaseGenerateTask):
         if len(self.count_buf) and len(self.count_buf) % 1000 == 0:
             with self.conn:
                 self.conn.executemany(
-                    'insert into tweets(user_id, tweet_count) values (?, ?);', self.count_buf.items)
+                    'insert into tweets(user_id, tweet_count) values (?, ?);', self.count_buf.items())
                 self.total_user_count += len(self.count_buf)
                 self.count_buf = dict()
 
