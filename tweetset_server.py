@@ -194,12 +194,12 @@ def dataset(dataset_id):
 
     # Check for existing derivatives
     filenames_list = []
-    _add_filenames('Generated tweet JSON files', 'tweets-*.json.gz', dataset_path, filenames_list)
-    _add_filenames('Generated tweet CSV files', 'tweets-*.csv.gz', dataset_path, filenames_list)
-    _add_filenames('Generated tweet id files', 'tweet-ids-*.txt.gz', dataset_path, filenames_list)
-    _add_filenames('Generated mentions files', 'mention-*.csv.gz', dataset_path, filenames_list)
-    _add_filenames('Generated top mentions files', 'top-mentions-*.csv.gz', dataset_path, filenames_list)
-    _add_filenames('Generated top users files', 'top-users-*.csv.gz', dataset_path, filenames_list)
+    _add_filenames('Generated tweet JSON files', 'tweets-*.jsonl.zip', dataset_path, filenames_list)
+    _add_filenames('Generated tweet CSV files', 'tweets-*.csv.zip', dataset_path, filenames_list)
+    _add_filenames('Generated tweet id files', 'tweet-ids-*.txt.zip', dataset_path, filenames_list)
+    _add_filenames('Generated mentions files', 'mention-*.csv.zip', dataset_path, filenames_list)
+    _add_filenames('Generated top mentions files', 'top-mentions-*.csv.zip', dataset_path, filenames_list)
+    _add_filenames('Generated top users files', 'top-users-*.csv.zip', dataset_path, filenames_list)
     context['filenames_list'] = filenames_list
 
     context['dataset_id'] = dataset_id

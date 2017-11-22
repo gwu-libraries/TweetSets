@@ -1,17 +1,18 @@
 import os
 import fnmatch
 import sqlite3
-import gzip
 import json
 import csv
 from utils import dataset_params_to_search
 import logging
 from twarc_utils import json2csv
+import zipfile
 
 logger = logging.getLogger(__name__)
 
 
-def generate_tasks(self, task_defs, dataset_params, total_tweets, dataset_path, generate_update_increment=None):
+def generate_tasks(self, task_defs, dataset_params, total_tweets, dataset_path, generate_update_increment=None,
+                   zip_bytes_threshold=1000000000):
     generate_update_increment = generate_update_increment or 10000
 
     tasks = []
@@ -24,7 +25,11 @@ def generate_tasks(self, task_defs, dataset_params, total_tweets, dataset_path, 
     for task in tasks:
         # Delete existing files
         if task.file_filter:
+            # Unzipped files
             for filename in fnmatch.filter(os.listdir(dataset_path), task.file_filter):
+                os.remove(os.path.join(dataset_path, filename))
+            # Zipped files
+            for filename in fnmatch.filter(os.listdir(dataset_path), '{}.zip'.format(task.file_filter)):
                 os.remove(os.path.join(dataset_path, filename))
 
         task.on_start()
@@ -50,6 +55,24 @@ def generate_tasks(self, task_defs, dataset_params, total_tweets, dataset_path, 
 
     for task in tasks:
         task.on_end()
+
+        # Zip files
+        z = None
+        zip_filepath = None
+        file_count = 1
+        for filename in sorted(fnmatch.filter(os.listdir(dataset_path), task.file_filter)):
+            if z is None or os.path.getsize(zip_filepath) > zip_bytes_threshold:
+                if z:
+                    z.close()
+                zip_filepath = os.path.join(dataset_path,
+                                            '{}.zip'.format(task.file_filter.replace('*', str(file_count).zfill(3))))
+                z = zipfile.ZipFile(zip_filepath, 'w', compression=zipfile.ZIP_DEFLATED)
+                file_count += 1
+            filepath = os.path.join(dataset_path, filename)
+            z.write(filepath, arcname=filename)
+            os.remove(os.path.join(dataset_path, filename))
+        if z:
+            z.close()
 
     generate_task_filepath = os.path.join(dataset_path, 'generate_tasks.json')
     if os.path.exists(generate_task_filepath):
@@ -85,7 +108,7 @@ class BaseGenerateTask:
 
 class GenerateTweetIdsTask(BaseGenerateTask):
     def __init__(self, *args, max_per_file=None):
-        super(GenerateTweetIdsTask, self).__init__(*args, file_filter='tweet-ids-*.txt.gz')
+        super(GenerateTweetIdsTask, self).__init__(*args, file_filter='tweet-ids-*.txt')
 
         self.max_per_file = max_per_file or 10000000
         self.file = None
@@ -96,12 +119,12 @@ class GenerateTweetIdsTask(BaseGenerateTask):
         if tweet_count % self.max_per_file == 0:
             if self.file:
                 self.file.close()
-            self.file = gzip.open(
-                os.path.join(self.dataset_path, 'tweet-ids-{}.txt.gz'.format(str(self.file_count).zfill(3))), 'wb')
+            self.file = open(
+                os.path.join(self.dataset_path, 'tweet-ids-{}.txt'.format(str(self.file_count).zfill(3))), 'w')
             self.file_count += 1
         # Write to tweet id file
-        self.file.write(bytes(hit.meta.id, 'utf-8'))
-        self.file.write(bytes('\n', 'utf-8'))
+        self.file.write(hit.meta.id)
+        self.file.write('\n')
 
     def on_end(self):
         if self.file:
@@ -110,7 +133,7 @@ class GenerateTweetIdsTask(BaseGenerateTask):
 
 class GenerateTweetJSONTask(BaseGenerateTask):
     def __init__(self, *args, max_per_file=None):
-        super(GenerateTweetJSONTask, self).__init__(*args, file_filter='tweets-*.json.gz', source=['tweet'])
+        super(GenerateTweetJSONTask, self).__init__(*args, file_filter='tweets-*.jsonl', source=['tweet'])
 
         self.max_per_file = max_per_file or 10000000
         self.file = None
@@ -121,12 +144,12 @@ class GenerateTweetJSONTask(BaseGenerateTask):
         if tweet_count % self.max_per_file == 0:
             if self.file:
                 self.file.close()
-            self.file = gzip.open(
-                os.path.join(self.dataset_path, 'tweets-{}.json.gz'.format(str(self.file_count).zfill(3))), 'wb')
+            self.file = open(
+                os.path.join(self.dataset_path, 'tweets-{}.jsonl'.format(str(self.file_count).zfill(3))), 'w')
             self.file_count += 1
         # Write to tweet file
-        self.file.write(bytes(json.dumps(hit.tweet.to_dict()), 'utf-8'))
-        self.file.write(bytes('\n', 'utf-8'))
+        self.file.write(json.dumps(hit.tweet.to_dict()))
+        self.file.write('\n')
 
     def on_end(self):
         if self.file:
@@ -135,7 +158,7 @@ class GenerateTweetJSONTask(BaseGenerateTask):
 
 class GenerateTweetCSVTask(BaseGenerateTask):
     def __init__(self, *args, max_per_file=None):
-        super(GenerateTweetCSVTask, self).__init__(*args, file_filter='tweets-*.csv.gz', source=['tweet'])
+        super(GenerateTweetCSVTask, self).__init__(*args, file_filter='tweets-*.csv', source=['tweet'])
 
         self.max_per_file = max_per_file or 250000
         self.file = None
@@ -147,8 +170,8 @@ class GenerateTweetCSVTask(BaseGenerateTask):
         if tweet_count % self.max_per_file == 0:
             if self.file:
                 self.file.close()
-            self.file = gzip.open(
-                os.path.join(self.dataset_path, 'tweets-{}.csv.gz'.format(str(self.file_count).zfill(3))), 'wt')
+            self.file = open(
+                os.path.join(self.dataset_path, 'tweets-{}.csv'.format(str(self.file_count).zfill(3))), 'w')
             self.sheet = csv.writer(self.file)
             self.sheet.writerow(json2csv.get_headings())
             self.file_count += 1
@@ -162,7 +185,7 @@ class GenerateTweetCSVTask(BaseGenerateTask):
 
 class GenerateMentionsTask(BaseGenerateTask):
     def __init__(self, *args, max_per_file=None):
-        super(GenerateMentionsTask, self).__init__(*args, file_filter='mention-*.csv.gz',
+        super(GenerateMentionsTask, self).__init__(*args, file_filter='mention-*.csv',
                                                    source=['mention_user_ids', 'user_id'])
 
         self.max_per_file = max_per_file or 10000000
@@ -180,15 +203,15 @@ class GenerateMentionsTask(BaseGenerateTask):
         self.conn = sqlite3.connect(self.db_filepath)
         with self.conn:
             self.conn.execute('create table user_ids (user_id primary key);')
-        self.nodes_file = gzip.open(os.path.join(self.dataset_path, 'mention-nodes.csv.gz'), 'wb')
+        self.nodes_file = open(os.path.join(self.dataset_path, 'mention-nodes.csv'), 'w')
 
     def on_hit(self, hit, tweet_count):
         # Cycle edges files
         if tweet_count % self.max_per_file == 0:
             if self.edges_file:
                 self.edges_file.close()
-            self.edges_file = gzip.open(
-                os.path.join(self.dataset_path, 'mention-edges-{}.csv.gz'.format(str(self.file_count).zfill(3))), 'wb')
+            self.edges_file = open(
+                os.path.join(self.dataset_path, 'mention-edges-{}.csv'.format(str(self.file_count).zfill(3))), 'w')
             self.file_count += 1
         # Write to mentions to file
         if hasattr(hit, 'mention_user_ids'):
@@ -197,16 +220,15 @@ class GenerateMentionsTask(BaseGenerateTask):
                 if mention_user_id:
                     self.mention_count += 1
                     # Write mention user id (edge)
-                    self.edges_file.write(bytes(','.join([hit.user_id, mention_user_id]), 'utf-8'))
-                    self.edges_file.write(bytes('\n', 'utf-8'))
+                    self.edges_file.write(','.join([hit.user_id, mention_user_id]))
+                    self.edges_file.write('\n')
 
                     # Possibly write mention user id to mention screen name (node)
                     try:
                         with self.conn:
                             self.conn.execute('insert into user_ids(user_id) values (?);', (mention_user_id,))
-                        self.nodes_file.write(
-                            bytes(','.join([mention_user_id, hit.mention_screen_names[i]]), 'utf-8'))
-                        self.nodes_file.write(bytes('\n', 'utf-8'))
+                        self.nodes_file.write(','.join([mention_user_id, hit.mention_screen_names[i]]))
+                        self.nodes_file.write('\n')
                     except sqlite3.IntegrityError:
                         # A dupe, so skipping writing to nodes file
                         pass
@@ -221,7 +243,7 @@ class GenerateMentionsTask(BaseGenerateTask):
 
 class GenerateTopMentionsTask(BaseGenerateTask):
     def __init__(self, *args, max_per_file=None):
-        super(GenerateTopMentionsTask, self).__init__(*args, file_filter='top-mention-*.csv.gz',
+        super(GenerateTopMentionsTask, self).__init__(*args, file_filter='top-mention-*.csv',
                                                       source=['mention_user_ids', 'mention_screen_names'])
 
         self.max_per_file = max_per_file or 250000
@@ -301,9 +323,8 @@ class GenerateTopMentionsTask(BaseGenerateTask):
                 if user_count % self.max_per_file == 0:
                     if file:
                         file.close()
-                    file = gzip.open(
-                        os.path.join(self.dataset_path, 'top-mentions-{}.csv.gz'.format(str(file_count).zfill(3))),
-                        'wb')
+                    file = open(
+                        os.path.join(self.dataset_path, 'top-mentions-{}.csv'.format(str(file_count).zfill(3))), 'w')
                     file_count += 1
                 # Get screen names
                 screen_names = []
@@ -313,8 +334,8 @@ class GenerateTopMentionsTask(BaseGenerateTask):
                 # Write to mentions to file
                 line = [user_id, str(mention_count)]
                 line.extend(screen_names)
-                file.write(bytes(','.join(line), 'utf-8'))
-                file.write(bytes('\n', 'utf-8'))
+                file.write(','.join(line))
+                file.write('\n')
 
                 if (user_count + 1) % self.generate_update_increment == 0:
                     self.update_state(user_count + 1, self.total_user_count,
@@ -328,7 +349,7 @@ class GenerateTopMentionsTask(BaseGenerateTask):
 
 class GenerateTopUsersTask(BaseGenerateTask):
     def __init__(self, *args, max_per_file=None):
-        super(GenerateTopUsersTask, self).__init__(*args, file_filter='top-users-*.csv.gz',
+        super(GenerateTopUsersTask, self).__init__(*args, file_filter='top-users-*.csv',
                                                    source=['user_id', 'user_screen_name'])
 
         self.max_per_file = max_per_file or 250000
@@ -400,8 +421,8 @@ class GenerateTopUsersTask(BaseGenerateTask):
                 if user_count % self.max_per_file == 0:
                     if file:
                         file.close()
-                    file = gzip.open(
-                        os.path.join(self.dataset_path, 'top-users-{}.csv.gz'.format(str(file_count).zfill(3))), 'wb')
+                    file = open(
+                        os.path.join(self.dataset_path, 'top-users-{}.csv'.format(str(file_count).zfill(3))), 'w')
                     file_count += 1
                 # Get screen names
                 screen_names = []
@@ -411,8 +432,8 @@ class GenerateTopUsersTask(BaseGenerateTask):
                 # Write to mentions to file
                 line = [user_id, str(tweet_count)]
                 line.extend(screen_names)
-                file.write(bytes(','.join(line), 'utf-8'))
-                file.write(bytes('\n', 'utf-8'))
+                file.write(','.join(line))
+                file.write('\n')
 
                 if (user_count + 1) % self.generate_update_increment == 0:
                     self.update_state(user_count + 1,
