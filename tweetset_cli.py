@@ -19,7 +19,7 @@ def fetch_by_screen_name(screen_name, source_datasets):
     search.source(['tweet'])
 
     for hit in search.scan():
-        print(json.dumps(hit.tweet.to_dict()))
+        yield hit.tweet.to_dict()
 
 
 def fetch_by_source_screen_name(screen_name, source_datasets):
@@ -34,9 +34,24 @@ def fetch_by_source_screen_name(screen_name, source_datasets):
     for hit in search.scan():
         tweet = hit.tweet.to_dict()
         if 'retweeted_status' in tweet:
-            print(json.dumps(tweet['retweeted_status']))
+            yield tweet['retweeted_status']
         elif 'quoted_status' in tweet:
-            print(json.dumps(tweet['quoted_status']))
+            yield tweet['quoted_status']
+
+
+def fetch_by_mention_screen_name(mention_screen_name, source_datasets):
+    search = dataset_params_to_search({
+        'source_datasets': source_datasets,
+        'tweet_type_original': 'true',
+        'tweet_type_reply': 'true',
+        'tweet_type_retweet': 'true',
+        'tweet_type_quote': 'true',
+        'mention_any': mention_screen_name.lstrip('@')
+    }, skip_aggs=True)
+    search.source(['tweet'])
+
+    for hit in search.scan():
+        yield hit.tweet.to_dict()
 
 
 if __name__ == '__main__':
@@ -56,12 +71,22 @@ if __name__ == '__main__':
                                                               'or quote.')
     by_source_screen_name_parser.add_argument('screen_name')
 
+    by_mention_screen_name_parser = subparsers.add_parser('by_mention_screen_name',
+                                                          help='Fetch tweets in which user with provided screen name '
+                                                               'is mentioned.')
+    by_mention_screen_name_parser.add_argument('screen_name')
+
     args = parser.parse_args()
 
     if args.command is None:
         parser.print_help()
         sys.exit(1)
     elif args.command == 'by_screen_name':
-        fetch_by_screen_name(args.screen_name, args.datasets.split(','))
+        tweets = fetch_by_screen_name(args.screen_name, args.datasets.split(','))
     elif args.command == 'by_source_screen_name':
-        fetch_by_source_screen_name(args.screen_name, args.datasets.split(','))
+        tweets = fetch_by_source_screen_name(args.screen_name, args.datasets.split(','))
+    elif args.command == 'by_mention_screen_name':
+        tweets = fetch_by_mention_screen_name(args.screen_name, args.datasets.split(','))
+
+    for tweet in tweets:
+        print(json.dumps(tweet))

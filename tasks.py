@@ -5,7 +5,7 @@ import json
 import csv
 from utils import dataset_params_to_search
 import logging
-from twarc_utils import json2csv
+from twarc import json2csv
 import zipfile
 
 logger = logging.getLogger(__name__)
@@ -176,7 +176,7 @@ class GenerateTweetCSVTask(BaseGenerateTask):
             self.sheet.writerow(json2csv.get_headings())
             self.file_count += 1
         # Write to tweet file
-        self.sheet.writerow(json2csv.get_row(hit.tweet.to_dict(), extra_fields=[]))
+        self.sheet.writerow(json2csv.get_row(hit.tweet.to_dict()))
 
     def on_end(self):
         if self.file:
