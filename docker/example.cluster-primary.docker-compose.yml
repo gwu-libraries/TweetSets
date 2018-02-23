@@ -32,6 +32,7 @@ services:
         - xpack.graph.enabled=false
         - xpack.watcher.enabled=false
         - node.master=true
+        - discovery.zen.minimum_master_nodes=2
         - TZ
       restart: always
   redis:

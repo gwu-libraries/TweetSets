@@ -65,7 +65,9 @@ be used to list other datasets that are available, but not yet loaded. If leavin
 For HTTPS support, uncomment and configure the nginx-proxy container in `docker-compose.yml`.
 
 ### Cluster installation
-#### Master
+Clusters must have at least a primary node and two additional nodes.
+
+#### Primary node
 1. Create data directories on a volume with adequate storage:
 
         mkdir -p /tweetset_data/redis
@@ -82,7 +84,7 @@ For HTTPS support, uncomment and configure the nginx-proxy container in `docker-
         cd docker
 4. Copy the example docker files:
 
-        cp example.cluster-master.docker-compose.yml docker-compose.yml
+        cp example.cluster-primary.docker-compose.yml docker-compose.yml
         cp example.env .env
 
 5. Edit `.env`. This file is annotated to help you select appropriate values.
@@ -97,7 +99,7 @@ be used to list other datasets that are available, but not yet loaded. If leavin
 
 For HTTPS support, uncomment and configure the nginx-proxy container in `docker-compose.yml`.
 
-#### Worker
+#### Cluster node
 1. Create data directories on a volume with adequate storage:
 
         mkdir -p /tweetset_data/elasticsearch
@@ -112,10 +114,11 @@ For HTTPS support, uncomment and configure the nginx-proxy container in `docker-
         cd docker
 4. Copy the example docker files:
 
-        cp example.cluster-worker.docker-compose.yml docker-compose.yml
-        cp example.cluster-worker.env .env
+        cp example.cluster-node.docker-compose.yml docker-compose.yml
+        cp example.cluster-node.env .env
 
-5. Edit `.env`. This file is annotated to help you select appropriate values.
+5. Edit `.env`. This file is annotated to help you select appropriate values. Note that 2 cluster nodes
+must have `MASTER` set to `true`.
 6. Bring up the containers:
 
         docker-compose up -d
