@@ -22,7 +22,7 @@ services:
       networks:
         - tweetsets
       environment:
-        - cluster.name=tweetsets-cluster
+        - cluster.name=${CLUSTER_NAME}
         - bootstrap.memory_lock=true
         - network.host=_eth0_
         - network.publish_host=${HOSTNAME}

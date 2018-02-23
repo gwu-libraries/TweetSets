@@ -20,7 +20,7 @@ services:
       networks:
         - tweetsets
       environment:
-        - cluster.name=tweetsets-cluster
+        - cluster.name=${CLUSTER_NAME}
         - bootstrap.memory_lock=true
         - "ES_JAVA_OPTS=-Xms${ES_JAVA_MEM} -Xmx${ES_JAVA_MEM}"
         - xpack.security.enabled=false
@@ -45,7 +45,7 @@ services:
       networks:
         - tweetsets
       environment:
-        - cluster.name=tweetsets-cluster
+        - cluster.name=${CLUSTER_NAME}
         - bootstrap.memory_lock=true
         - "ES_JAVA_OPTS=-Xms${ES_JAVA_MEM} -Xmx${ES_JAVA_MEM}"
         - "discovery.zen.ping.unicast.hosts=elasticsearch1"
