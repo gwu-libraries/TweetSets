@@ -77,9 +77,10 @@ def tweet_iter(json_files, json_gz_files, txt_files, limit=None, total_tweets=No
 
 
 def delete_tweet_index(dataset_identifier):
-    tweet_index = TweetIndex(dataset_identifier)
-    tweet_index.delete(ignore=404)
-    log.info('Deleted tweets from {}'.format(dataset_identifier))
+    _, __, existing_index_name = get_tweet_index_state(dataset_identifier)
+    if existing_index_name:
+        TweetIndex(existing_index_name).delete(ignore=404)
+        log.info('Deleted tweets from {}'.format(dataset_identifier))
 
 
 def get_tweet_index_state(dataset_identifier):
