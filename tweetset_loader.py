@@ -10,9 +10,7 @@ import argparse
 from datetime import datetime
 from time import sleep
 import os
-import itertools
 import math
-from collections import deque
 
 from models import TweetIndex, to_tweet, DatasetIndex, to_dataset, DatasetDocType, get_tweets_index_name
 from utils import read_json, short_uid
@@ -224,13 +222,14 @@ if __name__ == '__main__':
         connection = connections.get_connection()
 
         log.debug('Indexing using %s threads', args.threads)
-        deque(helpers.parallel_bulk(connection,
+        for success, info in helpers.parallel_bulk(connection,
                                     [to_tweet(tweet_json, dataset_id, new_index_name, store_tweet=store_tweet).to_dict(
                                         include_meta=True) for
                                         tweet_json in
                                         tweet_iter(*filepaths, limit=args.limit, total_tweets=tweet_count)],
-                                    thread_count=args.threads), maxlen=0)
-
+                                    thread_count=args.threads):
+            log.debug('Success: %s. %s', success, info)
+            
         log.debug('Setting replicas and refresh interval')
         tweet_index.put_settings(body={
             'number_of_replicas': args.replicas, 'refresh_interval': '1s'})
