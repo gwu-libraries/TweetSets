@@ -12,6 +12,7 @@ from time import sleep
 import os
 import itertools
 import math
+from collections import deque
 
 from models import TweetIndex, to_tweet, DatasetIndex, to_dataset, DatasetDocType, get_tweets_index_name
 from utils import read_json, short_uid
@@ -20,8 +21,6 @@ log = logging.getLogger(__name__)
 
 connections.create_connection(hosts=['elasticsearch'], timeout=90, sniff_on_start=True, sniff_on_connection_fail=True,
                               retry_on_timeout=True)
-
-CONNECTION_ERROR_TRIES = 30
 
 
 def find_files(path):
@@ -222,12 +221,11 @@ if __name__ == '__main__':
         # create_tweet_index(dataset_id, shards, replicas=0, )
         connection = connections.get_connection()
 
-        helpers.bulk(connection,
+        deque(helpers.parallel_bulk(connection,
                      [to_tweet(tweet_json, dataset_id, new_index_name, store_tweet=store_tweet).to_dict(
                          include_meta=True) for
                       tweet_json in
-                      tweet_iter(*filepaths, limit=args.limit, total_tweets=tweet_count)],
-                     max_retries=CONNECTION_ERROR_TRIES)
+                      tweet_iter(*filepaths, limit=args.limit, total_tweets=tweet_count)]), maxlen=0)
 
         log.debug('Setting replicas and refresh interval')
         tweet_index.put_settings(body={
@@ -243,7 +241,7 @@ if __name__ == '__main__':
             TweetIndex(existing_index_name).delete()
 
         # Get number of tweets in dataset and update
-        sleep(10)
+        sleep(5)
         update_dataset_stats(dataset)
 
     if args.command == 'clear':
