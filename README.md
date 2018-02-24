@@ -141,24 +141,15 @@ the format of the file.
         docker-compose run --rm loader /bin/bash
 3. Invoke the loader:
 
-        python tweetset_loader.py dataset
+        python tweetset_loader.py create
     
 To see other loader commands:
 
         python tweetset_loader.py
-        
-### Adding to a dataset
-Under the hood, each dataset has its own index. Each index is composed of a number of shards and that number is fixed 
-when the index is created. TweetSets attempts to select the optimal number of shards based on the number
-of tweets. If you add too many tweets to an existing dataset, you may cause sharding problems.
 
-If the total number of tweets in a collection are less than 32.5 million when storing tweets or 138 million
-when not storing tweets, then don't worry about sharding. You can use `python tweetset_loader.py tweets` to
-add more tweets to an existing collection.
-
-If the total number of tweets in a collection is greater than the above limits, then it is recommended to
-delete the collection's index first with `python tweetset_loader truncate` and then reload all tweets with
-`python tweetset_loader.py tweets`.
+Note that tweets are never added to an existing index. When using the `reload` command, a new index is created
+for a dataset that replaces the existing index. The new index replaces the old index only after the new index
+has been created, so user's are not effected by reloading.
 
 ## TODO
 * Loading:

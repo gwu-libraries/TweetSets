@@ -15,6 +15,7 @@ services:
       mem_limit: ${ES_MEM_LIMIT}
       ports:
           - 9300:9300
+          - 9200:9200
       volumes:
         - ${TWEETSETS_DATA_PATH}/elasticsearch:/usr/share/elasticsearch/data
       networks:

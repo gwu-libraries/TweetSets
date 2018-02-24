@@ -39,7 +39,8 @@ app.config['ADMIN_EMAIL'] = os.environ.get('ADMIN_EMAIL')
 app.config['ES_TIMEOUT'] = int(os.environ.get('ES_TIMEOUT', '20'))
 
 # ElasticSearch setup
-es_connections.create_connection(hosts=['elasticsearch'], timeout=app.config['ES_TIMEOUT'])
+es_connections.create_connection(hosts=['elasticsearch'], timeout=app.config['ES_TIMEOUT'], sniff_on_start=True,
+                                 sniff_on_connection_fail=True)
 app.logger.debug('ElasticSearch timeout is %s', app.config['ES_TIMEOUT'])
 
 # Celery setup
