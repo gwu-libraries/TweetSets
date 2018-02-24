@@ -70,12 +70,12 @@ class TweetDocType(DocType):
         source = MetaField(excludes=['text'])
 
 
-def to_tweet(tweet_json, dataset_id, store_tweet=False):
+def to_tweet(tweet_json, dataset_id, index_name, store_tweet=False):
     entities = tweet_json.get('extended_tweet', {}).get('entities') or tweet_json['entities']
 
     tweet = TweetDocType()
     tweet.meta.id = tweet_json['id_str']
-    tweet.meta.index = get_tweets_index_name(dataset_id)
+    tweet.meta.index = index_name
     tweet.dataset_id = dataset_id
     type = tweet_type(tweet_json)
     tweet.tweet_type = type
@@ -152,11 +152,12 @@ def urls(entities, type):
 
 
 class TweetIndex(Index):
-    def __init__(self, dataset_id, shards=1, replicas=1):
-        Index.__init__(self, get_tweets_index_name(dataset_id))
+    def __init__(self, index_name, shards=1, replicas=1, refresh_interval=1):
+        Index.__init__(self, index_name)
         self.settings(
             number_of_shards=shards,
-            number_of_replicas=replicas
+            number_of_replicas=replicas,
+            refresh_interval=refresh_interval
         )
         # register a doc_type with the index
         self.doc_type(TweetDocType)
