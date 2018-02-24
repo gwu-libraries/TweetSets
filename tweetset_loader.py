@@ -22,7 +22,6 @@ connections.create_connection(hosts=['elasticsearch'], timeout=90, sniff_on_star
                               retry_on_timeout=True)
 
 CONNECTION_ERROR_TRIES = 30
-CONNECTION_ERROR_SLEEP = 30
 
 
 def find_files(path):
@@ -77,27 +76,11 @@ def tweet_iter(json_files, json_gz_files, txt_files, limit=None, total_tweets=No
                 # TODO: Handle hydration
 
 
-def _chunker(iterable, chunk_size=500):
-    """
-    Splits an iterable up into chunks.
-    """
-    it = iter(iterable)
-    while True:
-        chunk = tuple(itertools.islice(it, chunk_size))
-        if not chunk:
-            return
-        yield chunk
-
-
 def delete_tweet_index(dataset_identifier):
     tweet_index = TweetIndex(dataset_identifier)
     tweet_index.delete(ignore=404)
     log.info('Deleted tweets from {}'.format(dataset_identifier))
 
-
-# def create_tweet_index(dataset_id, shards, replicas):
-#     tweet_index = TweetIndex(dataset_id, shards=shards, replicas=replicas)
-#     tweet_index.create(ignore=400)
 
 def get_tweet_index_state(dataset_identifier):
     """
@@ -236,26 +219,14 @@ if __name__ == '__main__':
         tweet_index.create()
 
         # create_tweet_index(dataset_id, shards, replicas=0, )
-
-        # Doing this in chunks so that can retry if error
         connection = connections.get_connection()
-        for chunk in _chunker(
-                to_tweet(tweet_json, dataset_id, new_index_name, store_tweet=store_tweet).to_dict(include_meta=True) for
-                tweet_json in
-                tweet_iter(*filepaths, limit=args.limit, total_tweets=tweet_count)):
-            try_count = 1
-            while True:
-                try:
-                    helpers.bulk(connection, chunk)
-                    break
-                except ConnectionError as e:
-                    if try_count == CONNECTION_ERROR_TRIES:
-                        raise e
-                    log.warning('Sleeping %s after connection error %s of %s: %s', CONNECTION_ERROR_SLEEP, try_count,
-                                CONNECTION_ERROR_TRIES, e)
-                    try_count += 1
-                    sleep(CONNECTION_ERROR_SLEEP)
-                    connection = connections.get_connection()
+
+        helpers.bulk(connection,
+                     [to_tweet(tweet_json, dataset_id, new_index_name, store_tweet=store_tweet).to_dict(
+                         include_meta=True) for
+                      tweet_json in
+                      tweet_iter(*filepaths, limit=args.limit, total_tweets=tweet_count)],
+                     max_retries=CONNECTION_ERROR_TRIES)
 
         log.debug('Setting replicas and refresh interval')
         tweet_index.put_settings(body={
@@ -271,7 +242,7 @@ if __name__ == '__main__':
             TweetIndex(existing_index_name).delete()
 
         # Get number of tweets in dataset and update
-        sleep(5)
+        sleep(10)
         update_dataset_stats(dataset)
 
     if args.command == 'clear':
