@@ -137,6 +137,7 @@ if __name__ == '__main__':
     reload_parser.add_argument('--skip-count', action='store_true', help='skip count the tweets')
     reload_parser.add_argument('--store-tweet', action='store_true', help='store the entire tweet')
     reload_parser.add_argument('--replicas', type=int, default='1', help='number of replicas to make of this dataset')
+    reload_parser.add_argument('--threads', type=int, default='2', help='number of loading threads')
 
     dataset_parser = subparsers.add_parser('create', help='create a dataset and add tweets')
     dataset_parser.add_argument('--path', help='path of dataset', default='/dataset')
@@ -146,6 +147,7 @@ if __name__ == '__main__':
     dataset_parser.add_argument('--store-tweet', action='store_true', help='store the entire tweet')
     dataset_parser.add_argument('--shards', type=int, help='number of shards for this dataset')
     dataset_parser.add_argument('--replicas', type=int, default='1', help='number of replicas to make of this dataset')
+    dataset_parser.add_argument('--threads', type=int, default='2', help='number of loading threads')
 
     subparsers.add_parser('clear', help='delete all indexes')
 
@@ -221,11 +223,13 @@ if __name__ == '__main__':
         # create_tweet_index(dataset_id, shards, replicas=0, )
         connection = connections.get_connection()
 
+        log.debug('Indexing using %s threads', args.threads)
         deque(helpers.parallel_bulk(connection,
-                     [to_tweet(tweet_json, dataset_id, new_index_name, store_tweet=store_tweet).to_dict(
-                         include_meta=True) for
-                      tweet_json in
-                      tweet_iter(*filepaths, limit=args.limit, total_tweets=tweet_count)]), maxlen=0)
+                                    [to_tweet(tweet_json, dataset_id, new_index_name, store_tweet=store_tweet).to_dict(
+                                        include_meta=True) for
+                                        tweet_json in
+                                        tweet_iter(*filepaths, limit=args.limit, total_tweets=tweet_count)],
+                                    thread_count=args.threads), maxlen=0)
 
         log.debug('Setting replicas and refresh interval')
         tweet_index.put_settings(body={
