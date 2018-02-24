@@ -136,6 +136,7 @@ if __name__ == '__main__':
     reload_parser.add_argument('--store-tweet', action='store_true', help='store the entire tweet')
     reload_parser.add_argument('--replicas', type=int, default='1', help='number of replicas to make of this dataset')
     reload_parser.add_argument('--threads', type=int, default='2', help='number of loading threads')
+    reload_parser.add_argument('--chunk-size', type=int, default='500', help='size of indexing chunk')
 
     dataset_parser = subparsers.add_parser('create', help='create a dataset and add tweets')
     dataset_parser.add_argument('--path', help='path of dataset', default='/dataset')
@@ -146,6 +147,7 @@ if __name__ == '__main__':
     dataset_parser.add_argument('--shards', type=int, help='number of shards for this dataset')
     dataset_parser.add_argument('--replicas', type=int, default='1', help='number of replicas to make of this dataset')
     dataset_parser.add_argument('--threads', type=int, default='2', help='number of loading threads')
+    dataset_parser.add_argument('--chunk-size', type=int, default='500', help='size of indexing chunk')
 
     subparsers.add_parser('clear', help='delete all indexes')
 
@@ -218,18 +220,17 @@ if __name__ == '__main__':
         tweet_index = TweetIndex(new_index_name, shards=shards, replicas=0, refresh_interval=-1)
         tweet_index.create()
 
-        # create_tweet_index(dataset_id, shards, replicas=0, )
-        connection = connections.get_connection()
-
         log.debug('Indexing using %s threads', args.threads)
-        for success, info in helpers.parallel_bulk(connection,
-                                    [to_tweet(tweet_json, dataset_id, new_index_name, store_tweet=store_tweet).to_dict(
-                                        include_meta=True) for
-                                        tweet_json in
-                                        tweet_iter(*filepaths, limit=args.limit, total_tweets=tweet_count)],
-                                    thread_count=args.threads):
+        for success, info in helpers.parallel_bulk(connections.get_connection(),
+                                                   (to_tweet(tweet_json, dataset_id, new_index_name,
+                                                             store_tweet=store_tweet).to_dict(
+                                                       include_meta=True) for
+                                                           tweet_json in
+                                                           tweet_iter(*filepaths, limit=args.limit,
+                                                                      total_tweets=tweet_count)),
+                                                   thread_count=args.threads, chunk_size=args.chunk_size):
             log.debug('Success: %s. %s', success, info)
-            
+
         log.debug('Setting replicas and refresh interval')
         tweet_index.put_settings(body={
             'number_of_replicas': args.replicas, 'refresh_interval': '1s'})
