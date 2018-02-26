@@ -101,7 +101,8 @@ def to_tweet(tweet_json, dataset_id, index_name, store_tweet=False):
     tweet.retweet_count = tweet_json['retweet_count']
     tweet.has_media = 'media' in entities
     tweet.urls = urls(entities, type)
-    tweet.has_geo = tweet_json.get('geo') or tweet_json.get('place') or tweet_json.get('coordinates')
+    tweet.has_geo = tweet.has_geo = True if tweet_json.get('geo') or tweet_json.get('place') or tweet_json.get(
+        'coordinates') else False
     if store_tweet:
         tweet.tweet = tweet_json
     return tweet
@@ -121,8 +122,8 @@ def tweet_type(tweet_json):
 def tweet_text(tweet_json):
     # This handles compat, extended, and extended streaming tweets.
     return tweet_json.get('full_text') \
-                  or tweet_json.get('extended_tweet', {}).get('full_text') \
-                  or tweet_json['text']
+           or tweet_json.get('extended_tweet', {}).get('full_text') \
+           or tweet_json['text']
 
 
 def tweet_hashtags(entities):
