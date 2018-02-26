@@ -87,14 +87,20 @@ def get_tweet_index_state(dataset_identifier):
     alias_name = get_tweets_index_name(dataset_identifier)
     index_name_a = '{}-a'.format(alias_name)
     index_name_b = '{}-b'.format(alias_name)
+    existing_index = None
+    new_index = index_name_a
     # If a exists then a is existing and b is new
     if Index(index_name_a).exists():
-        return alias_name, index_name_b, index_name_a
+        existing_index = index_name_a
+        new_index = index_name_b
     # Else if b exists then a is new and b is existing
     elif Index(index_name_b).exists():
-        return alias_name, index_name_b, index_name_a
+        existing_index = index_name_b
+    # Handle legacy cases where no existing alias
+    elif Index(alias_name).exists():
+        existing_index = alias_name
     # Else neither exists and a is new
-    return alias_name, index_name_a, None
+    return alias_name, new_index, existing_index
 
 
 def update_dataset_stats(dataset):
@@ -233,14 +239,14 @@ if __name__ == '__main__':
         tweet_index.put_settings(body={
             'number_of_replicas': args.replicas, 'refresh_interval': '1s'})
 
-        # Add aliases
-        log.debug('Adding alias %s to %s', alias_name, new_index_name)
-        tweet_index.put_alias(name=alias_name)
-
         # Delete existing index
         if existing_index_name:
             log.debug('Deleting existing index %s', existing_index_name)
             TweetIndex(existing_index_name).delete()
+
+        # Add aliases
+        log.debug('Adding alias %s to %s', alias_name, new_index_name)
+        tweet_index.put_alias(name=alias_name)
 
         # Get number of tweets in dataset and update
         sleep(5)
