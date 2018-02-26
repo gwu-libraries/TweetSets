@@ -148,6 +148,7 @@ if __name__ == '__main__':
     dataset_parser.add_argument('--replicas', type=int, default='1', help='number of replicas to make of this dataset')
     dataset_parser.add_argument('--threads', type=int, default='2', help='number of loading threads')
     dataset_parser.add_argument('--chunk-size', type=int, default='500', help='size of indexing chunk')
+    dataset_parser.add_argument('--dataset-identifier', help='identifier (a UUID) for the dataset')
 
     subparsers.add_parser('clear', help='delete all indexes')
 
@@ -168,27 +169,24 @@ if __name__ == '__main__':
     dataset_index = DatasetIndex()
     dataset_index.create(ignore=400)
 
-    dataset_id = None
+    dataset_id = args.dataset_identifier
     if args.command == 'delete':
-        dataset = DatasetDocType.get(args.dataset_identifier)
+        dataset = DatasetDocType.get(dataset_id)
         if not dataset:
-            raise Exception('{} not found'.format(args.dataset_identifier))
+            raise Exception('{} not found'.format(args.dataset_id))
         dataset.delete()
         log.info('Deleted {}'.format(dataset.meta.id))
-        delete_tweet_index(args.dataset_identifier)
+        delete_tweet_index(dataset_id)
     if args.command == 'create':
+        if dataset_id is None:
+            dataset_id = short_uid(6, exists_func=lambda uid: DatasetDocType.get(uid, ignore=404) is not None)
         dataset = to_dataset(read_json(os.path.join(args.path, args.filename)),
-                             dataset_id=short_uid(6,
-                                                  exists_func=lambda uid: DatasetDocType.get(uid,
-                                                                                             ignore=404) is not None))
+                             dataset_id=dataset_id)
         dataset.save()
-        dataset_id = dataset.meta.id
         log.info('Created {}'.format(dataset_id))
         print('Dataset id is {}'.format(dataset_id))
 
     if args.command in ('create', 'reload'):
-        if dataset_id is None:
-            dataset_id = args.dataset_identifier
         store_tweet = os.environ.get('STORE_TWEET', 'false').lower() == 'true' or args.store_tweet
         if store_tweet:
             log.info('Storing tweet')
