@@ -63,7 +63,7 @@ class TweetDocType(DocType):
     has_media = Boolean()
     urls = Keyword()
     has_geo = Boolean()
-    tweet = Text()
+    tweet = Text(index=False)
 
     class Meta:
         all = MetaField(enabled=False)

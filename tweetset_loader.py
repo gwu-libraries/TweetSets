@@ -304,7 +304,7 @@ if __name__ == '__main__':
                        "es.port": "9200",
                        "es.index.auto.create": "false",
                        "es.mapping.id": "tweet_id",
-                       "es.resource": "{}/tweet_doc_type".format(new_index_name)}
+                       "es.resource": "{}/doc".format(new_index_name)}
 
 
             def to_tweet_dict(tweet_str):

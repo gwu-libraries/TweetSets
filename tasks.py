@@ -148,7 +148,7 @@ class GenerateTweetJSONTask(BaseGenerateTask):
                 os.path.join(self.dataset_path, 'tweets-{}.jsonl'.format(str(self.file_count).zfill(3))), 'w')
             self.file_count += 1
         # Write to tweet file
-        self.file.write(json.dumps(hit.tweet.to_dict()))
+        self.file.write(hit.tweet)
         self.file.write('\n')
 
     def on_end(self):
@@ -176,7 +176,7 @@ class GenerateTweetCSVTask(BaseGenerateTask):
             self.sheet.writerow(json2csv.get_headings())
             self.file_count += 1
         # Write to tweet file
-        self.sheet.writerow(json2csv.get_row(hit.tweet.to_dict()))
+        self.sheet.writerow(json2csv.get_row(json.loads(hit.tweet)))
 
     def on_end(self):
         if self.file:

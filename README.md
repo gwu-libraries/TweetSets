@@ -166,7 +166,7 @@ used to support the dynamic ports) does not work correctly on Mac.
 2. Invoke the loader:
 
         spark-submit \
-        --jars elasticsearch-hadoop-5.6.8.jar \
+        --jars elasticsearch-hadoop.jar \
         --master spark://spark-master:7077 \
         --py-files dist/TweetSets-0.1-py3.4.egg,dependencies.zip \
         --conf spark.driver.port=$SPARK_DRIVER_PORT \
@@ -182,7 +182,7 @@ used to support the dynamic ports) does not work correctly on Mac.
 2. Invoke the loader (when running in cluster mode):
 
         spark-submit \
-        --jars elasticsearch-hadoop-5.6.8.jar \
+        --jars elasticsearch-hadoop.jar \
         --master spark://$SPARK_MASTER_HOST:7077 \
         --py-files dist/TweetSets-0.1-py3.4.egg,dependencies.zip \
         --conf spark.driver.bindAddress=0.0.0.0 \

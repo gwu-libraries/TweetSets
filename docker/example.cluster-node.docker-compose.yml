@@ -1,7 +1,7 @@
 version: '2'
 services:
   elasticsearch:
-      image: docker.elastic.co/elasticsearch/elasticsearch:5.6.7
+      image: docker.elastic.co/elasticsearch/elasticsearch-oss:6.2.2
       logging:
           driver: json-file
           options:
@@ -27,10 +27,6 @@ services:
         - network.publish_host=${HOSTNAME}
         - "ES_JAVA_OPTS=-Xms${ES_JAVA_MEM} -Xmx${ES_JAVA_MEM}"
         - discovery.zen.ping.unicast.hosts=${PRIMARY_HOSTNAME}
-        - xpack.security.enabled=false
-        - xpack.monitoring.enabled=false
-        - xpack.graph.enabled=false
-        - xpack.watcher.enabled=false
         - node.master=${MASTER}
         - discovery.zen.minimum_master_nodes=2
         - TZ
