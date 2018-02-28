@@ -175,7 +175,7 @@ if __name__ == '__main__':
     dataset_index = DatasetIndex()
     dataset_index.create(ignore=400)
 
-    dataset_id = args.dataset_identifier
+    dataset_id = args.dataset_identifier if hasattr(args, 'dataset_identifier') else None
     if args.command == 'delete':
         dataset = DatasetDocType.get(dataset_id)
         if not dataset:
