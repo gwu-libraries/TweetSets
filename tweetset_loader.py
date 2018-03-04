@@ -1,7 +1,6 @@
 from elasticsearch_dsl.connections import connections
 from elasticsearch import helpers
 from elasticsearch_dsl import Search, Index
-from elasticsearch.exceptions import ConnectionError
 from glob import glob
 import gzip
 import logging
@@ -11,6 +10,7 @@ from datetime import datetime
 from time import sleep
 import os
 import math
+import multiprocessing
 
 from models import TweetIndex, to_tweet, DatasetIndex, to_dataset, DatasetDocType, get_tweets_index_name
 from utils import read_json, short_uid
@@ -34,14 +34,20 @@ def find_files(path):
             glob('{}/*.txt'.format(path)))
 
 
-def count_lines(json_files, json_gz_files, txt_files):
+def count_normal_lines(filepath):
+    return sum(1 for _ in open(filepath))
+
+
+def count_gz_lines(filepath):
+    return sum(1 for _ in gzip.open(filepath))
+
+
+def count_lines(json_files, json_gz_files, txt_files, threads=6):
     total_lines = 0
-    for filepath in json_files:
-        total_lines += sum(1 for _ in open(filepath))
-    for filepath in json_gz_files:
-        total_lines += sum(1 for _ in gzip.open(filepath))
-    for filepath in txt_files:
-        total_lines += sum(1 for _ in open(filepath))
+    pool = multiprocessing.Pool(threads)
+    total_lines += sum(pool.imap_unordered(count_normal_lines, json_files))
+    total_lines += sum(pool.imap_unordered(count_gz_lines, json_gz_files))
+    total_lines += sum(pool.imap_unordered(count_normal_lines, txt_files))
     return total_lines
 
 
