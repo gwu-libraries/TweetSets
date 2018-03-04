@@ -10,4 +10,6 @@ if __name__ == "__main__":
         scripts=['tweetset_cli.py'],
         description='Archive tweets from the command line',
         install_requires=open('requirements.txt').read().split(),
+        py_modules=['models'],
+        packages = []
     )

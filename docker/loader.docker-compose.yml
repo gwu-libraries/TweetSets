@@ -1,0 +1,25 @@
+version: '2'
+services:
+  loader:
+      image: justinlittman/tweetsets-loader
+#      build:
+#          context: ..
+#          dockerfile: Dockerfile-loader
+      logging:
+          driver: json-file
+          options:
+              max-size: ${DOCKER_LOG_MAX_SIZE}
+              max-file: ${DOCKER_LOG_MAX_FILE}
+      volumes:
+        - ${DATASET_PATH}:/dataset
+      # Using host networking so that spark can choose own ports
+      # and the ports inside the container match the ports outside
+      # the container. (Spark needs to be able to share the correct
+      # ports.)
+      network_mode: "host"
+      environment:
+        - TZ
+        - STORE_TWEET
+        - ES_HOST=${HOSTNAME}
+        - SPARK_DRIVER_HOST=${HOSTNAME}
+        - SPARK_MASTER_HOST=${HOSTNAME}

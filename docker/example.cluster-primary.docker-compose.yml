@@ -14,8 +14,8 @@ services:
       # This value is suitable for dev. Set higher for production.
       mem_limit: ${ES_MEM_LIMIT}
       ports:
-          - 9300:9300
           - 9200:9200
+          - 9300:9300
       volumes:
         - ${TWEETSETS_DATA_PATH}/elasticsearch:/usr/share/elasticsearch/data
       networks:
@@ -136,23 +136,27 @@ services:
         - TZ
         - ES_TIMEOUT
       restart: always
-  # This will exit. That's OK.
-  loader:
-      image: justinlittman/tweetsets-loader
+  spark-master:
+      image: gettyimages/spark
+      command: bin/spark-class org.apache.spark.deploy.master.Master -h spark-master
+      hostname: spark-master
       logging:
           driver: json-file
           options:
               max-size: ${DOCKER_LOG_MAX_SIZE}
               max-file: ${DOCKER_LOG_MAX_FILE}
-      links:
-        - elasticsearch:elasticsearch
-      volumes:
-        - ${DATASET_PATH}:/dataset
+      environment:
+        - MASTER=spark://spark-master:${SPARK_PORT}
+        - SPARK_CONF_DIR=/conf
+        - SPARK_PUBLIC_DNS=localhost
+      ports:
+        - 4040:4040
+        - 6066:6066
+        - 7077:7077
+        - ${SPARK_UI_PORT}:8080
       networks:
         - tweetsets
-      environment:
-       - TZ
-       - STORE_TWEET
+      restart: always
 #    # For running with HTTPS
 #    # When using this set SERVER_PORT in .env to 8080. Also, make sure HOSTNAME is set correctly.
 #    # For more information on configuration of nginx-proxy, see https://github.com/jwilder/nginx-proxy

@@ -110,3 +110,7 @@ docker/dataset_list_msg.txt
 
 # OS X
 .DS_Store
+
+# Dependencies
+dependencies/
+dependencies.zip
