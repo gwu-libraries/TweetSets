@@ -1,9 +1,9 @@
 version: '2'
 services:
   # This has 2 ElasticSearch nodes. Scale as necessary to additional nodes.
-  elasticsearch1:
+  elasticsearch:
       image: docker.elastic.co/elasticsearch/elasticsearch:5.6.6
-      container_name: elasticsearch1
+      container_name: elasticsearch
       logging:
           driver: json-file
           options:
@@ -15,6 +15,8 @@ services:
           hard: -1
       # This value is suitable for dev. Set higher for production.
       mem_limit: ${ES_MEM_LIMIT}
+      ports:
+          - 9200:9200
       volumes:
         - ${TWEETSETS_DATA_PATH}/elasticsearch/esdata1:/usr/share/elasticsearch/data
       networks:
@@ -48,7 +50,7 @@ services:
         - cluster.name=${CLUSTER_NAME}
         - bootstrap.memory_lock=true
         - "ES_JAVA_OPTS=-Xms${ES_JAVA_MEM} -Xmx${ES_JAVA_MEM}"
-        - "discovery.zen.ping.unicast.hosts=elasticsearch1"
+        - "discovery.zen.ping.unicast.hosts=elasticsearch"
         - xpack.security.enabled=false
         - xpack.monitoring.enabled=false
         - xpack.graph.enabled=false
@@ -83,7 +85,7 @@ services:
               max-file: ${DOCKER_LOG_MAX_FILE}
       links:
         - redis:redis
-        - elasticsearch1:elasticsearch
+        - elasticsearch:elasticsearch
       ports:
           - ${SERVER_PORT}:8080
       volumes:
@@ -126,7 +128,7 @@ services:
 #              max-file: ${DOCKER_LOG_MAX_FILE}
 #      links:
 #        - redis:redis
-#        - elasticsearch1:elasticsearch
+#        - elasticsearch:elasticsearch
 #      ports:
 #          - ${SERVER_PORT}:5000
 #      volumes:
@@ -156,7 +158,7 @@ services:
               max-file: ${DOCKER_LOG_MAX_FILE}
       links:
         - redis:redis
-        - elasticsearch1:elasticsearch
+        - elasticsearch:elasticsearch
       volumes:
         - ${TWEETSETS_DATA_PATH}/datasets:/tweetsets_data/datasets
       networks:
@@ -178,7 +180,9 @@ services:
               max-size: ${DOCKER_LOG_MAX_SIZE}
               max-file: ${DOCKER_LOG_MAX_FILE}
       links:
-        - elasticsearch1:elasticsearch
+        - elasticsearch:elasticsearch
+        - elasticsearch2:elasticsearch2
+        - spark-master
       volumes:
         - ${DATASET_PATH}:/dataset
       networks:
@@ -186,6 +190,62 @@ services:
       environment:
         - TZ
         - STORE_TWEET
+  spark-master:
+      image: gettyimages/spark
+      command: bin/spark-class org.apache.spark.deploy.master.Master -h spark-master
+      logging:
+          driver: json-file
+          options:
+              max-size: ${DOCKER_LOG_MAX_SIZE}
+              max-file: ${DOCKER_LOG_MAX_FILE}
+      environment:
+          MASTER: spark://spark-master:7077
+          SPARK_CONF_DIR: /conf
+          SPARK_PUBLIC_DNS: localhost
+      expose:
+        - 7001
+        - 7002
+        - 7003
+        - 7004
+        - 7005
+        - 7006
+        - 7077
+        - 6066
+      ports:
+        - ${SPARK_UI_PORT}:8080
+      networks:
+        - tweetsets
+      restart: always
+  spark-worker1:
+      image: gettyimages/spark
+      command: bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
+      logging:
+          driver: json-file
+          options:
+              max-size: ${DOCKER_LOG_MAX_SIZE}
+              max-file: ${DOCKER_LOG_MAX_FILE}
+      environment:
+          SPARK_CONF_DIR: /conf
+          SPARK_WORKER_CORES: ${SPARK_CORES}
+          SPARK_WORKER_MEMORY: ${SPARK_MEMORY}
+          SPARK_WORKER_PORT: 8881
+          SPARK_WORKER_WEBUI_PORT: 8081
+      links:
+        - spark-master
+      expose:
+        - 7012
+        - 7013
+        - 7014
+        - 7015
+        - 7016
+        - 8881
+      ports:
+        - 8081:8081
+      networks:
+        - tweetsets
+      volumes:
+        - ${DATASET_PATH}:/dataset
+      restart: always
 #    # For running with HTTPS
 #    # When using this set SERVER_PORT in .env to 8080. Also, make sure HOSTNAME is set correctly.
 #    # For more information on configuration of nginx-proxy, see https://github.com/jwilder/nginx-proxy

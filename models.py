@@ -3,6 +3,7 @@ from elasticsearch_dsl import DocType, Date, Boolean, \
 from dateutil.parser import parse as date_parse
 from datetime import datetime
 import uuid
+import json
 
 
 class DatasetDocType(DocType):
@@ -62,7 +63,7 @@ class TweetDocType(DocType):
     has_media = Boolean()
     urls = Keyword()
     has_geo = Boolean()
-    tweet = Object(enabled=False)
+    tweet = Text()
 
     class Meta:
         all = MetaField(enabled=False)
@@ -79,9 +80,9 @@ def to_tweet(tweet_json, dataset_id, index_name, store_tweet=False):
     tweet.dataset_id = dataset_id
     type = tweet_type(tweet_json)
     tweet.tweet_type = type
-    tweet.text = [tweet_text(tweet_json)]
+    text = [tweet_text(tweet_json)]
     if tweet.tweet_type == 'quote':
-        tweet.text.append(tweet_text(tweet_json['quoted_status']))
+        text.append(tweet_text(tweet_json['quoted_status']))
         tweet.retweeted_quoted_user_id = tweet_json['quoted_status']['user']['id_str']
         tweet.retweeted_quoted_screen_name = tweet_json['quoted_status']['user']['screen_name']
     elif tweet.tweet_type == 'retweet':
@@ -90,6 +91,7 @@ def to_tweet(tweet_json, dataset_id, index_name, store_tweet=False):
     elif tweet.tweet_type == 'reply':
         tweet.in_reply_to_user_id = tweet_json.get('in_reply_to_user_id_str')
         tweet.in_reply_to_screen_name = tweet_json.get('in_reply_to_screen_name')
+    tweet.text = tuple(text)
     tweet.created_at = date_parse(tweet_json['created_at'])
     tweet.user_id = tweet_json['user']['id_str']
     tweet.user_screen_name = tweet_json['user']['screen_name']
@@ -104,7 +106,7 @@ def to_tweet(tweet_json, dataset_id, index_name, store_tweet=False):
     tweet.has_geo = tweet.has_geo = True if tweet_json.get('geo') or tweet_json.get('place') or tweet_json.get(
         'coordinates') else False
     if store_tweet:
-        tweet.tweet = tweet_json
+        tweet.tweet = json.dumps(tweet_json)
     return tweet
 
 
@@ -130,7 +132,7 @@ def tweet_hashtags(entities):
     hashtags = []
     for hashtag in entities['hashtags']:
         hashtags.append(hashtag['text'].lower())
-    return hashtags
+    return tuple(hashtags)
 
 
 def mentions(entities):
@@ -139,7 +141,7 @@ def mentions(entities):
     for mention in entities['user_mentions']:
         mentions_user_ids.append(mention['id_str'])
         mention_screen_names.append(mention['screen_name'])
-    return mentions_user_ids, mention_screen_names
+    return tuple(mentions_user_ids), tuple(mention_screen_names)
 
 
 def urls(entities, type):
@@ -149,7 +151,7 @@ def urls(entities, type):
         if url and (not type == 'quote' or not url.startswith('https://twitter.com/')):
             # Normalize to lower case and http
             urls.append(url.lower().replace('https://', 'http://'))
-    return urls
+    return tuple(urls)
 
 
 class TweetIndex(Index):

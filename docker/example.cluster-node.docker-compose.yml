@@ -35,5 +35,31 @@ services:
         - discovery.zen.minimum_master_nodes=2
         - TZ
       restart: always
+  spark-worker:
+      image: gettyimages/spark
+      command: bin/spark-class org.apache.spark.deploy.worker.Worker spark://${SPARK_MASTER_HOSTNAME}:${SPARK_MASTER_PORT}
+      hostname: ${HOSTNAME}
+      logging:
+          driver: json-file
+          options:
+              max-size: ${DOCKER_LOG_MAX_SIZE}
+              max-file: ${DOCKER_LOG_MAX_FILE}
+      environment:
+          SPARK_CONF_DIR: /conf
+          SPARK_WORKER_CORES: ${SPARK_CORES}
+          SPARK_WORKER_MEMORY: ${SPARK_MEMORY}
+          SPARK_WORKER_PORT: 8881
+          SPARK_WORKER_WEBUI_PORT: 8080
+          SPARK_PUBLIC_DNS: ${HOST_IP}
+          SPARK_LOCAL_HOSTNAME: ${HOSTNAME}
+          SPARK_IDENT_STRING: ${HOSTNAME}
+      ports:
+          - ${SPARK_UI_PORT}:8080
+          - ${SPARK_PORT}:8881
+      networks:
+        - tweetsets
+      volumes:
+        - ${DATASET_PATH}:/dataset
+      restart: always
 networks:
   tweetsets:

@@ -126,23 +126,20 @@ must have `MASTER` set to `true`.
 
 ## Loading a source dataset
 ### Prepping the source dataset
-1. Create a dataset directory.
+1. Create a dataset directory within the dataset filepath configured in your `.env`.
 2. Place tweet files in the directory. The tweet files can be line-oriented JSON (.json) or gzip compressed
 line-oriented JSON (.json.gz).
 3. Create a dataset description file in the directory named `dataset.json`. See `example.dataset.json` for
 the format of the file.
 
 ### Loading
-1. Point to the dataset directory:
-
-        export DATASET_PATH=/my-dataset
-2. Start and connect to a loader container:
+1. Start and connect to a loader container:
 
         docker-compose run --rm loader /bin/bash
-3. Invoke the loader:
+2. Invoke the loader:
 
-        python tweetset_loader.py create
-    
+        python tweetset_loader.py create /dataset/path/to
+        
 To see other loader commands:
 
         python tweetset_loader.py
@@ -150,6 +147,47 @@ To see other loader commands:
 Note that tweets are never added to an existing index. When using the `reload` command, a new index is created
 for a dataset that replaces the existing index. The new index replaces the old index only after the new index
 has been created, so user's are not effected by reloading.
+
+### Loading with Apache Spark
+When using the Spark loader, the dataset files must be located at the dataset filepath
+on all nodes (e.g., by having separate copies or using a network share such as [NFS](https://www.digitalocean.com/community/tutorials/how-to-set-up-an-nfs-mount-on-ubuntu-16-04)).
+
+In general, using Spark withing Docker is tricky because the Spark driver, Spark master, and Spark
+nodes all need to be able to communicate and the ports are dynamically selected. (Some of the ports
+can be fixed, but supporting multiple simultaneous loaders requires leaving some dynamic.) This
+doesn't play well with Docker's port mapping, since the hostnames and ports that Spark advertises internally
+must match what is available through Docker. Further complicating this is that host networking (which is
+used to support the dynamic ports) does not work correctly on Mac.
+
+#### Locally (non-cluster mode)
+1. Start and connect to a loader container:
+
+        docker-compose run --rm loader /bin/bash
+2. Invoke the loader:
+
+        spark-submit \
+        --jars elasticsearch-hadoop-5.6.8.jar \
+        --master spark://spark-master:7077 \
+        --py-files dist/TweetSets-0.1-py3.4.egg,dependencies.zip \
+        --conf spark.driver.port=$SPARK_DRIVER_PORT \
+        --conf spark.ui.port=$SPARK_UI_PORT \
+        --conf spark.blockManager.port=$SPARK_BLOCKMGR_PORT \
+        --conf spark.driver.host=$HOSTNAME \
+        tweetset_loader.py spark-create /dataset/path/to
+
+#### Cluster mode
+1. Start and connect to a loader container:
+
+        docker-compose -f loader.docker-compose.yml run --rm loader /bin/bash
+2. Invoke the loader (when running in cluster mode):
+
+        spark-submit \
+        --jars elasticsearch-hadoop-5.6.8.jar \
+        --master spark://$SPARK_MASTER_HOST:7077 \
+        --py-files dist/TweetSets-0.1-py3.4.egg,dependencies.zip \
+        --conf spark.driver.bindAddress=0.0.0.0 \
+        --conf spark.driver.host=$SPARK_DRIVER_HOST \
+        tweetset_loader.py spark /dataset/path/to
 
 ## TODO
 * Loading:
