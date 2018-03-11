@@ -176,7 +176,7 @@ class GenerateTweetCSVTask(BaseGenerateTask):
             self.sheet.writerow(json2csv.get_headings())
             self.file_count += 1
         # Write to tweet file
-        self.sheet.writerow(json2csv.get_row(json.loads(hit.tweet)))
+        self.sheet.writerow(json2csv.get_row(json.loads(hit.tweet), excel=True))
 
     def on_end(self):
         if self.file:

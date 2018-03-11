@@ -298,7 +298,7 @@
                     </div>
                     <div class="row">
                         <div id="actions" class="panel panel-default">
-                            <div class="panel-heading"><h2 class="panel-title">Limit Actions</h2></div>
+                            <div class="panel-heading"><h2 class="panel-title">Actions</h2></div>
                             <div class="panel-body">
                                 <div class="form-group">
                                     <div class="col-sm-offset-1">
@@ -401,6 +401,26 @@
                         </div>
                     </div>
                 </div>
+                <form class="form-horizontal" action="{{ url_for('limit_dataset') }}#datasetDerivatives" method="POST">
+                    <div class="row">
+                        <div class="panel panel-default">
+                            <div class="panel-heading"><h2 class="panel-title">Actions</h2></div>
+                            <div class="panel-body">
+                                <div class="form-group">
+                                    <div class="col-sm-offset-1">
+                                        {% if not dataset_id %}
+                                            <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#datasetNameModal">Create dataset</button>
+                                            <p class="help-block">Freeze the dataset parameters to allow generating dataset derivatives.</p>
+                                            <input type="hidden"  name="dataset_name" value="" />
+                                        {% endif %}
+                                        <a href="{{ url_for('dataset_list') }}" class="btn btn-default">Start over</a>
+                                        <p class="help-block">Return to selecting source datasets.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
             </div>
             <div role="tabpanel" class="tab-pane" id="sampleTweets">
                 <div class="row">
@@ -421,6 +441,26 @@
                         </div>
                     </div>
                 </div>
+                <form class="form-horizontal" action="{{ url_for('limit_dataset') }}#datasetDerivatives" method="POST">
+                    <div class="row">
+                        <div class="panel panel-default">
+                            <div class="panel-heading"><h2 class="panel-title">Actions</h2></div>
+                            <div class="panel-body">
+                                <div class="form-group">
+                                    <div class="col-sm-offset-1">
+                                        {% if not dataset_id %}
+                                            <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#datasetNameModal">Create dataset</button>
+                                            <p class="help-block">Freeze the dataset parameters to allow generating dataset derivatives.</p>
+                                            <input type="hidden"  name="dataset_name" value="" />
+                                        {% endif %}
+                                        <a href="{{ url_for('dataset_list') }}" class="btn btn-default">Start over</a>
+                                        <p class="help-block">Return to selecting source datasets.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
             </div>
             {% if dataset_id %}
                 <div role="tabpanel" class="tab-pane" id="datasetDerivatives">
