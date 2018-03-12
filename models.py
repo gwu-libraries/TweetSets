@@ -67,8 +67,6 @@ class TweetDocType(DocType):
 
     class Meta:
         all = MetaField(enabled=False)
-        # Exclude storing the text field
-        source = MetaField(excludes=['text'])
 
 
 def to_tweet(tweet_json, dataset_id, index_name, store_tweet=False):
