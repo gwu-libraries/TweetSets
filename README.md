@@ -187,7 +187,7 @@ used to support the dynamic ports) does not work correctly on Mac.
         --py-files dist/TweetSets-0.1-py3.4.egg,dependencies.zip \
         --conf spark.driver.bindAddress=0.0.0.0 \
         --conf spark.driver.host=$SPARK_DRIVER_HOST \
-        tweetset_loader.py spark /dataset/path/to
+        tweetset_loader.py spark-create /dataset/path/to
 
 ## TODO
 * Loading:

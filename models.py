@@ -123,7 +123,7 @@ def tweet_text(tweet_json):
     # This handles compat, extended, and extended streaming tweets.
     return tweet_json.get('full_text') \
            or tweet_json.get('extended_tweet', {}).get('full_text') \
-           or tweet_json['text']
+           or tweet_json.get('text','')
 
 
 def tweet_hashtags(entities):
