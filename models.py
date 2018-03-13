@@ -4,7 +4,7 @@ from dateutil.parser import parse as date_parse
 from datetime import datetime
 import uuid
 import json
-
+import pytz
 
 class DatasetDocType(DocType):
     name = Keyword()
@@ -95,12 +95,12 @@ def to_tweet(tweet_json, dataset_id, index_name, store_tweet=False):
         tweet.in_reply_to_user_id = tweet_json.get('in_reply_to_user_id_str')
         tweet.in_reply_to_screen_name = tweet_json.get('in_reply_to_screen_name')
     tweet.text = tuple(text)
-    tweet.created_at = date_parse(tweet_json['created_at'])
+    tweet.created_at = date_parse(tweet_json['created_at']).replace(tzinfo=pytz.utc)
     tweet.user_id = tweet_json['user']['id_str']
     tweet.user_screen_name = tweet_json['user']['screen_name']
     tweet.user_follower_count = tweet_json['user']['followers_count']
     tweet.user_verified = tweet_json['user']['verified']
-    tweet.user_created_at = date_parse(tweet_json['user']['created_at'])
+    tweet.user_created_at = date_parse(tweet_json['user']['created_at']).replace(tzinfo=pytz.utc)
     tweet.user_language = tweet_json['user']['lang']
     tweet.user_utc_offset = tweet_json['user']['utc_offset']
     tweet.user_time_zone = tweet_json['user']['time_zone']
