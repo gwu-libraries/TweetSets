@@ -31,7 +31,7 @@ services:
         - TZ
       restart: always
   redis:
-      image: redis:3.0.7
+      image: redis:4.0.8
       logging:
           driver: json-file
           options:
@@ -142,7 +142,7 @@ services:
               max-size: ${DOCKER_LOG_MAX_SIZE}
               max-file: ${DOCKER_LOG_MAX_FILE}
       environment:
-        - MASTER=spark://spark-master:${SPARK_PORT}
+        - MASTER=spark://spark-master:7077
         - SPARK_CONF_DIR=/conf
         - SPARK_PUBLIC_DNS=localhost
       ports:
