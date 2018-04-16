@@ -96,10 +96,14 @@ class TweetSetStats():
         for source_dataset, count in self.source_datasets_stats(local_only=True):
             if source_dataset not in source_datasets:
                 source_datasets[source_dataset] = SourceDatasetMergeStat(source_dataset, 0, 0, 0, 0)
-                source_datasets[source_dataset] = source_datasets[source_dataset]._replace(local_count=count)
+            source_datasets[source_dataset] = source_datasets[source_dataset]._replace(local_count=count)
         for source_dataset, count in self.source_datasets_stats(since_datetime=since_datetime):
+            if source_dataset not in source_datasets:
+                source_datasets[source_dataset] = SourceDatasetMergeStat(source_dataset, 0, 0, 0, 0)
             source_datasets[source_dataset] = source_datasets[source_dataset]._replace(all_recent_count=count)
         for source_dataset, count in self.source_datasets_stats(local_only=True, since_datetime=since_datetime):
+            if source_dataset not in source_datasets:
+                source_datasets[source_dataset] = SourceDatasetMergeStat(source_dataset, 0, 0, 0, 0)
             source_datasets[source_dataset] = source_datasets[source_dataset]._replace(local_recent_count=count)
         return list(source_datasets.values())
 

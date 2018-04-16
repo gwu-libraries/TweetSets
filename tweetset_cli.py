@@ -19,7 +19,7 @@ def fetch_by_screen_name(screen_name, source_datasets):
     search.source(['tweet'])
 
     for hit in search.scan():
-        yield hit.tweet.to_dict()
+        yield json.loads(hit.tweet)
 
 
 def fetch_by_source_screen_name(screen_name, source_datasets):
@@ -32,7 +32,7 @@ def fetch_by_source_screen_name(screen_name, source_datasets):
     search.source(['tweet'])
 
     for hit in search.scan():
-        tweet = hit.tweet.to_dict()
+        tweet = json.loads(hit.tweet)
         if 'retweeted_status' in tweet:
             yield tweet['retweeted_status']
         elif 'quoted_status' in tweet:
@@ -51,7 +51,7 @@ def fetch_by_mention_screen_name(mention_screen_name, source_datasets):
     search.source(['tweet'])
 
     for hit in search.scan():
-        yield hit.tweet.to_dict()
+        yield json.loads(hit.tweet)
 
 
 if __name__ == '__main__':
