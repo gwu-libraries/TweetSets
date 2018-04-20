@@ -32,7 +32,7 @@ services:
         - TZ
       restart: always
   spark-worker:
-      image: gettyimages/spark
+      image: gettyimages/spark:2.3.0-hadoop-2.8
       command: bin/spark-class org.apache.spark.deploy.worker.Worker spark://${SPARK_MASTER_HOSTNAME}:${SPARK_MASTER_PORT}
       hostname: ${HOSTNAME}
       logging:

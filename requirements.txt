@@ -24,4 +24,4 @@ urllib3==1.21.1
 vine==1.1.3
 Werkzeug==0.12.2
 twarc==1.4.0
-pyspark==2.2.1
+pyspark==2.3.0

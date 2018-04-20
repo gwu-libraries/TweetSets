@@ -186,7 +186,7 @@ services:
         - TZ
         - STORE_TWEET
   spark-master:
-      image: gettyimages/spark
+      image: gettyimages/spark:2.3.0-hadoop-2.8
       command: bin/spark-class org.apache.spark.deploy.master.Master -h spark-master
       logging:
           driver: json-file
@@ -212,7 +212,7 @@ services:
         - tweetsets
       restart: always
   spark-worker1:
-      image: gettyimages/spark
+      image: gettyimages/spark:2.3.0-hadoop-2.8
       command: bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
       logging:
           driver: json-file

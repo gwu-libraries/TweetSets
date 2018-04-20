@@ -133,7 +133,7 @@ services:
         - ES_TIMEOUT
       restart: always
   spark-master:
-      image: gettyimages/spark
+      image: gettyimages/spark:2.3.0-hadoop-2.8
       command: bin/spark-class org.apache.spark.deploy.master.Master -h spark-master
       hostname: spark-master
       logging:
