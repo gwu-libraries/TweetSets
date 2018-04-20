@@ -63,8 +63,10 @@ class TweetDocType(DocType):
     retweet_count = Integer()
     retweeted_quoted_user_id = Keyword()
     retweeted_quoted_screen_name = Keyword()
+    retweet_quoted_status_id = Keyword()
     in_reply_to_user_id = Keyword()
     in_reply_to_screen_name = Keyword()
+    in_reply_to_status_id = Keyword()
     has_media = Boolean()
     urls = Keyword()
     has_geo = Boolean()
@@ -88,12 +90,15 @@ def to_tweet(tweet_json, dataset_id, index_name, store_tweet=False):
         text.append(tweet_text(tweet_json['quoted_status']))
         tweet.retweeted_quoted_user_id = tweet_json['quoted_status']['user']['id_str']
         tweet.retweeted_quoted_screen_name = tweet_json['quoted_status']['user']['screen_name']
+        tweet.retweet_quoted_status_id = tweet_json['quoted_status']['id_str']
     elif tweet.tweet_type == 'retweet':
         tweet.retweeted_quoted_user_id = tweet_json['retweeted_status']['user']['id_str']
         tweet.retweeted_quoted_screen_name = tweet_json['retweeted_status']['user']['screen_name']
+        tweet.retweet_quoted_status_id = tweet_json['retweeted_status']['id_str']
     elif tweet.tweet_type == 'reply':
         tweet.in_reply_to_user_id = tweet_json.get('in_reply_to_user_id_str')
         tweet.in_reply_to_screen_name = tweet_json.get('in_reply_to_screen_name')
+        tweet.in_reply_to_status_id = tweet_json.get('in_reply_to_status_id_str')
     tweet.text = tuple(text)
     tweet.created_at = date_parse(tweet_json['created_at'])
     tweet.user_id = tweet_json['user']['id_str']

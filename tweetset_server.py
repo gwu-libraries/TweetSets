@@ -376,8 +376,14 @@ def handle_bad_request(e):
 
 def _prepare_dataset_view(dataset_params, clear_cache=False):
     context = _dataset_params_to_context(dataset_params)
+    tweet_limit = 0
+    try:
+        tweet_limit = int(dataset_params.get('tweet_limit', '0') or '0')
+    except ValueError:
+        pass
+
     search_context = _search_to_search_context(dataset_params_to_search(dataset_params), dataset_params,
-                                               tweet_limit=int(dataset_params.get('tweet_limit', '0') or '0'),
+                                               tweet_limit=tweet_limit,
                                                clear_cache=clear_cache)
     context.update(search_context)
     context['sample_tweet_html'] = []
