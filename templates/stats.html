@@ -75,13 +75,15 @@
             </thead>
             <tbody>
                 {% for source_dataset_stat in source_dataset_stats %}
-                    <tr>
-                        <td>{{ source_dataset_names[source_dataset_stat.dataset_id] }}</td>
-                        <td>{{ source_dataset_stat.all_count | nf }}</td>
-                        <td>{{ source_dataset_stat.all_recent_count | nf }}</td>
-                        <td>{{ source_dataset_stat.local_count | nf }}</td>
-                        <td>{{ source_dataset_stat.local_recent_count | nf }}</td>
-                    </tr>
+                    {% if source_dataset_stat.dataset_id in source_dataset_names %}
+                        <tr>
+                            <td>{{ source_dataset_names[source_dataset_stat.dataset_id] }}</td>
+                            <td>{{ source_dataset_stat.all_count | nf }}</td>
+                            <td>{{ source_dataset_stat.all_recent_count | nf }}</td>
+                            <td>{{ source_dataset_stat.local_count | nf }}</td>
+                            <td>{{ source_dataset_stat.local_recent_count | nf }}</td>
+                        </tr>
+                    {% endif %}
                 {% endfor %}
             </tbody>
         </table>

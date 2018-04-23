@@ -306,18 +306,17 @@ def stats():
     since = datetime.utcnow() - timedelta(days=30 * 6)
     source_dataset_stats = ts_stats.source_datasets_merge_stats(since_datetime=since)
     source_dataset_names = {}
-    clean_source_dataset_stats = []
+    # Get the names of the datasets.
     if source_dataset_stats:
         for source_dataset in DatasetDocType.mget([stat.dataset_id for stat in source_dataset_stats]):
             if source_dataset:
                 source_dataset_names[source_dataset.meta.id] = source_dataset.name
-                clean_source_dataset_stats.append(source_dataset)
     return render_template('stats.html',
                            all_datasets_stat=ts_stats.datasets_stats(),
                            local_datasets_stat=ts_stats.datasets_stats(local_only=True),
                            all_recent_datasets_stats=ts_stats.datasets_stats(since_datetime=since),
                            local_recent_dataset_stats=ts_stats.datasets_stats(since_datetime=since, local_only=True),
-                           source_dataset_stats=clean_source_dataset_stats,
+                           source_dataset_stats=source_dataset_stats,
                            source_dataset_names=source_dataset_names,
                            derivatives_stats=ts_stats.derivatives_merge_stats(since_datetime=since))
 
