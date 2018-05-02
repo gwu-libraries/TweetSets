@@ -183,8 +183,8 @@ used to support the dynamic ports) does not work correctly on Mac.
 
         spark-submit \
         --jars elasticsearch-hadoop.jar \
-        --master spark://$SPARK_MASTER_HOST:7077 \
-        --py-files dist/TweetSets-0.1-py3.4.egg,dependencies.zip \
+        --master spark://$SPARK_MASTER_HOST:7101 \
+        --py-files dist/TweetSets-0.1-py3.6.egg,dependencies.zip \
         --conf spark.driver.bindAddress=0.0.0.0 \
         --conf spark.driver.host=$SPARK_DRIVER_HOST \
         tweetset_loader.py spark-create /dataset/path/to

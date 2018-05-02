@@ -133,7 +133,7 @@ services:
         - ES_TIMEOUT
       restart: always
   spark-master:
-      image: gettyimages/spark:2.3.0-hadoop-2.8
+      image: justinlittman/tweetsets-spark
       command: bin/spark-class org.apache.spark.deploy.master.Master -h spark-master
       hostname: spark-master
       logging:
@@ -142,14 +142,13 @@ services:
               max-size: ${DOCKER_LOG_MAX_SIZE}
               max-file: ${DOCKER_LOG_MAX_FILE}
       environment:
-        - MASTER=spark://spark-master:7077
-        - SPARK_CONF_DIR=/conf
+        - MASTER=spark://spark-master:7101
         - SPARK_PUBLIC_DNS=localhost
+        - SPARK_MASTER_PORT=7101
+        - SPARK_MASTER_WEBUI_PORT=7102
       ports:
-        - 4040:4040
-        - 6066:6066
-        - 7077:7077
-        - ${SPARK_UI_PORT}:8080
+        - 7101:7101
+        - 7102:7102
       networks:
         - tweetsets
       restart: always

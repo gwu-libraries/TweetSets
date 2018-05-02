@@ -1,4 +1,4 @@
-FROM python:3.4
+FROM python:3.6
 MAINTAINER Justin Littman <justinlittman@gwu.edu>
 
 ADD requirements.txt /opt/tweetsets/
