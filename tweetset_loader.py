@@ -27,12 +27,12 @@ def find_files(path):
     """
     Returns (.json files, .json.gz files, .txt files) found in path.
     """
-    json_filepaths = glob('{}/*.json'.format(path))
+    json_filepaths = glob('{}/*.json*'.format(path))
     dataset_filepath = os.path.join(path, 'dataset.json')
     if dataset_filepath in json_filepaths:
         json_filepaths.remove(dataset_filepath)
     return (json_filepaths,
-            glob('{}/*.json.gz'.format(path)),
+            glob('{}/*.json*.gz'.format(path)),
             glob('{}/*.txt'.format(path)))
 
 
