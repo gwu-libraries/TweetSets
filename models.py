@@ -95,6 +95,7 @@ def to_tweet(tweet_json, dataset_id, index_name, store_tweet=False):
         tweet.retweeted_quoted_user_id = tweet_json['retweeted_status']['user']['id_str']
         tweet.retweeted_quoted_screen_name = tweet_json['retweeted_status']['user']['screen_name']
         tweet.retweet_quoted_status_id = tweet_json['retweeted_status']['id_str']
+        text = [tweet_text(tweet_json['retweeted_status'])]
     elif tweet.tweet_type == 'reply':
         tweet.in_reply_to_user_id = tweet_json.get('in_reply_to_user_id_str')
         tweet.in_reply_to_screen_name = tweet_json.get('in_reply_to_screen_name')
