@@ -159,27 +159,11 @@ doesn't play well with Docker's port mapping, since the hostnames and ports that
 must match what is available through Docker. Further complicating this is that host networking (which is
 used to support the dynamic ports) does not work correctly on Mac.
 
-#### Locally (non-cluster mode)
-1. Start and connect to a loader container:
-
-        docker-compose run --rm loader /bin/bash
-2. Invoke the loader:
-
-        spark-submit \
-        --jars elasticsearch-hadoop.jar \
-        --master spark://spark-master:7077 \
-        --py-files dist/TweetSets-0.1-py3.4.egg,dependencies.zip \
-        --conf spark.driver.port=$SPARK_DRIVER_PORT \
-        --conf spark.ui.port=$SPARK_UI_PORT \
-        --conf spark.blockManager.port=$SPARK_BLOCKMGR_PORT \
-        --conf spark.driver.host=$HOSTNAME \
-        tweetset_loader.py spark-create /dataset/path/to
-
 #### Cluster mode
 1. Start and connect to a loader container:
 
         docker-compose -f loader.docker-compose.yml run --rm loader /bin/bash
-2. Invoke the loader (when running in cluster mode):
+2. Invoke the loader:
 
         spark-submit \
         --jars elasticsearch-hadoop.jar \
@@ -189,7 +173,28 @@ used to support the dynamic ports) does not work correctly on Mac.
         --conf spark.driver.host=$SPARK_DRIVER_HOST \
         tweetset_loader.py spark-create /dataset/path/to
 
-## TODO
+## Kibana
+Elastic's [Kibana](https://www.elastic.co/products/kibana) is a general-purpose framework for exploring, 
+analyzing, and visualizing data. Since the tweets are already indexed in ElasticSearch, they are ready
+to be used from Kibana.
+
+To enable Kibana, uncomment the Kibana service in your `docker-compose.yml`. By default, Kibana will run on
+port 5601.
+
+A few notes about Kibana:
+* When starting Kibana, the first step you will need to do is select an index pattern. Each index represents
+a dataset, where the format of the name of the index is _tweets-<dataset id>_. The dataset id is available
+under the dataset details when selecting source datasets in TweetSets.
+* The time period of the tweets is controlled by the date picker on the top, right of the Kibana screen. By
+default the time period is very short; you will probably want to adjust to cover a longer time period.
+
+### Kibana TODO
+* Consider multiple Kibana users.
+* Consider persistence.
+* Provide a default dashboard.
+* Consider approaches to index patterns.
+
+## TweetSets TODO
 * Loading:
   * Hydration of tweet ids lists.
 * Limiting:

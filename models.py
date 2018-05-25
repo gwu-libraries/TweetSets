@@ -83,8 +83,7 @@ def to_tweet(tweet_json, dataset_id, index_name, store_tweet=False):
     tweet.meta.id = tweet_json['id_str']
     tweet.meta.index = index_name
     tweet.dataset_id = dataset_id
-    type = tweet_type(tweet_json)
-    tweet.tweet_type = type
+    tweet.tweet_type = tweet_type(tweet_json)
     text = [tweet_text(tweet_json)]
     if tweet.tweet_type == 'quote':
         text.append(tweet_text(tweet_json['quoted_status']))

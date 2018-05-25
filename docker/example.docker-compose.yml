@@ -185,62 +185,6 @@ services:
       environment:
         - TZ
         - STORE_TWEET
-  spark-master:
-      image: gettyimages/spark:2.3.0-hadoop-2.8
-      command: bin/spark-class org.apache.spark.deploy.master.Master -h spark-master
-      logging:
-          driver: json-file
-          options:
-              max-size: ${DOCKER_LOG_MAX_SIZE}
-              max-file: ${DOCKER_LOG_MAX_FILE}
-      environment:
-          MASTER: spark://spark-master:7077
-          SPARK_CONF_DIR: /conf
-          SPARK_PUBLIC_DNS: localhost
-      expose:
-        - 7001
-        - 7002
-        - 7003
-        - 7004
-        - 7005
-        - 7006
-        - 7077
-        - 6066
-      ports:
-        - ${SPARK_UI_PORT}:8080
-      networks:
-        - tweetsets
-      restart: always
-  spark-worker1:
-      image: gettyimages/spark:2.3.0-hadoop-2.8
-      command: bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
-      logging:
-          driver: json-file
-          options:
-              max-size: ${DOCKER_LOG_MAX_SIZE}
-              max-file: ${DOCKER_LOG_MAX_FILE}
-      environment:
-          SPARK_CONF_DIR: /conf
-          SPARK_WORKER_CORES: ${SPARK_CORES}
-          SPARK_WORKER_MEMORY: ${SPARK_MEMORY}
-          SPARK_WORKER_PORT: 8881
-          SPARK_WORKER_WEBUI_PORT: 8081
-      links:
-        - spark-master
-      expose:
-        - 7012
-        - 7013
-        - 7014
-        - 7015
-        - 7016
-        - 8881
-      ports:
-        - 8081:8081
-      networks:
-        - tweetsets
-      volumes:
-        - ${DATASET_PATH}:/dataset
-      restart: always
 #    # For running with HTTPS
 #    # When using this set SERVER_PORT in .env to 8080. Also, make sure HOSTNAME is set correctly.
 #    # For more information on configuration of nginx-proxy, see https://github.com/jwilder/nginx-proxy
@@ -267,6 +211,20 @@ services:
 #        # To include a custom configuration file for nginx, e.g., to increase proxy timeout.
 #        # See example.vhost.conf.
 #        - "./vhost.conf:/etc/nginx/vhost.d/${HOSTNAME}"
+#      restart: always
+#  kibana:
+#      image: docker.elastic.co/kibana/kibana-oss:6.2.2
+#      logging:
+#          driver: json-file
+#          options:
+#              max-size: ${DOCKER_LOG_MAX_SIZE}
+#              max-file: ${DOCKER_LOG_MAX_FILE}
+#      ports:
+#        - 5601:5601
+#      networks:
+#        - tweetsets
+#      environment:
+#        - TZ
 #      restart: always
 networks:
   tweetsets:
