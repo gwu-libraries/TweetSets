@@ -30,7 +30,7 @@
                 <p class="help-block">Limit the tweets selected from the source datasets. Once completed, create the dataset.</p>
             {% else %}
                 <h1>Dataset: {{ dataset_name }}</h1>
-                <p class="help-block">The parameters are frozen. Generate and download dataset derivatives.</p>
+                <p class="help-block">The parameters are frozen. Generate and download dataset exports.</p>
             {% endif %}
         </div>
     </div>
@@ -59,8 +59,8 @@
                     progressBar.css('width', percent + '%');
                     progressBarStatus.text(data['status']);
                     if (data['state'] != 'PENDING' && data['state'] != 'PROGRESS') {
-                        window.location.hash = 'datasetDerivatives';
-                        window.location.href='{{ url_for('dataset', dataset_id=dataset_id) }}?reload=true#datasetDerivatives';
+                        window.location.hash = 'datasetExports';
+                        window.location.href='{{ url_for('dataset', dataset_id=dataset_id) }}?reload=true#datasetExports';
                     }
                     else {
                         // rerun in 2 seconds
@@ -74,7 +74,7 @@
 
         <div class="row">
             <div class="panel panel-default">
-                <div class="panel-heading"><h2 class="panel-title">Progress generating dataset derivatives</h2></div>
+                <div class="panel-heading"><h2 class="panel-title">Progress generating dataset exports</h2></div>
                 <div class="panel-body">
                     {% if task_id %}
                         <h3>Tasks</h3>
@@ -100,7 +100,7 @@
             <li role="presentation"><a href="#datasetStatistics" aria-controls="datasetStatistics" role="tab" data-toggle="tab" id="datasetStatisticsTab">Dataset statistics</a></li>
             <li role="presentation"><a href="#sampleTweets" aria-controls="sampleTweets" role="tab" data-toggle="tab" id="sampleTweetsTab">Sample tweets</a></li>
             {% if dataset_id %}
-                <li role="presentation"><a href="#datasetDerivatives" aria-controls="datasetDerivatives" role="tab" data-toggle="tab" id="datasetDerivativesTab">Dataset derivatives</a></li>
+                <li role="presentation"><a href="#datasetExports" aria-controls="datasetExports" role="tab" data-toggle="tab" id="datasetExportsTab">Dataset exports</a></li>
             {% endif %}
         </ul>
     </div>
@@ -306,7 +306,7 @@
                                             <button type="submit" class="btn btn-primary">Preview</button>
                                             <p class="help-block">Get a sample of tweets in the dataset and see dataset statistics.</p>
                                             <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#datasetNameModal">Create dataset</button>
-                                            <p class="help-block">Freeze the dataset parameters to allow generating dataset derivatives.</p>
+                                            <p class="help-block">Freeze the dataset parameters to allow generating dataset exports.</p>
                                             <input type="hidden"  name="dataset_name" value="" />
 
                                         {% else %}
@@ -401,7 +401,7 @@
                         </div>
                     </div>
                 </div>
-                <form class="form-horizontal" action="{{ url_for('limit_dataset') }}#datasetDerivatives" method="POST">
+                <form class="form-horizontal" action="{{ url_for('limit_dataset') }}#datasetExports" method="POST">
                     <div class="row">
                         <div class="panel panel-default">
                             <div class="panel-heading"><h2 class="panel-title">Actions</h2></div>
@@ -410,7 +410,7 @@
                                     <div class="col-sm-offset-1">
                                         {% if not dataset_id %}
                                             <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#datasetNameModal">Create dataset</button>
-                                            <p class="help-block">Freeze the dataset parameters to allow generating dataset derivatives.</p>
+                                            <p class="help-block">Freeze the dataset parameters to allow generating dataset exports.</p>
                                             <input type="hidden"  name="dataset_name" value="" />
                                         {% endif %}
                                         <a href="{{ url_for('dataset_list') }}" class="btn btn-default">Start over</a>
@@ -441,7 +441,7 @@
                         </div>
                     </div>
                 </div>
-                <form class="form-horizontal" action="{{ url_for('limit_dataset') }}#datasetDerivatives" method="POST">
+                <form class="form-horizontal" action="{{ url_for('limit_dataset') }}#datasetExports" method="POST">
                     <div class="row">
                         <div class="panel panel-default">
                             <div class="panel-heading"><h2 class="panel-title">Actions</h2></div>
@@ -450,7 +450,7 @@
                                     <div class="col-sm-offset-1">
                                         {% if not dataset_id %}
                                             <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#datasetNameModal">Create dataset</button>
-                                            <p class="help-block">Freeze the dataset parameters to allow generating dataset derivatives.</p>
+                                            <p class="help-block">Freeze the dataset parameters to allow generating dataset exports.</p>
                                             <input type="hidden"  name="dataset_name" value="" />
                                         {% endif %}
                                         <a href="{{ url_for('dataset_list') }}" class="btn btn-default">Start over</a>
@@ -463,11 +463,11 @@
                 </form>
             </div>
             {% if dataset_id %}
-                <div role="tabpanel" class="tab-pane" id="datasetDerivatives">
+                <div role="tabpanel" class="tab-pane" id="datasetExports">
 
                     <div class="row">
-                        <div id="datasetDerivativesActions" class="panel panel-default">
-                            <div class="panel-heading"><h2 class="panel-title">Generate Derivative Actions</h2></div>
+                        <div id="datasetExportsActions" class="panel panel-default">
+                            <div class="panel-heading"><h2 class="panel-title">Generate Export Actions</h2></div>
                             <div class="panel-body">
                                 <form class="form-horizontal" action="{{ url_for('dataset', dataset_id=dataset_id) }}" method="POST">
                                   {% if is_local_mode %}

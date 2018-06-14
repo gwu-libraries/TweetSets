@@ -177,7 +177,7 @@ def dataset(dataset_id):
             generate_tasks = _generate_tasks.delay(task_defs, dataset_params, context['total_tweets'], dataset_path,
                                                    generate_update_increment=app.config[
                                                        'GENERATE_UPDATE_INCREMENT'])
-            flash('Started generating derivatives')
+            flash('Started generating exports')
             # Write task.json
             write_json(generate_tasks_filepath, {'id': generate_tasks.id})
             context['task_id'] = generate_tasks.id
@@ -188,12 +188,12 @@ def dataset(dataset_id):
         task = _generate_tasks.AsyncResult(task_id)
         if task.state == 'FAILURE':
             os.remove(generate_tasks_filepath)
-            flash('An error occurred generating derivates. Try again or <a href="mailto:{}">let me know</a>.'.format(
+            flash('An error occurred generating exports. Try again or <a href="mailto:{}">let me know</a>.'.format(
                 app.config['ADMIN_EMAIL']), 'warning')
         else:
             context['task_id'] = task_id
 
-    # Check for existing derivatives
+    # Check for existing exports
     filenames_list = []
     _add_filenames('Generated tweet JSON files', 'tweets-*.jsonl.zip', dataset_path, filenames_list)
     _add_filenames('Generated tweet CSV files', 'tweets-*.csv.zip', dataset_path, filenames_list)
@@ -239,7 +239,7 @@ def limit_dataset():
         prev_datasets.insert(0, {'dataset_name': dataset_name,
                                  'dataset_id': dataset_id,
                                  'create_date': date.today().isoformat()})
-        resp = make_response(redirect('{}#datasetDerivatives'.format(url_for('dataset', dataset_id=dataset_id)),
+        resp = make_response(redirect('{}#datasetExports'.format(url_for('dataset', dataset_id=dataset_id)),
                                       code=303))
         resp.set_cookie('prev_datasets', json.dumps(prev_datasets), expires=datetime.now() + timedelta(days=365 * 5))
 
