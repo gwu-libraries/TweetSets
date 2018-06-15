@@ -1,4 +1,6 @@
 # TweetSets
+[![DOI](https://zenodo.org/badge/91485768.svg)](https://zenodo.org/badge/latestdoi/91485768)
+
 Twitter datasets for research and archiving.
 
 * Create your own Twitter dataset from existing datasets.
@@ -187,6 +189,11 @@ a dataset, where the format of the name of the index is _tweets-<dataset id>_. T
 under the dataset details when selecting source datasets in TweetSets.
 * The time period of the tweets is controlled by the date picker on the top, right of the Kibana screen. By
 default the time period is very short; you will probably want to adjust to cover a longer time period.
+
+## Citing
+Please cite TweetSets as:
+
+        Justin Littman. (2018). TweetSets. Zenodo. https://doi.org/10.5281/zenodo.1289426
 
 ### Kibana TODO
 * Consider multiple Kibana users.
