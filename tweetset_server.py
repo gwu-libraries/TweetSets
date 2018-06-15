@@ -320,10 +320,13 @@ def stats():
                            source_dataset_names=source_dataset_names,
                            derivatives_stats=ts_stats.derivatives_merge_stats(since_datetime=since))
 
-
 @app.route('/help')
 def help():
     return render_template('help.html')
+
+@app.route('/citing')
+def citing():
+    return render_template('citing.html')
 
 
 Node = namedtuple('Node', ['name', 'total_storage', 'available_storage', 'storage_status'])

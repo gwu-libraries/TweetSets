@@ -1,0 +1,52 @@
+<dl class="dl-horizontal">
+    {% if dataset.description %}
+        <dt>Decription</dt>
+        <dd>{{ dataset.description }}</dd>
+    {% endif %}
+    {% if dataset.tags %}
+        <dt>Tags</dt>
+        <dd>
+            <ul>
+                {% for tag in dataset.tags %}
+                    <li>{{ tag }}</li>
+                {% endfor %}
+            </ul>
+        </dd>
+    {% endif %}
+    {% if dataset.creators %}
+        <dt>Creators</dt>
+        <dd>
+            <ul>
+                {% for creator in dataset.creators %}
+                    <li>{{ creator }}</li>
+                {% endfor %}
+            </ul>
+        </dd>
+    {% endif %}
+    {% if dataset.link %}
+        <dt>Public link</dt>
+        <dd><a href="{{ dataset.link }}" target="_blank">{{ dataset.link }}</a><p class="help-block">See the public version for citing this dataset.</p></dd>
+    {% endif %}
+    {% if dataset.created %}
+        <dt>First loaded</dt>
+        <dd>{{ dataset.created.strftime('%Y-%m-%d') }}</dd>
+    {% endif %}
+    {% if dataset.updated %}
+        <dt>Updated</dt>
+        <dd>{{ dataset.updated.strftime('%Y-%m-%d') }}</dd>
+    {% endif %}
+    {% if dataset.first_tweet_created_at %}
+        <dt>First tweet</dt>
+        <dd>{{ dataset.first_tweet_created_at.strftime('%Y-%m-%d') }}</dd>
+    {% endif %}
+    {% if dataset.last_tweet_created_at %}
+        <dt>Last tweet</dt>
+        <dd>{{ dataset.last_tweet_created_at.strftime('%Y-%m-%d') }}</dd>
+    {% endif %}
+    {% if dataset.tweet_count %}
+        <dt>Tweet count</dt>
+        <dd>{{ dataset.tweet_count | nf }}</dd>
+    {% endif %}
+    <dt>ID</dt>
+    <dd>{{ dataset.meta.id }}</dd>
+</dl>

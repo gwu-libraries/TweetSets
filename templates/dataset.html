@@ -99,6 +99,7 @@
             <li role="presentation" class="active"><a href="#datasetParametersActions" aria-controls="datasetParametersActions" role="tab" data-toggle="tab" id="datasetParametersActionsTab">Dataset parameters / actions</a></li>
             <li role="presentation"><a href="#datasetStatistics" aria-controls="datasetStatistics" role="tab" data-toggle="tab" id="datasetStatisticsTab">Dataset statistics</a></li>
             <li role="presentation"><a href="#sampleTweets" aria-controls="sampleTweets" role="tab" data-toggle="tab" id="sampleTweetsTab">Sample tweets</a></li>
+            <li role="presentation"><a href="#sourceDatasets" aria-controls="sourceDatasets" role="tab" data-toggle="tab" id="sourceDatasetsTab">Source datasets</a></li>
             {% if dataset_id %}
                 <li role="presentation"><a href="#datasetExports" aria-controls="datasetExports" role="tab" data-toggle="tab" id="datasetExportsTab">Dataset exports</a></li>
             {% endif %}
@@ -462,6 +463,25 @@
                     </div>
                 </form>
             </div>
+            <div role="tabpanel" class="tab-pane" id="sourceDatasets">
+                <div class="row">
+                    <div class="panel panel-default">
+                        <div class="panel-heading"><h2 class="panel-title">Source datasets</h2></div>
+                        <div class="panel-body">
+                            {% for dataset in source_datasets %}
+                                <div class="panel panel-default">
+                                    <div class="panel-heading" role="tab" id="heading{{ dataset.meta.id }}">
+                                        <h4 class="panel-title">{{ dataset.name }}</h4>
+                                    </div>
+                                    <div class="panel-body">
+                                        {% include 'source_dataset_snippet.html' %}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
             {% if dataset_id %}
                 <div role="tabpanel" class="tab-pane" id="datasetExports">
 
@@ -519,6 +539,9 @@
                             </div>
                         </div>
                     </div>
+                    {% if filenames_list %}
+                        <p class="text-info">Tip: See the public link(s) on the Source datasources tab for citing these dataset(s).</p>
+                    {% endif %}
                     {% for label, filenames in filenames_list %}
                         <div class="row">
                             <div class="panel panel-default">
