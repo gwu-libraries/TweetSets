@@ -342,7 +342,7 @@ def healthcheck():
         r = requests.get('http://elasticsearch:9200/_cluster/stats', timeout=10)
         if r:
             stats = r.json()
-            cluster_status = stats['status']
+            cluster_status = stats.get('status', 'unknown')
             statuses.append(cluster_status)
         r = requests.get('http://elasticsearch:9200/_nodes/stats/fs', timeout=10)
         if r:
@@ -594,7 +594,7 @@ def status_filter(eval_ctx, status):
             result = '<p class="text-success">{}</p>'.format(status)
         if status.lower() == 'yellow':
             result = '<p class="text-warning">{}</p>'.format(status)
-        if status.lower() == 'red':
+        if status.lower() == 'red' or status.lower() == 'unknown':
             result = '<p class="text-danger">{}</p>'.format(status)
     if result:
         if eval_ctx.autoescape:
