@@ -135,6 +135,7 @@ line-oriented JSON (.json.gz).
 the format of the file.
 
 ### Loading
+Use this method when Elasticsearch is on the same machine as TweetSets (non-cluster option), or for otherwise loading without using Spark.
 1. Start and connect to a loader container:
 
         docker-compose run --rm loader /bin/bash
@@ -148,18 +149,19 @@ To see other loader commands:
 
 Note that tweets are never added to an existing index. When using the `reload` command, a new index is created
 for a dataset that replaces the existing index. The new index replaces the old index only after the new index
-has been created, so user's are not effected by reloading.
+has been created, so users are not affected by reloading.
 
 ### Loading with Apache Spark
-When using the Spark loader, the dataset files must be located at the dataset filepath
-on all nodes (e.g., by having separate copies or using a network share such as [NFS](https://www.digitalocean.com/community/tutorials/how-to-set-up-an-nfs-mount-on-ubuntu-16-04)).
+When using the Spark loader, the dataset files must be located at the dataset filepath on all nodes 
+(e.g., by having separate copies or using a network share such as [NFS](https://www.digitalocean.com/community/tutorials/how-to-set-up-an-nfs-mount-on-ubuntu-16-04)).
 
 In general, using Spark withing Docker is tricky because the Spark driver, Spark master, and Spark
 nodes all need to be able to communicate and the ports are dynamically selected. (Some of the ports
 can be fixed, but supporting multiple simultaneous loaders requires leaving some dynamic.) This
 doesn't play well with Docker's port mapping, since the hostnames and ports that Spark advertises internally
 must match what is available through Docker. Further complicating this is that host networking (which is
-used to support the dynamic ports) does not work correctly on Mac.
+used to support the dynamic ports) does not work correctly on Mac. Use the regular loader rather than the Spark
+loader Elasticsearch is on the same machine as TweetSets (e.g., in a small development environment, not a cluster). 
 
 #### Cluster mode
 1. Start and connect to a loader container:
