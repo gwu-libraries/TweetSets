@@ -195,7 +195,13 @@ Please cite TweetSets as:
 
         Justin Littman. (2018). TweetSets. Zenodo. https://doi.org/10.5281/zenodo.1289426
 
-### Kibana TODO
+## Development
+### Unit tests
+  Run outside the container. 
+  
+  `python -m unittest`
+
+## Kibana TODO
 * Consider multiple Kibana users.
 * Consider persistence.
 * Provide a default dashboard.
