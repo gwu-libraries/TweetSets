@@ -47,7 +47,7 @@ services:
       restart: always
   # For production
   server:
-      image: gwul/tweetsets-server
+      image: justinlittman/tweetsets-server
       logging:
           driver: json-file
           options:
@@ -87,7 +87,7 @@ services:
       restart: always
   # For development
 #  server-flaskrun:
-#      image: gwul/tweetsets-flaskrun
+#      image: justinlittman/tweetsets-flaskrun
 #      logging:
 #          driver: json-file
 #          options:
@@ -114,7 +114,7 @@ services:
 #        - IP_RANGE
 #        - ES_TIMEOUT
   worker:
-      image: gwul/tweetsets-worker
+      image: justinlittman/tweetsets-worker
       logging:
           driver: json-file
           options:
@@ -133,7 +133,7 @@ services:
         - ES_TIMEOUT
       restart: always
   spark-master:
-      image: gwul/tweetsets-spark
+      image: justinlittman/tweetsets-spark
       command: bin/spark-class org.apache.spark.deploy.master.Master -h spark-master
       hostname: spark-master
       logging:

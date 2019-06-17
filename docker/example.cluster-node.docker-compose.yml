@@ -32,7 +32,7 @@ services:
         - TZ
       restart: always
   spark-worker:
-      image: gwul/tweetsets-spark
+      image: justinlittman/tweetsets-spark
       command: bin/spark-class org.apache.spark.deploy.worker.Worker spark://${SPARK_MASTER_HOSTNAME}:7101
       hostname: ${HOSTNAME}
       logging:

@@ -69,7 +69,7 @@ services:
       restart: always
   # For production
   server:
-      image: gwul/tweetsets-server
+      image: justinlittman/tweetsets-server
 #      build:
 #          context: ..
 #          dockerfile: Dockerfile-server
@@ -112,7 +112,7 @@ services:
       restart: always
   # For development
 #  server-flaskrun:
-      image: gwul/tweetsets-flaskrun
+      image: justinlittman/tweetsets-flaskrun
 ##      build:
 ##          context: ..
 ##          dockerfile: Dockerfile-flaskrun
@@ -142,7 +142,7 @@ services:
 #        - IP_RANGE
 #        - ES_TIMEOUT
   worker:
-      image: gwul/tweetsets-worker
+      image: justinlittman/tweetsets-worker
 #      build:
 #          context: ..
 #          dockerfile: Dockerfile-worker
@@ -165,7 +165,7 @@ services:
       restart: always
   # This will exit. That's OK.
   loader:
-      image: gwul/tweetsets-loader
+      image: justinlittman/tweetsets-loader
 #      build:
 #          context: ..
 #          dockerfile: Dockerfile-loader

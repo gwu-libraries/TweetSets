@@ -1,5 +1,5 @@
 FROM python:3.6-jessie
-MAINTAINER TweetSets <sfm@gwu.edu> 
+MAINTAINER Justin Littman <justinlittman@gwu.edu>
 
 # Based on https://hub.docker.com/r/gettyimages/spark/~/dockerfile/
 
