@@ -1,7 +1,7 @@
 version: '2'
 services:
   loader:
-      image: justinlittman/tweetsets-loader
+      image: gwul/tweetsets-loader
 #      build:
 #          context: ..
 #          dockerfile: Dockerfile-loader

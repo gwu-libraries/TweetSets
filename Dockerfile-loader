@@ -1,5 +1,5 @@
 FROM python:3.6
-MAINTAINER Justin Littman <justinlittman@gwu.edu>
+MAINTAINER TweetSets <sfm@gwu.edu>
 
 ADD requirements.txt /opt/tweetsets/
 WORKDIR /opt/tweetsets
@@ -7,8 +7,9 @@ RUN pip install -r requirements.txt
 RUN grep elasticsearch-dsl requirements.txt | xargs pip install -t dependencies
 
 RUN set -ex && \
-    echo 'deb http://deb.debian.org/debian jessie-backports main' \
+    echo 'deb [check-valid-until=no] http://archive.debian.org/debian jessie-backports main' \
       > /etc/apt/sources.list.d/jessie-backports.list && \
+    echo "Acquire::Check-Valid-Until \"false\";" > /etc/apt/apt.conf.d/100disablechecks && \
     apt update -y && \
     apt install -t \
       jessie-backports \
