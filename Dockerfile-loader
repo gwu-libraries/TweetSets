@@ -1,4 +1,4 @@
-FROM python:3.6
+FROM python:3.6-stretch
 MAINTAINER TweetSets <sfm@gwu.edu>
 
 ADD requirements.txt /opt/tweetsets/
@@ -6,16 +6,10 @@ WORKDIR /opt/tweetsets
 RUN pip install -r requirements.txt
 RUN grep elasticsearch-dsl requirements.txt | xargs pip install -t dependencies
 
-RUN set -ex && \
-    echo 'deb [check-valid-until=no] http://archive.debian.org/debian jessie-backports main' \
-      > /etc/apt/sources.list.d/jessie-backports.list && \
-    echo "Acquire::Check-Valid-Until \"false\";" > /etc/apt/apt.conf.d/100disablechecks && \
-    apt update -y && \
-    apt install -t \
-      jessie-backports \
-      openjdk-8-jre-headless \
-      ca-certificates-java \
-      zip -y
+RUN apt-get update && \
+    apt-get install -y openjdk-8-jre-headless \
+    ca-certificates-java \
+    zip -y
 
 WORKDIR /opt/tweetsets/dependencies
 RUN zip -r ../dependencies.zip .
