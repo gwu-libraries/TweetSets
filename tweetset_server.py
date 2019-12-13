@@ -7,7 +7,7 @@ import os
 from celery import Celery
 import requests
 import fnmatch
-from models import DatasetDocType
+from models import DatasetDocument
 import redis as redispy
 from datetime import date, datetime, timedelta
 import json
@@ -93,7 +93,7 @@ def about():
 
 @app.route('/datasets')
 def dataset_list():
-    search = DatasetDocType.search().sort('name')[:1000]
+    search = DatasetDocument.search().sort('name')[:1000]
     if not _is_local_mode(request):
         search = search.filter('term', local_only=False)
 
@@ -308,7 +308,7 @@ def stats():
     source_dataset_names = {}
     # Get the names of the datasets.
     if source_dataset_stats:
-        for source_dataset in DatasetDocType.mget([stat.dataset_id for stat in source_dataset_stats]):
+        for source_dataset in DatasetDocument.mget([stat.dataset_id for stat in source_dataset_stats]):
             if source_dataset:
                 source_dataset_names[source_dataset.meta.id] = source_dataset.name
     return render_template('stats.html',
@@ -399,7 +399,7 @@ def _prepare_dataset_view(dataset_params, clear_cache=False):
             except OembedException:
                 # Skip further Oembed attemts
                 oembed_error = True
-    source_datasets = DatasetDocType.mget(dataset_params['source_datasets'])
+    source_datasets = DatasetDocument.mget(dataset_params['source_datasets'])
     context['source_datasets'] = source_datasets
     dataset_created_at_min = None
     dataset_created_at_max = None
@@ -495,7 +495,7 @@ def _tweet_count(clear_cache=False):
     tweet_count_str = redis.get('tweet_count')
     if not tweet_count_str or clear_cache:
         tweet_count = 0
-        search = DatasetDocType.search()
+        search = DatasetDocument.search()
         for dataset in search.scan():
             tweet_count += (dataset.tweet_count or 0)
         app.logger.info('Counted %s tweets', tweet_count)
