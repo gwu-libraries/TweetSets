@@ -13,7 +13,7 @@ import math
 import multiprocessing
 import os.path
 from pyspark.sql import SparkSession
-from models import TweetIndex, to_tweet, DatasetIndex, to_dataset, DatasetDocType, get_tweets_index_name
+from models import TweetIndex, to_tweet, DatasetIndex, to_dataset, DatasetDocument, get_tweets_index_name
 from utils import read_json, short_uid
 
 log = logging.getLogger(__name__)
@@ -224,7 +224,7 @@ if __name__ == '__main__':
     tweet_index = None
     dataset = None
     if args.command == 'delete':
-        dataset = DatasetDocType.get(dataset_id)
+        dataset = DatasetDocument.get(dataset_id)
         if not dataset:
             raise Exception('{} not found'.format(args.dataset_id))
         dataset.delete()
@@ -232,7 +232,7 @@ if __name__ == '__main__':
         delete_tweet_index(dataset_id)
     if args.command in ('create', 'spark-create'):
         if dataset_id is None:
-            dataset_id = short_uid(6, exists_func=lambda uid: DatasetDocType.get(uid, ignore=404) is not None)
+            dataset_id = short_uid(6, exists_func=lambda uid: DatasetDocument.get(uid, ignore=404) is not None)
         dataset = to_dataset(read_json(os.path.join(args.path, args.filename)),
                              dataset_id=dataset_id)
         dataset.save()
@@ -243,7 +243,7 @@ if __name__ == '__main__':
         store_tweet = os.environ.get('STORE_TWEET', 'false').lower() == 'true' or args.store_tweet
         if store_tweet:
             log.info('Storing tweet')
-        dataset = DatasetDocType.get(dataset_id)
+        dataset = DatasetDocument.get(dataset_id)
         if not dataset:
             raise Exception('{} not found'.format(dataset_id))
 
@@ -279,7 +279,7 @@ if __name__ == '__main__':
         store_tweet = os.environ.get('STORE_TWEET', 'false').lower() == 'true' or args.store_tweet
         if store_tweet:
             log.info('Storing tweet')
-        dataset = DatasetDocType.get(dataset_id)
+        dataset = DatasetDocument.get(dataset_id)
         if not dataset:
             raise Exception('{} not found'.format(dataset_id))
 
@@ -350,7 +350,7 @@ if __name__ == '__main__':
         update_dataset_stats(dataset)
 
     if args.command == 'clear':
-        search = DatasetDocType.search()
+        search = DatasetDocument.search()
         for dataset in search.execute():
             delete_tweet_index(dataset.meta.id)
         dataset_index.delete()

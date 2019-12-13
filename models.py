@@ -1,4 +1,4 @@
-from elasticsearch_dsl import DocType, Date, Boolean, \
+from elasticsearch_dsl import Document, Date, Boolean, \
     Keyword, Text, Index, Integer, MetaField, Object
 from dateutil.parser import parse as date_parse
 from datetime import datetime
@@ -6,7 +6,7 @@ import uuid
 import json
 
 
-class DatasetDocType(DocType):
+class DatasetDocument(Document):
     name = Keyword()
     description = Text()
     tags = Keyword()
@@ -19,8 +19,8 @@ class DatasetDocType(DocType):
     tweet_count = Integer()
     local_only = Boolean()
 
-    class Meta:
-        index = 'datasets'
+    class Index:
+        name = 'datasets'
 
     def save(self, **kwargs):
         self.updated = datetime.now()
@@ -29,7 +29,7 @@ class DatasetDocType(DocType):
 
 def to_dataset(dataset_json, dataset=None, dataset_id=None):
     if not dataset:
-        dataset = DatasetDocType()
+        dataset = DatasetDocument()
         dataset.created = datetime.now()
         dataset.meta.id = dataset_id or uuid.uuid4().hex
     # This will throw a KeyError for missing, required fields
@@ -42,7 +42,7 @@ def to_dataset(dataset_json, dataset=None, dataset_id=None):
     return dataset
 
 
-class TweetDocType(DocType):
+class TweetDocument(Document):
     dataset_id = Keyword()
     text = Text()
     tweet_type = Keyword()
@@ -79,7 +79,7 @@ class TweetDocType(DocType):
 def to_tweet(tweet_json, dataset_id, index_name, store_tweet=False):
     entities = tweet_json.get('extended_tweet', {}).get('entities') or tweet_json['entities']
 
-    tweet = TweetDocType()
+    tweet = TweetDocument()
     tweet.meta.id = tweet_json['id_str']
     tweet.meta.index = index_name
     tweet.dataset_id = dataset_id
@@ -176,7 +176,7 @@ class TweetIndex(Index):
             refresh_interval=refresh_interval
         )
         # register a doc_type with the index
-        self.doc_type(TweetDocType)
+        self.doc_type(TweetDocument)
 
 
 def get_tweets_index_name(dataset_id):
@@ -189,5 +189,5 @@ class DatasetIndex(Index):
         self.settings(
             number_of_shards=1
         )
-        # register a doc_type with the index
-        self.doc_type(DatasetDocType)
+       # register a doc_type with the index
+        self.doc_type(DatasetDocument)
