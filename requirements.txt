@@ -7,7 +7,7 @@ chardet==3.0.3
 click==7.0
 elasticsearch==6.4.0
 elasticsearch-dsl==6.2.1
-Flask==1.0.4
+Flask==1.1.1
 idna==2.5
 itsdangerous==1.1.0
 Jinja2==2.10.3
