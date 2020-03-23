@@ -172,7 +172,7 @@ loader Elasticsearch is on the same machine as TweetSets (e.g., in a small devel
         spark-submit \
         --jars elasticsearch-hadoop.jar \
         --master spark://$SPARK_MASTER_HOST:7101 \
-        --py-files dist/TweetSets-0.1-py3.6.egg,dependencies.zip \
+        --py-files dist/TweetSets-1.1.1-py3.6.egg,dependencies.zip \
         --conf spark.driver.bindAddress=0.0.0.0 \
         --conf spark.driver.host=$SPARK_DRIVER_HOST \
         tweetset_loader.py spark-create /dataset/path/to
