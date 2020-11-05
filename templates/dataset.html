@@ -336,6 +336,12 @@
                         $("input[name='dataset_name']" ).val($("input[name='dataset_name_modal']").val());
                         $("#limitForm").submit();
                     });
+
+		    $('#datasetNameModal').submit(function( event ) {
+			event.preventDefault();
+                        $("input[name='dataset_name']" ).val($("input[name='dataset_name_modal']").val());
+                        $("#limitForm").submit();
+                    });
                 });
                 </script>
             </div>
@@ -586,7 +592,7 @@
                 <h3 class="modal-title" id="myModalLabel">Provide a name for the dataset</h3>
             </div>
             <div class="modal-body">
-                <form name="modal-form" class="form-horizontal">
+                <form name="modal-form" class="form-horizontal" id="datasetNameModal">
                      <input class="form-control" type="text" name="dataset_name_modal" value="" />
                 </form>
             </div>
