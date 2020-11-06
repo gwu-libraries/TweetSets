@@ -39,7 +39,7 @@ class TestTweetSetStats(TestCase):
 
         self.assertEqual([('a', 2), ('b', 1)], self.stats.source_datasets_stats())
         self.assertEqual([('a', 2)], self.stats.source_datasets_stats(limit=1))
-        self.assertEqual([('a', 1), ('b', 1)], self.stats.source_datasets_stats(local_only=True))
+        self.assertEqual({('a', 1), ('b', 1)}, set(self.stats.source_datasets_stats(local_only=True)))
 
     def test_derivatives(self):
         self.stats.add_derivative('b', True)
@@ -48,4 +48,4 @@ class TestTweetSetStats(TestCase):
 
         self.assertEqual([('a', 2), ('b', 1)], self.stats.derivatives_stats())
         self.assertEqual([('a', 2), ('b', 1)], self.stats.derivatives_stats())
-        self.assertEqual([('a', 1), ('b', 1)], self.stats.derivatives_stats(local_only=True))
+        self.assertEqual({('a', 1), ('b', 1)}, set(self.stats.derivatives_stats(local_only=True)))
