@@ -72,9 +72,6 @@ class TweetDocument(Document):
     has_geo = Boolean()
     tweet = Text(index=False)
 
-    class Meta:
-        all = MetaField(enabled=False)
-
 
 def to_tweet(tweet_json, dataset_id, index_name, store_tweet=False):
     entities = tweet_json.get('extended_tweet', {}).get('entities') or tweet_json['entities']
@@ -175,8 +172,6 @@ class TweetIndex(Index):
             number_of_replicas=replicas,
             refresh_interval=refresh_interval
         )
-        # register a doc_type with the index
-        self.doc_type(TweetDocument)
 
 
 def get_tweets_index_name(dataset_id):
@@ -189,5 +184,4 @@ class DatasetIndex(Index):
         self.settings(
             number_of_shards=1
         )
-       # register a doc_type with the index
-        self.doc_type(DatasetDocument)
+

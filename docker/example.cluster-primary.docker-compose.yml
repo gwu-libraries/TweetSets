@@ -1,7 +1,7 @@
 version: '2'
 services:
   elasticsearch:
-      image: docker.elastic.co/elasticsearch/elasticsearch-oss:6.2.2
+      image: docker.elastic.co/elasticsearch/elasticsearch-oss:7.9.2
       logging:
           driver: json-file
           options:
@@ -25,6 +25,7 @@ services:
         - bootstrap.memory_lock=true
         - network.host=_eth0_
         - network.publish_host=${HOSTNAME}
+        - discovery.zen.ping.unicast.hosts=${NODE_HOSTNAMES}
         - "ES_JAVA_OPTS=-Xms${ES_JAVA_MEM} -Xmx${ES_JAVA_MEM}"
         - node.master=true
         - discovery.zen.minimum_master_nodes=2
