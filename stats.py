@@ -13,6 +13,70 @@ DerivativeMergeStat = namedtuple('DerivativeMergeStat',
                                  ['derivative_type', 'all_count', 'all_recent_count', 'local_count',
                                   'local_recent_count'])
 
+SOURCE_DATASET_SQL = '''
+select s1.dataset_id, s1.all_count, s3.all_recent_count, s2.local_count, s4.local_recent_count
+from 
+    (select 
+         dataset_id, count(dataset_id) as all_count
+    from source_datasets 
+    group by dataset_id ) s1
+left join (
+    select dataset_id, count(dataset_id) as local_count
+        from source_datasets
+        where is_local=1 
+        group by dataset_id 
+    ) s2
+on s1.dataset_id = s2.dataset_id
+left join (
+    select dataset_id, count(dataset_id) as all_recent_count
+    from source_datasets 
+    where create_timestamp >= (?) 
+    group by dataset_id 
+) s3
+on s1.dataset_id = s3.dataset_id
+left join (
+    select dataset_id, count(dataset_id) as local_recent_count
+    from source_datasets 
+    where is_local=1 and create_timestamp >= (?) 
+    group by dataset_id 
+) s4
+on s1.dataset_id = s4.dataset_id
+order by s1.all_count desc
+'''
+
+DERIVATIVE_SQL = '''
+select s1.derivative_type, s1.all_count, s3.all_recent_count, s2.local_count, s4.local_recent_count
+from 
+    (select 
+         derivative_type, count(derivative_type) as all_count
+    from derivatives 
+    group by derivative_type ) s1
+left join (
+    select derivative_type, count(derivative_type) as local_count
+        from derivatives
+        where is_local=1 
+        group by derivative_type
+    ) s2
+on s1.derivative_type = s2.derivative_type
+left join (
+    select derivative_type, count(derivative_type) as all_recent_count
+    from derivatives 
+    where create_timestamp >= (?) 
+    group by derivative_type 
+) s3
+on s1.derivative_type = s3.derivative_type
+left join (
+    select derivative_type, count(derivative_type) as local_recent_count
+    from derivatives 
+    where is_local=1 and create_timestamp >= (?) 
+    group by derivative_type
+) s4
+on s1.derivative_type = s4.derivative_type
+order by s1.all_count desc
+
+'''
+
+
 
 class TweetSetStats():
     def __init__(self, db_filepath='/tweetsets_data/datasets/stats.db'):
@@ -72,52 +136,20 @@ class TweetSetStats():
             sql += ' where {}'.format(' and '.join(params_sql))
         return DatasetStat._make(self._get_conn().execute(sql, params).fetchone())
 
-    def source_datasets_stats(self, local_only=False, since_datetime=None, limit=10):
+    def source_datasets_stats(self, since_datetime, limit=100):
         """
-        Returns [(dataset_id, count of datasets), ...]
+        Returns stats table for source datasets
         """
-        sql1 = 'select dataset_id, count(dataset_id) from source_datasets'
-        sql2 = 'group by dataset_id order by count(dataset_id) desc'
-        params, params_sql = self._params(local_only, since_datetime)
-        sql = '{} {}'.format(sql1, sql2)
-        if params_sql:
-            sql = '{} where {} {}'.format(sql1, ' and '.join(params_sql), sql2)
-        return list(map(SourceDatasetStat._make, self._get_conn().execute(sql, params).fetchmany(limit)))
+        params = [since_datetime, since_datetime]
+        return list(map(SourceDatasetMergeStat._make, self._get_conn().execute(SOURCE_DATASET_SQL, params).fetchmany(limit)))
+    
 
-    def source_datasets_merge_stats(self, since_datetime=None):
+    def derivatives_stats(self, since_datetime):
         """
-        Returns [(dataset_id, all count of datasets, all recent count, local count, local recent count), ...]
+        Returns stats table for derivatives.
         """
-        source_datasets = {}
-        for source_dataset, count in self.source_datasets_stats():
-            if source_dataset not in source_datasets:
-                source_datasets[source_dataset] = SourceDatasetMergeStat(source_dataset, 0, 0, 0, 0)
-            source_datasets[source_dataset] = source_datasets[source_dataset]._replace(all_count=count)
-        for source_dataset, count in self.source_datasets_stats(local_only=True):
-            if source_dataset not in source_datasets:
-                source_datasets[source_dataset] = SourceDatasetMergeStat(source_dataset, 0, 0, 0, 0)
-            source_datasets[source_dataset] = source_datasets[source_dataset]._replace(local_count=count)
-        for source_dataset, count in self.source_datasets_stats(since_datetime=since_datetime):
-            if source_dataset not in source_datasets:
-                source_datasets[source_dataset] = SourceDatasetMergeStat(source_dataset, 0, 0, 0, 0)
-            source_datasets[source_dataset] = source_datasets[source_dataset]._replace(all_recent_count=count)
-        for source_dataset, count in self.source_datasets_stats(local_only=True, since_datetime=since_datetime):
-            if source_dataset not in source_datasets:
-                source_datasets[source_dataset] = SourceDatasetMergeStat(source_dataset, 0, 0, 0, 0)
-            source_datasets[source_dataset] = source_datasets[source_dataset]._replace(local_recent_count=count)
-        return list(source_datasets.values())
-
-    def derivatives_stats(self, local_only=False, since_datetime=None):
-        """
-        Returns [(derivative type, count of datasets), ...]
-        """
-        sql1 = 'select derivative_type, count(derivative_type) from derivatives'
-        sql2 = 'group by derivative_type order by count(derivative_type) desc'
-        params, params_sql = self._params(local_only, since_datetime)
-        sql = '{} {}'.format(sql1, sql2)
-        if params_sql:
-            sql = '{} where {} {}'.format(sql1, ' and '.join(params_sql), sql2)
-        return list(map(DerivativeStat._make, self._get_conn().execute(sql, params).fetchall()))
+        params = [since_datetime, since_datetime]
+        return list(map(DerivativeMergeStat._make, self._get_conn().execute(DERIVATIVE_SQL, params).fetchall()))
 
     def derivatives_merge_stats(self, since_datetime=None):
         """
