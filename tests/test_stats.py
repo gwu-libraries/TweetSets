@@ -16,6 +16,9 @@ class TestTweetSetStats(TestCase):
         self.db_path = tempfile.mkdtemp()
         self.stats = TweetSetStats(db_filepath=os.path.join(self.db_path, 'stat.db'))
         self.since = datetime.utcnow() - timedelta(days=30 * 6)
+        self.ids = [random.choice('ABCD') for i in range(NUM_ROWS)]
+        self.is_local = [random.choice([1, 0]) for i in range(NUM_ROWS)]
+        self.counts = Counter()
 
     def tearDown(self):
         shutil.rmtree(self.db_path, ignore_errors=True)
@@ -37,22 +40,22 @@ class TestTweetSetStats(TestCase):
         self.assertEqual((0, None), self.stats.datasets_stats(since_datetime=after))
 
     def test_source_datasets(self):
-        dataset_ids = [random.choice('ABCD') for i in range(NUM_ROWS)]
-        is_local = [random.choice([1, 0]) for i in range(NUM_ROWS)]
-        source_stats = Counter()
-        for d, l in zip(dataset_ids, is_local):
+        counts = Counter()
+        for d, l in zip(self.ids, self.is_local):
             self.stats.add_source_dataset(d, l)
-            source_stats[d] += 1
+            counts[d] += l
         stats = self.stats.source_datasets_stats(self.since, limit=NUM_ROWS)
         for s in stats:
-            self.assertEqual(len([d for d in dataset_ids if d == s.dataset_id]), s.all_count)
-            self.assertEqual(source_stats[s.dataset_id], s.local_count)
+            self.assertEqual(len([d for d in self.ids if d == s.dataset_id]), s.all_count)
+            self.assertEqual(counts[s.dataset_id], s.local_count)
 
     def test_derivatives(self):
-        self.stats.add_derivative('b', True)
-        self.stats.add_derivative('a', True)
-        self.stats.add_derivative('a', False)
-
-        self.assertEqual([('a', 2), ('b', 1)], self.stats.derivatives_stats())
-        self.assertEqual([('a', 2), ('b', 1)], self.stats.derivatives_stats())
-        self.assertEqual([('a', 1), ('b', 1)], self.stats.derivatives_stats(local_only=True))
+        counts = Counter()
+        for d, l in zip(self.ids, self.is_local):
+            self.stats.add_derivative(d, l)
+            counts[d] += l
+        stats = self.stats.derivatives_stats(self.since)
+        for s in stats:
+            self.assertEqual(len([d for d in self.ids if d == s.derivative_type]), s.all_count)
+            self.assertEqual(counts[s.derivative_type], s.local_count)
+        
