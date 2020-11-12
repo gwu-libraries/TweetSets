@@ -151,24 +151,6 @@ class TweetSetStats():
         params = [since_datetime, since_datetime]
         return list(map(DerivativeMergeStat._make, self._get_conn().execute(DERIVATIVE_SQL, params).fetchall()))
 
-    def derivatives_merge_stats(self, since_datetime=None):
-        """
-        Returns [(derivative type, all count of datasets, all recent count, local count, local recent count), ...]
-        """
-        derivatives = {}
-        for derivative_type, count in self.derivatives_stats():
-            if derivative_type not in derivatives:
-                derivatives[derivative_type] = DerivativeMergeStat(derivative_type, 0, 0, 0, 0)
-            derivatives[derivative_type] = derivatives[derivative_type]._replace(all_count=count)
-        for derivative_type, count in self.derivatives_stats(local_only=True):
-            if derivative_type not in derivatives:
-                derivatives[derivative_type] = DerivativeMergeStat(derivative_type, 0, 0, 0, 0)
-                derivatives[derivative_type] = derivatives[derivative_type]._replace(local_count=count)
-        for derivative_type, count in self.derivatives_stats(since_datetime=since_datetime):
-            derivatives[derivative_type] = derivatives[derivative_type]._replace(all_recent_count=count)
-        for derivative_type, count in self.derivatives_stats(local_only=True, since_datetime=since_datetime):
-            derivatives[derivative_type] = derivatives[derivative_type]._replace(local_recent_count=count)
-        return list(derivatives.values())
 
     @staticmethod
     def _params(local_only, since_datetime):
