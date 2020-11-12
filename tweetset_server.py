@@ -430,8 +430,8 @@ def _search_to_search_context(search, dataset_params, tweet_limit=None, clear_ca
     context = dict()
     if not cache_context or clear_cache:
         search_response = search.execute()
-        context['total_tweets'] = search_response.hits.total if not tweet_limit else min(
-            search_response.hits.total, tweet_limit)
+        context['total_tweets'] = search_response.hits.total.value if not tweet_limit else min(
+            search_response.hits.total.value, tweet_limit)
         context['top_users'] = _buckets_to_list(search_response.aggregations.top_users.buckets)
         context['top_mentions'] = _buckets_to_list(search_response.aggregations.top_mentions.buckets)
         context['top_hashtags'] = _buckets_to_list(search_response.aggregations.top_hashtags.buckets)

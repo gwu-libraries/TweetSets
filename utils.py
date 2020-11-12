@@ -28,7 +28,7 @@ def dataset_params_to_search(dataset_params, skip_aggs=False):
     indexes = []
     for source_dataset in dataset_params.get('source_datasets'):
         indexes.append(get_tweets_index_name(source_dataset))
-    search = Search(index=indexes)
+    search = Search(index=indexes).extra(track_total_hits=True)
 
     # Query
     q = None
@@ -189,4 +189,3 @@ def _and(q1, q2):
     if q1 is None:
         return q2
     return q1 & q2
-

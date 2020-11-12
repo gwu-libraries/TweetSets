@@ -1,5 +1,5 @@
 from elasticsearch_dsl import Document, Date, Boolean, \
-    Keyword, Text, Index, Integer, MetaField, Object
+    Keyword, Text, Index, Integer
 from dateutil.parser import parse as date_parse
 from datetime import datetime
 import uuid
@@ -135,7 +135,7 @@ def tweet_text(tweet_json):
     # This handles compat, extended, and extended streaming tweets.
     return tweet_json.get('full_text') \
            or tweet_json.get('extended_tweet', {}).get('full_text') \
-           or tweet_json.get('text','')
+           or tweet_json.get('text', '')
 
 
 def tweet_hashtags(entities):
@@ -184,4 +184,3 @@ class DatasetIndex(Index):
         self.settings(
             number_of_shards=1
         )
-

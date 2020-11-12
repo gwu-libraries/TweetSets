@@ -13,7 +13,7 @@ import math
 import multiprocessing
 import os.path
 from pyspark.sql import SparkSession
-from models import TweetIndex, to_tweet, DatasetIndex, to_dataset, DatasetDocument, get_tweets_index_name
+from models import TweetIndex, to_tweet, DatasetIndex, to_dataset, DatasetDocument, TweetDocument, get_tweets_index_name
 from utils import read_json, short_uid
 
 log = logging.getLogger(__name__)
@@ -115,7 +115,7 @@ def get_tweet_index_state(dataset_identifier):
 
 
 def update_dataset_stats(dataset):
-    search = Search(index=get_tweets_index_name(dataset.meta.id))
+    search = Search(index=get_tweets_index_name(dataset.meta.id)).extra(track_total_hits=True)
     search = search.query('term', dataset_id=dataset.meta.id)[0:0]
     search.aggs.metric('created_at_min', 'min', field='created_at')
     search.aggs.metric('created_at_max', 'max', field='created_at')
@@ -124,7 +124,7 @@ def update_dataset_stats(dataset):
         search_response.aggregations.created_at_min.value / 1000.0)
     dataset.last_tweet_created_at = datetime.utcfromtimestamp(
         search_response.aggregations.created_at_max.value / 1000.0)
-    dataset.tweet_count = search_response.hits.total
+    dataset.tweet_count = search_response.hits.total.value
     dataset.save()
 
 
@@ -218,6 +218,7 @@ if __name__ == '__main__':
 
     # Create indexs if they doesn't exist
     dataset_index = DatasetIndex()
+    dataset_index.document(DatasetDocument)
     dataset_index.create(ignore=400)
 
     dataset_id = args.dataset_identifier if hasattr(args, 'dataset_identifier') else None
@@ -262,6 +263,7 @@ if __name__ == '__main__':
 
         log.debug('Index name is %s', new_index_name)
         tweet_index = TweetIndex(new_index_name, shards=shards, replicas=0, refresh_interval=-1)
+        tweet_index.document(TweetDocument)
         tweet_index.create()
 
         log.debug('Indexing using %s threads', args.threads)
@@ -313,7 +315,6 @@ if __name__ == '__main__':
             def to_tweet_dict(tweet_str):
                 return clean_tweet_dict(
                     to_tweet(json.loads(tweet_str), dataset_id, '', store_tweet=True).to_dict(include_meta=True))
-
 
             filepath_list = []
             filepath_list.extend(filepaths[0])
