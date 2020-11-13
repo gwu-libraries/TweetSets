@@ -26,7 +26,7 @@ services:
         - bootstrap.memory_lock=true
         - "ES_JAVA_OPTS=-Xms${ES_JAVA_MEM} -Xmx${ES_JAVA_MEM}"
         - TZ
-        #added for 7.9
+        # added for 7.9.2
         - node.name=elasticsearch
         - cluster.initial_master_nodes=elasticsearch,elasticsearch2
       restart: always
@@ -54,7 +54,7 @@ services:
         - "ES_JAVA_OPTS=-Xms${ES_JAVA_MEM} -Xmx${ES_JAVA_MEM}"
         - "discovery.zen.ping.unicast.hosts=elasticsearch"
         - TZ
-        # adding for 7.9.2
+        # added for 7.9.2
         - node.name=elasticsearch2
         - cluster.initial_master_nodes=elasticsearch,elasticsearch2
       restart: always
