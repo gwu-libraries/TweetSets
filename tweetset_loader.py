@@ -301,6 +301,7 @@ if __name__ == '__main__':
 
         log.debug('Index name is %s', new_index_name)
         tweet_index = TweetIndex(new_index_name, shards=shards, replicas=0, refresh_interval=-1)
+        tweet_index.document(TweetDocument)
         tweet_index.create()
 
         spark = SparkSession.builder.appName('TweetSets').getOrCreate()
@@ -309,7 +310,7 @@ if __name__ == '__main__':
                        "es.port": "9200",
                        "es.index.auto.create": "false",
                        "es.mapping.id": "tweet_id",
-                       "es.resource": "{}/doc".format(new_index_name)}
+                       "es.resource": "{}/_doc".format(new_index_name)}
 
 
             def to_tweet_dict(tweet_str):
