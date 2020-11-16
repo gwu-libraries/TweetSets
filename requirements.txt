@@ -5,8 +5,8 @@ celery==4.0.2
 certifi==2017.4.17
 chardet==3.0.3
 click==7.0
-elasticsearch==6.4.0
-elasticsearch-dsl==6.2.1
+elasticsearch<7.10
+elasticsearch-dsl<7.4
 Flask==1.1.2
 idna==2.5
 itsdangerous==1.1.0

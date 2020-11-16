@@ -1,5 +1,5 @@
 from elasticsearch_dsl import Document, Date, Boolean, \
-    Keyword, Text, Index, Integer, MetaField, Object
+    Keyword, Text, Index, Integer
 from dateutil.parser import parse as date_parse
 from datetime import datetime
 import uuid
@@ -72,9 +72,6 @@ class TweetDocument(Document):
     has_geo = Boolean()
     tweet = Text(index=False)
 
-    class Meta:
-        all = MetaField(enabled=False)
-
 
 def to_tweet(tweet_json, dataset_id, index_name, store_tweet=False):
     entities = tweet_json.get('extended_tweet', {}).get('entities') or tweet_json['entities']
@@ -138,7 +135,7 @@ def tweet_text(tweet_json):
     # This handles compat, extended, and extended streaming tweets.
     return tweet_json.get('full_text') \
            or tweet_json.get('extended_tweet', {}).get('full_text') \
-           or tweet_json.get('text','')
+           or tweet_json.get('text', '')
 
 
 def tweet_hashtags(entities):
@@ -175,8 +172,6 @@ class TweetIndex(Index):
             number_of_replicas=replicas,
             refresh_interval=refresh_interval
         )
-        # register a doc_type with the index
-        self.doc_type(TweetDocument)
 
 
 def get_tweets_index_name(dataset_id):
@@ -189,5 +184,3 @@ class DatasetIndex(Index):
         self.settings(
             number_of_shards=1
         )
-       # register a doc_type with the index
-        self.doc_type(DatasetDocument)

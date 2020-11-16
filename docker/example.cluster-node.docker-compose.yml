@@ -1,7 +1,7 @@
 version: '2'
 services:
   elasticsearch:
-      image: docker.elastic.co/elasticsearch/elasticsearch-oss:6.2.2
+      image: docker.elastic.co/elasticsearch/elasticsearch-oss:7.9.2
       logging:
           driver: json-file
           options:
@@ -28,8 +28,10 @@ services:
         - "ES_JAVA_OPTS=-Xms${ES_JAVA_MEM} -Xmx${ES_JAVA_MEM}"
         - discovery.zen.ping.unicast.hosts=${PRIMARY_HOSTNAME}
         - node.master=${MASTER}
-        - discovery.zen.minimum_master_nodes=2
         - TZ
+        # added for 7.9.2
+        - cluster.initial_master_nodes=${PRIMARY_HOSTNAME}
+        - node.name=${HOSTNAME}
       restart: always
   spark-worker:
       image: gwul/tweetsets-spark
