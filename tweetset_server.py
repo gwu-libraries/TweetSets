@@ -304,7 +304,7 @@ def stats():
             session['demo_mode'] = False
 
     since = datetime.utcnow() - timedelta(days=30 * 6)
-    source_dataset_stats = ts_stats.source_datasets_merge_stats(since_datetime=since)
+    source_dataset_stats = ts_stats.source_datasets_stats(since_datetime=since)
     source_dataset_names = {}
     # Get the names of the datasets.
     if source_dataset_stats:
@@ -318,11 +318,13 @@ def stats():
                            local_recent_dataset_stats=ts_stats.datasets_stats(since_datetime=since, local_only=True),
                            source_dataset_stats=source_dataset_stats,
                            source_dataset_names=source_dataset_names,
-                           derivatives_stats=ts_stats.derivatives_merge_stats(since_datetime=since))
+                           derivatives_stats=ts_stats.derivatives_stats(since_datetime=since))
+
 
 @app.route('/help')
 def help():
     return render_template('help.html')
+
 
 @app.route('/citing')
 def citing():
