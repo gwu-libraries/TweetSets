@@ -2,13 +2,14 @@ from unittest import TestCase
 import tempfile
 import os
 import shutil
-from stats import TweetSetStats, SourceDatasetMergeStat, DerivativeMergeStat
+from stats import TweetSetStats
 from datetime import datetime, timedelta
 import random
 from time import sleep
 from collections import Counter
 
 NUM_ROWS = 100
+
 
 class TestTweetSetStats(TestCase):
 
@@ -58,4 +59,3 @@ class TestTweetSetStats(TestCase):
         for s in stats:
             self.assertEqual(len([d for d in self.ids if d == s.derivative_type]), s.all_count)
             self.assertEqual(counts[s.derivative_type], s.local_count)
-        

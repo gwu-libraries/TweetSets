@@ -320,9 +320,11 @@ def stats():
                            source_dataset_names=source_dataset_names,
                            derivatives_stats=ts_stats.derivatives_stats(since_datetime=since))
 
+
 @app.route('/help')
 def help():
     return render_template('help.html')
+
 
 @app.route('/citing')
 def citing():

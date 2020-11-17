@@ -77,7 +77,6 @@ order by s1.all_count desc
 '''
 
 
-
 class TweetSetStats():
     def __init__(self, db_filepath='/tweetsets_data/datasets/stats.db'):
         self._connection_cache = {}
@@ -142,7 +141,6 @@ class TweetSetStats():
         """
         params = [since_datetime, since_datetime]
         return list(map(SourceDatasetMergeStat._make, self._get_conn().execute(SOURCE_DATASET_SQL, params).fetchmany(limit)))
-    
 
     def derivatives_stats(self, since_datetime):
         """
@@ -150,7 +148,6 @@ class TweetSetStats():
         """
         params = [since_datetime, since_datetime]
         return list(map(DerivativeMergeStat._make, self._get_conn().execute(DERIVATIVE_SQL, params).fetchall()))
-
 
     @staticmethod
     def _params(local_only, since_datetime):
