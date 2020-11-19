@@ -249,7 +249,7 @@
                                 <div class="form-group">
                                     <label for="created_at_from" class="col-sm-2 control-label">From<span class="sr-only">, format as 4 digit year hyphen 2 digit month hyphen 2 digit day</span></label>
                                     <div class="col-sm-3">
-                                        <input type="text" class="form-control" id="created_at_from" name="limit_created_at_from" value="{{ limit_created_at_from }}" pattern="[0-9]{4}/[0-9]{1,2}/[0-9]{1,2}">
+                                        <input type="text" class="form-control" id="created_at_from" name="limit_created_at_from" value="{{ limit_created_at_from }}" pattern="[0-9]{4}-[0-9]{1,2}-[0-9]{1,2}">
                                     </div>
                                     <div class="col-sm-6">
                                         <p class="help-block">Created at date is greater than or equal to.{% if created_at_min %} First tweet in limited dataset is {{ created_at_min.strftime('%Y-%m-%d') }}.{% endif %}{% if dataset_created_at_min %} First tweet in source dataset(s) is {{ dataset_created_at_min.strftime('%Y-%m-%d') }}.{% endif %}</p>
@@ -258,7 +258,7 @@
                                 <div class="form-group">
                                     <label for="created_at_to" class="col-sm-2 control-label">To<span class="sr-only">, format as 4 digit year hyphen 2 digit month hyphen 2 digit day</span></label>
                                     <div class="col-sm-3">
-                                        <input type="text" class="form-control" id="created_at_to" name="limit_created_at_to" value="{{ limit_created_at_to }}" pattern="[0-9]{4}-[0-9]{1,2}/[0-9]{1,2}">
+                                        <input type="text" class="form-control" id="created_at_to" name="limit_created_at_to" value="{{ limit_created_at_to }}" pattern="[0-9]{4}-[0-9]{1,2}-[0-9]{1,2}">
                                     </div>
                                     <div class="col-sm-6">
                                         <p class="help-block">Created at date is less than or equal to.{% if created_at_max %} Last tweet in limited dataset is {{ created_at_max.strftime('%Y-%m-%d') }}.{% endif %}{% if dataset_created_at_max %} Last tweet in source dataset(s) is {{ dataset_created_at_max.strftime('%Y-%m-%d') }}.{% endif %}</p>
