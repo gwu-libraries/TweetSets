@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='bootstrap/3.3.7/css/bootstrap-theme.min.css') }}" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp">
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='datatables/1.10.15/css/jquery.dataTables.min.css') }}"/>
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='datatables/1.10.15/css/dataTables.bootstrap.min.css') }}"/>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='jquery/jquery-ui/jquery-ui.min.css') }}">
     {% block css %}
     {% endblock %}
 
@@ -17,6 +18,10 @@
     <script type="text/javascript" src="{{ url_for('static', filename='datatables/1.10.15/js/jquery.dataTables.min.js') }}"></script>
     <script type="text/javascript" src="{{ url_for('static', filename='datatables/1.10.15/js/dataTables.bootstrap.min.js') }}"></script>
     <script async src="//platform.twitter.com/widgets.js" charset="utf-8"></script>
+    <script type="text/javascript" src="{{ url_for('static', filename='jquery/jquery-ui/jquery-ui.min.js') }}"></script>
+   
+    {% block script %}
+    {% endblock %}
 </head>
 <body>
     {% if session.get("demo_mode") %}
