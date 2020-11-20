@@ -2,7 +2,7 @@ version: '2'
 services:
   loader:
       image: gwul/tweetsets-loader
-      # build:
+      #build:
       #    context: ..
       #    dockerfile: Dockerfile-loader
       logging:
