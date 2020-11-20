@@ -29,7 +29,7 @@
             </tbody>
         </table>
         <br>
-        <h2>Derivatives created</h2>
+        <h2>Dataset derivative types: number of users</h2>
         <table class="table" id="derivativeTable">
             <thead>
                 <tr>
@@ -62,7 +62,7 @@
             } );
         </script>
         <br>
-        <h2>Source datasets</h2>
+        <h2>Source tweetsets: number of users</h2>
         <table class="table" id="sourceDatasetsTable">
             <thead>
                 <tr>
@@ -87,6 +87,7 @@
                 {% endfor %}
             </tbody>
         </table>
+        
         <script>
             $(document).ready(function() {
                 $('#sourceDatasetsTable').DataTable({
@@ -96,6 +97,10 @@
                 });
             } );
         </script>
+    </div>
+    <div class="row">
+        <p class="help-block">NOTE: Users are not unique. One user = one use of the tweetset.</p>
+        </p>
     </div>
     <br>
     <br>
