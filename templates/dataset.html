@@ -508,8 +508,9 @@
                         <div id="datasetExportsActions" class="panel panel-default">
                             <div class="panel-heading"><h2 class="panel-title">Generate Export Actions</h2></div>
                             <div class="panel-body">
+                                {% if total_tweets > 0 %}
                                 <form class="form-horizontal" action="{{ url_for('dataset', dataset_id=dataset_id) }}" method="POST">
-                                  {% if is_local_mode %}
+                                    {% if is_local_mode %}
                                        <div class="checkbox">
                                           <label>
                                             <input type="checkbox" name="generate_tweet_json" value="true">
@@ -524,37 +525,40 @@
                                               <p class="help-block">Generate files containing tweet text and select metadata in CSV (can be used with Excel).</p>
                                           </label>
                                         </div>
-                                   {% endif %}
-                                   <div class="checkbox">
+                                    {% endif %}
+                                    <div class="checkbox">
                                       <label>
                                         <input type="checkbox" name="generate_tweet_ids" value="true">
                                         Generate tweet ids
                                           <p class="help-block">Generate files containing the tweet ids of the dataset.</p>
                                       </label>
-                                   </div>
-                                   <div class="checkbox">
-                                      <label>
+                                    </div>
+                                    <div class="checkbox">
+                                        <label>
                                         <input type="checkbox" name="generate_mentions" value="true">
                                         Generate mentions
                                           <p class="help-block">Generate files containing a mapping of user id to mentioned user id (edges) and user ids to screen names (nodes).</p>
-                                      </label>
-                                   </div>
-                                   <div class="checkbox">
-                                      <label>
+                                        </label>
+                                    </div>
+                                    <div class="checkbox">
+                                        <label>
                                         <input type="checkbox" name="generate_top_mentions" value="true">
                                         Generate top mentions
                                           <p class="help-block">Generate files containing an ordered count of mentioned user ids and screen names.</p>
-                                      </label>
-                                   </div>
-                                   <div class="checkbox">
-                                      <label>
+                                        </label>
+                                    </div>
+                                    <div class="checkbox">
+                                        <label>
                                         <input type="checkbox" name="generate_top_users" value="true">
                                         Generate top users
                                           <p class="help-block">Generate files containing an ordered count of tweets by user ids and screen names.</p>
-                                      </label>
-                                   </div>
-                                   <button type="submit" name="generate_tasks" value="true" class="btn btn-primary" {% if task_id %} disabled="true" {% endif %}>Generate</button>
+                                        </label>
+                                    </div>
+                                    <button type="submit" name="generate_tasks" value="true" class="btn btn-primary" {% if task_id %} disabled="true" {% endif %}>Generate</button>
                                 </form>
+                                {% else %}
+                                <div class=" alert alert-warning" role="alert">No tweets found, refine the dataset parameters to generate an export.</div>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
