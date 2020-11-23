@@ -30,7 +30,7 @@ Modes are configured in the `.env` file as described below.
 * Docker-compose
 * Set `vm_max_map_count` as described in the [ElasticSearch documentation](https://www.elastic.co/guide/en/elasticsearch/reference/current/docker.html).
 
-### Installation
+### Installation for non-cluster ElasticSearch
 1. Create data directories on a volume with adequate storage:
 
         mkdir -p /tweetset_data/redis
@@ -42,20 +42,26 @@ Modes are configured in the `.env` file as described below.
 Note:
 * Create an `esdata<number>` directory for each ElasticSearch container.
 * On OS X, the `redis` and `esdata<number>` directories must be `ugo+rwx`.
+
+2. Create a directory, to be named as you choose, where tweet data files will be stored for loading.
+
+        mkdir /dataset_loading
+
 2. Clone or download this repository:
 
-        git clone https://github.com/justinlittman/TweetSets.git
+        git clone https://github.com/gwu-libraries/TweetSets.git
         
 3. Change to the `docker` directory:
    
         cd docker
+
 4. Copy the example docker files:
 
         cp example.docker-compose.yml docker-compose.yml
         cp example.env .env
 
 5. Edit `.env`. This file is annotated to help you select appropriate values.
-6. Create `dataset_list_msg.txt`. The contents of this file will be displayed on the dataset list page. It can 
+6. Create `dataset_list_msg.txt` in the docker directory. The contents of this file will be displayed on the dataset list page. It can 
 be used to list other datasets that are available, but not yet loaded. If leaving the file empty then:
 
         touch dataset_list_msg.txt
@@ -77,20 +83,25 @@ Clusters must have at least a primary node and two additional nodes.
         mkdir -p /tweetset_data/elasticsearch
         chown -R 1000:1000 /tweetset_data/elasticsearch
 
+2. Create a directory, to be named as you choose, where tweet data files will be stored for loading. 
+
+        mkdir /dataset_loading
+
 2. Clone or download this repository:
 
-        git clone https://github.com/justinlittman/TweetSets.git
+        git clone https://github.com/gwu-libraries/TweetSets.git
         
 3. Change to the `docker` directory:
    
         cd docker
+
 4. Copy the example docker files:
 
         cp example.cluster-primary.docker-compose.yml docker-compose.yml
         cp example.env .env
 
 5. Edit `.env`. This file is annotated to help you select appropriate values.
-6. Create `dataset_list_msg.txt`. The contents of this file will be displayed on the dataset list page. It can 
+6. Create `dataset_list_msg.txt` in the docker directory. The contents of this file will be displayed on the dataset list page. It can 
 be used to list other datasets that are available, but not yet loaded. If leaving the file empty then:
 
         touch dataset_list_msg.txt
@@ -109,11 +120,12 @@ For HTTPS support, uncomment and configure the nginx-proxy container in `docker-
 
 2. Clone or download this repository:
 
-        git clone https://github.com/justinlittman/TweetSets.git
+        git clone https://github.com/gwu-libraries/TweetSets.git
         
 3. Change to the `docker` directory:
    
         cd docker
+
 4. Copy the example docker files:
 
         cp example.cluster-node.docker-compose.yml docker-compose.yml
@@ -172,7 +184,7 @@ loader Elasticsearch is on the same machine as TweetSets (e.g., in a small devel
         spark-submit \
         --jars elasticsearch-hadoop.jar \
         --master spark://$SPARK_MASTER_HOST:7101 \
-        --py-files dist/TweetSets-1.1.1-py3.6.egg,dependencies.zip \
+        --py-files dist/TweetSets-2.0-py3.6.egg,dependencies.zip \
         --conf spark.driver.bindAddress=0.0.0.0 \
         --conf spark.driver.host=$SPARK_DRIVER_HOST \
         tweetset_loader.py spark-create /dataset/path/to
@@ -195,7 +207,7 @@ default the time period is very short; you will probably want to adjust to cover
 ## Citing
 Please cite TweetSets as:
 
-        Justin Littman. (2018). TweetSets. Zenodo. https://doi.org/10.5281/zenodo.1289426
+        Justin Littman, Laura Wrubel, Dan Kerchner, Dolsy Smith, Will Bonnett. (2020). TweetSets. Zenodo. https://doi.org/10.5281/zenodo.1289426
 
 ## Development
 ### Unit tests
