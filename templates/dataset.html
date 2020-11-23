@@ -60,52 +60,6 @@
         <div class="well well-sm">Link for this dataset: <a href="{{ request.base_url }}">{{ request.base_url }}</a></div>
     {% endif %}
 
-    {% if task_id %}
-       <script>
-            function update_progress(url, progressBar, progressBarStatus) {
-                // send GET request to status URL
-                $.getJSON(url, function(data) {
-                    // update UI
-                    percent = parseInt(data['current'] * 100 / data['total']);
-                    progressBar.attr('aria-valuenow', percent);
-                    progressBar.text(percent + '%');
-                    progressBar.css('width', percent + '%');
-                    progressBarStatus.text(data['status']);
-                    if (data['state'] != 'PENDING' && data['state'] != 'PROGRESS') {
-                        window.location.hash = 'datasetExports';
-                        window.location.href='{{ url_for('dataset', dataset_id=dataset_id) }}?reload=true#datasetExports';
-                    }
-                    else {
-                        // rerun in 2 seconds
-                        setTimeout(function() {
-                            update_progress(url, progressBar, progressBarStatus);
-                        }, 2000);
-                    }
-                });
-            }
-        </script>
-
-        <div class="row">
-            <div class="panel panel-default">
-                <div class="panel-heading"><h2 class="panel-title">Progress generating dataset exports</h2></div>
-                <div class="panel-body">
-                    {% if task_id %}
-                        <h3>Tasks</h3>
-                        <div class="progress">
-                            <div id="progressBarTask" class="progress-bar" role="progressbar" aria-valuenow="45" aria-valuemin="0" aria-valuemax="100" style="width: 0%">
-                            </div>
-                        </div>
-                        <p id="progressBarStatusTask" />
-                        <script>
-                            $( document ).ready(function() {
-                                update_progress('/status/{{ task_id }}', $('#progressBarTask'), $('#progressBarStatusTask'));
-                            });
-                        </script>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-    {% endif %}
 
     <div class="row">
         <ul class="nav nav-pills" role="tablist" id="navBar">
@@ -503,7 +457,71 @@
             </div>
             {% if dataset_id %}
                 <div role="tabpanel" class="tab-pane" id="datasetExports">
+                    {% if task_id %}
+                        <script>
+                                function update_progress(url, progressBar, progressBarStatus) {
+                                    // send GET request to status URL
+                                    $.getJSON(url, function(data) {
+                                        // update UI
+                                        percent = parseInt(data['current'] * 100 / data['total']);
+                                        progressBar.attr('aria-valuenow', percent);
+                                        progressBar.text(percent + '%');
+                                        progressBar.css('width', percent + '%');
+                                        progressBarStatus.text(data['status']);
+                                        if (data['state'] != 'PENDING' && data['state'] != 'PROGRESS') {
+                                            window.location.hash = 'datasetExports';
+                                            window.location.href='{{ url_for('dataset', dataset_id=dataset_id) }}#datasetExports';
+                                        }
+                                        else {
+                                            window.location.hash = 'datasetExports';
+                                            window.location.href='{{ url_for('dataset', dataset_id=dataset_id) }}?reload=true#datasetExports';
+                                            // rerun in 2 seconds
+                                            setTimeout(function() {
+                                                update_progress(url, progressBar, progressBarStatus);
+                                            }, 2000);
+                                            }
+                                    });
+                                }
+                        </script>
 
+                        <div class="row">
+                            <div class="panel panel-default">
+                                <div class="panel-heading"><h2 class="panel-title">Progress generating dataset exports</h2></div>
+                                <div class="panel-body">
+                                    {% if task_id %}
+                                        <h3>Tasks</h3>
+                                        <div class="progress">
+                                            <div id="progressBarTask" class="progress-bar" role="progressbar" aria-valuenow="45" aria-valuemin="0" aria-valuemax="100" style="width: 0%">
+                                            </div>
+                                        </div>
+                                        <p id="progressBarStatusTask" />
+                                        <script>
+                                            $( document ).ready(function() {
+                                                update_progress('/status/{{ task_id }}', $('#progressBarTask'), $('#progressBarStatusTask'));
+                                            });
+                                        </script>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+                    {% for label, filenames in filenames_list %}
+                        <div class="row">
+                            <div class="panel panel-default">
+                                <div class="panel-heading"><h2 class="panel-title">{{ label }}</h2></div>
+                                <div class="panel-body">
+                                    <ul class="list-group">
+                                    {% for filename in filenames %}
+                                        <li class="list-group-item"><a href="{{ url_for('dataset_file', dataset_id=dataset_id, filename=filename) }}">{{ filename }}</a></li>
+                                    {% endfor %}
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                    {% if filenames_list %}
+                    <p class="text-info">Tip: See the public link(s) on the Source datasources tab for citing these dataset(s).</p>
+                    {% endif %}
                     <div class="row">
                         <div id="datasetExportsActions" class="panel panel-default">
                             <div class="panel-heading"><h2 class="panel-title">Generate Export Actions</h2></div>
@@ -562,23 +580,7 @@
                             </div>
                         </div>
                     </div>
-                    {% if filenames_list %}
-                        <p class="text-info">Tip: See the public link(s) on the Source datasources tab for citing these dataset(s).</p>
-                    {% endif %}
-                    {% for label, filenames in filenames_list %}
-                        <div class="row">
-                            <div class="panel panel-default">
-                                <div class="panel-heading"><h2 class="panel-title">{{ label }}</h2></div>
-                                <div class="panel-body">
-                                    <ul class="list-group">
-                                    {% for filename in filenames %}
-                                        <li class="list-group-item"><a href="{{ url_for('dataset_file', dataset_id=dataset_id, filename=filename) }}">{{ filename }}</a></li>
-                                    {% endfor %}
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-                    {% endfor %}
+                    
                 </div>
             {% endif %}
         </div>
