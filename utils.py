@@ -24,7 +24,7 @@ def short_uid(length, exists_func):
             return uid
 
 
-def dataset_params_to_search(dataset_params, skip_aggs=False):
+def dataset_params_to_search(dataset_params, skip_aggs=False, max_aggs=1000):
     indexes = []
     for source_dataset in dataset_params.get('source_datasets'):
         indexes.append(get_tweets_index_name(source_dataset))
@@ -164,10 +164,10 @@ def dataset_params_to_search(dataset_params, skip_aggs=False):
 
     # Aggregations
     if not skip_aggs:
-        search.aggs.bucket('top_users', 'terms', field='user_screen_name', size=10)
-        search.aggs.bucket('top_hashtags', 'terms', field='hashtags', size=10)
-        search.aggs.bucket('top_mentions', 'terms', field='mention_screen_names', size=10)
-        search.aggs.bucket('top_urls', 'terms', field='urls', size=10)
+        search.aggs.bucket('top_users', 'terms', field='user_screen_name', size=max_aggs)
+        search.aggs.bucket('top_hashtags', 'terms', field='hashtags', size=max_aggs)
+        search.aggs.bucket('top_mentions', 'terms', field='mention_screen_names', size=max_aggs)
+        search.aggs.bucket('top_urls', 'terms', field='urls', size=max_aggs)
         search.aggs.bucket('tweet_types', 'terms', field='tweet_type')
         search.aggs.metric('created_at_min', 'min', field='created_at')
         search.aggs.metric('created_at_max', 'max', field='created_at')

@@ -10,6 +10,35 @@
       $( "#created_at_from" ).datepicker(options);
       $( "#created_at_to" ).datepicker(options);
     } );
+
+    function toCSV(data, filename) {
+        /* Create CSV from JSON. From https://stackoverflow.com/questions/16078544/export-to-csv-using-jquery-and-html */
+        let csv = Papa.unparse(data);
+        // Check for HTML5 methods
+        if (window.Blob && window.URL) {
+            // HTML5 Blob        
+            let blob = new Blob([csv], {
+                type: 'text/csv;charset=utf-8'
+            });
+            let csvUrl = URL.createObjectURL(blob);
+
+            $(this)
+                .attr({
+                    'download': filename,
+                    'href': csvUrl
+            });
+        } else {
+            // Fall-back method: data URI
+            let csvData = 'data:application/csv;charset=utf-8,' + encodeURIComponent(csv);
+
+          $(this)
+             .attr({
+                'download': filename,
+                'href': csvData,
+                'target': '_blank'
+            });
+        }
+    }
 </script>
 {% endblock %}
 {% block body %}
@@ -316,62 +345,68 @@
                 <div class="row">
                     <div class="panel panel-default">
                         <div class="panel-heading"><h2 class="panel-title">Dataset statistics</h2></div>
-                        <div class="panel-body">
+                        <div class="panel-body" id="stats-panel">
                             <h4>Tweet count</h4>
                             <p>{{ total_tweets | nf }}</p>
-                            <h4>First tweet</h4>
-                            <p>{{ created_at_min }}</p>
-                            <h4>Last tweet</h4>
-                            <p>{{ created_at_max }}</p>
-                            <div class="row">
-                                <div class="col-md-4">
-                                    <h4>Tweet type</h4>
-                                    <ul class="list-group">
-                                        {% for tweet_type in tweet_types %}
-                                            <li class="list-group-item">
-                                                <span class="badge">{{ tweet_type.doc_count | nf }} ({{ '{:.0%}'.format(tweet_type.doc_count / total_tweets) }})</span>
-                                                {{ tweet_type.key }}
-                                            </li>
-                                        {% endfor %}
-                                    </ul>
-                                    <h4>Top users</h4>
-                                    <ul class="list-group">
-                                        {% for user in top_users %}
-                                            <li class="list-group-item">
-                                                <span class="badge">{{ user.doc_count | nf }}</span>
-                                                <a href="https://twitter.com/{{ user.key }}" target="_blank">@{{ user.key }}</a>
-                                            </li>
-                                        {% endfor %}
-                                    </ul>
-                                    <h4>Top mentions</h4>
-                                    <ul class="list-group">
-                                        {% for user in top_mentions %}
-                                            <li class="list-group-item">
-                                                <span class="badge">{{ user.doc_count | nf }}</span>
-                                                <a href="https://twitter.com/{{ user.key }}" target="_blank">@{{ user.key }}</a>
-                                            </li>
-                                        {% endfor %}
-                                    </ul>
-                                    <h4>Top hashtags</h4>
-                                    <ul class="list-group">
-                                        {% for hashtag in top_hashtags %}
-                                            <li class="list-group-item">
-                                                <span class="badge">{{ hashtag.doc_count | nf }}</span>
-                                                #{{ hashtag.key }}
-                                            </li>
-                                        {% endfor %}
-                                    </ul>
+                            {% if total_tweets %}
+                                <h4>First tweet</h4>
+                                <p>{{ created_at_min }}</p>
+                                <h4>Last tweet</h4>
+                                <p>{{ created_at_max }}</p>
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <h4>Tweet type</h4>
+                                        <ul class="list-group">
+                                            {% for tweet_type in tweet_types %}
+                                                <li class="list-group-item">
+                                                    <span class="badge">{{ tweet_type.doc_count | nf }} ({{ '{:.0%}'.format(tweet_type.doc_count / total_tweets) }})</span>
+                                                    {{ tweet_type.key }}
+                                                </li>
+                                            {% endfor %}
+                                        </ul>
+                                        <h4>Top users</h4>
+                                        <a id="top_users" class="csv_download_link" href="#">Download top 1,000 users.</a>
+                                        <ul class="list-group">
+                                            {% for user in top_users[:max_rows] %}
+                                                <li class="list-group-item">
+                                                    <span class="badge">{{ user.doc_count | nf }}</span>
+                                                    <a href="https://twitter.com/{{ user.key }}" target="_blank">@{{ user.key }}</a>
+                                                </li>
+                                            {% endfor %}
+                                        </ul>
+                                        <h4>Top mentions</h4>
+                                        <a id="top_mentions" class="csv_download_link" href="#">Download top 1,000 mentions.</a>
+                                        <ul class="list-group">
+                                            {% for user in top_mentions[:max_rows] %}
+                                                <li class="list-group-item">
+                                                    <span class="badge">{{ user.doc_count | nf }}</span>
+                                                    <a href="https://twitter.com/{{ user.key }}" target="_blank">@{{ user.key }}</a>
+                                                </li>
+                                            {% endfor %}
+                                        </ul>
+                                        <h4>Top hashtags</h4>
+                                        <a id="top_hashtags" class="csv_download_link" href="#">Download top 1,000 hashtags.</a>
+                                        <ul class="list-group">
+                                            {% for hashtag in top_hashtags[:max_rows] %}
+                                                <li class="list-group-item">
+                                                    <span class="badge">{{ hashtag.doc_count | nf }}</span>
+                                                    #{{ hashtag.key }}
+                                                </li>
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
                                 </div>
-                            </div>
-                            <h4>Top URLs</h4>
-                            <ul class="list-group">
-                                {% for url in top_urls %}
-                                    <li class="list-group-item">
-                                        <span class="badge">{{ url.doc_count | nf }}</span>
-                                        <a href="{{ url.key }}">{{ url.key }}</a>
-                                    </li>
-                                {% endfor %}
-                            </ul>
+                                <h4>Top URLs</h4>
+                                <a id="top_urls" class="csv_download_link" href="#">Download top 1,000 urls.</a>
+                                <ul class="list-group">
+                                    {% for url in top_urls[:max_rows] %}
+                                        <li class="list-group-item">
+                                            <span class="badge">{{ url.doc_count | nf }}</span>
+                                            <a href="{{ url.key }}">{{ url.key }}</a>
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -626,4 +661,22 @@
         </div>
     </div>
 </div>
+<script>
+        /* Bind data for top stats to an element for retrieval when CSV reequested. */
+        $("#stats-panel").data({"top_users": {{ top_users|tojson|safe }},
+                                "top_mentions": {{ top_mentions|tojson|safe }},
+                                "top_hashtags": {{ top_hashtags|tojson|safe }},
+                                "top_urls": {{ top_urls|tojson|safe }}
+                                });
+        $(".csv_download_link").on("click", function(e) {
+            /* Get the ID of the target clicked.*/
+            let link_id = $(e.target).attr("id");
+            /* Prevent click propagation. */
+            e.stopPropagation();
+            /* Get data associated with this id. */
+            let data = $("#stats-panel").data(link_id);
+            /* Call toCSV() on this element. */
+            toCSV.apply(this, [data, link_id + ".csv"]);
+        });
+</script>
 {% endblock %}
