@@ -2,14 +2,16 @@
 {% block body %}
 <div class="container">
     <div class="row">
-        <h2>Datasets created</h2>
+        <h1>Statistics</h1>
         <table class="table">
+            <caption>Datasets created</caption>
             <thead>
-                <td />
-                <td>Count</td>
-                <td>Count (last 6 months)</td>
-                <td>Tweets</td>
-                <td>Tweets (last 6 months)</td>
+                <tr>
+                    <th>Count</th>
+                    <th>Count (last 6 months)</th>
+                    <th>Tweets</th>
+                    <th>Tweets (last 6 months)</th>
+                </tr>
             </thead>
             <tbody>
                 <tr>
@@ -29,8 +31,8 @@
             </tbody>
         </table>
         <br>
-        <h2>Dataset derivative types: number of users</h2>
         <table class="table" id="derivativeTable">
+            <caption>Dataset derivative types: number of users</caption>
             <thead>
                 <tr>
                     <th>Derivative type</th>
@@ -62,8 +64,8 @@
             } );
         </script>
         <br>
-        <h2>Source tweetsets: number of users</h2>
         <table class="table" id="sourceDatasetsTable">
+            <caption>Source tweetsets: number of users</caption>
             <thead>
                 <tr>
                     <th>Source dataset</th>
@@ -113,5 +115,5 @@
         <p class="help-block">Statistics will not be collected for the datasets and derivatives that you create while in demo mode.</p>
 
     </div>
-</div>
+</div>  
 {% endblock %}
