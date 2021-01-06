@@ -364,8 +364,8 @@
                                                 </li>
                                             {% endfor %}
                                         </ul>
+                                        <a id="top_users" class="csv_download_link pull-right" href="#">Download top {{ top_users|length }} users</a>
                                         <h4>Top users</h4>
-                                        <a id="top_users" class="csv_download_link" href="#">Download top 1,000 users.</a>
                                         <ul class="list-group">
                                             {% for user in top_users[:max_rows] %}
                                                 <li class="list-group-item">
@@ -374,8 +374,8 @@
                                                 </li>
                                             {% endfor %}
                                         </ul>
+                                        <a id="top_mentions" class="csv_download_link pull-right" href="#">Download top {{ top_mentions|length }} mentions</a>
                                         <h4>Top mentions</h4>
-                                        <a id="top_mentions" class="csv_download_link" href="#">Download top 1,000 mentions.</a>
                                         <ul class="list-group">
                                             {% for user in top_mentions[:max_rows] %}
                                                 <li class="list-group-item">
@@ -384,8 +384,8 @@
                                                 </li>
                                             {% endfor %}
                                         </ul>
+                                        <a id="top_hashtags" class="csv_download_link pull-right" href="#">Download top {{ top_hashtags|length }} hashtags</a>
                                         <h4>Top hashtags</h4>
-                                        <a id="top_hashtags" class="csv_download_link" href="#">Download top 1,000 hashtags.</a>
                                         <ul class="list-group">
                                             {% for hashtag in top_hashtags[:max_rows] %}
                                                 <li class="list-group-item">
@@ -396,8 +396,8 @@
                                         </ul>
                                     </div>
                                 </div>
+                                <a id="top_urls" class="csv_download_link pull-right" href="#">Download top {{ top_urls|length }} urls</a>
                                 <h4>Top URLs</h4>
-                                <a id="top_urls" class="csv_download_link" href="#">Download top 1,000 urls.</a>
                                 <ul class="list-group">
                                     {% for url in top_urls[:max_rows] %}
                                         <li class="list-group-item">
@@ -586,7 +586,7 @@
                                           <p class="help-block">Generate files containing the tweet ids of the dataset.</p>
                                       </label>
                                     </div>
-                                    <div class="checkbox">
+                                    <!-- <div class="checkbox">
                                         <label>
                                         <input type="checkbox" name="generate_mentions" value="true">
                                         Generate mentions
@@ -606,7 +606,7 @@
                                         Generate top users
                                           <p class="help-block">Generate files containing an ordered count of tweets by user ids and screen names.</p>
                                         </label>
-                                    </div>
+                                    </div> -->
                                     <button type="submit" name="generate_tasks" value="true" class="btn btn-primary" {% if task_id %} disabled="true" {% endif %}>Generate</button>
                                 </form>
                                 {% else %}

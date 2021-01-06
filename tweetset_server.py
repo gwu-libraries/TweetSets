@@ -151,29 +151,7 @@ def dataset(dataset_id):
             # Record stats
             if not session.get("demo_mode", False):
                 ts_stats.add_derivative('tweet csv', _is_local(request))
-        if request.form.get('generate_mentions', '').lower() == 'true':
-            task_defs['mentions'] = {
-                'max_per_file': app.config['MAX_PER_CSV_FILE']
-            }
-            # Record stats
-            if not session.get("demo_mode", False):
-                ts_stats.add_derivative('mentions', _is_local(request))
-
-        if request.form.get('generate_top_mentions', '').lower() == 'true':
-            task_defs['top_mentions'] = {
-                'max_per_file': app.config['MAX_PER_CSV_FILE']
-            }
-            # Record stats
-            if not session.get("demo_mode", False):
-                ts_stats.add_derivative('top mentions', _is_local(request))
-
-        if request.form.get('generate_top_users', '').lower() == 'true':
-            task_defs['top_users'] = {
-                'max_per_file': app.config['MAX_PER_CSV_FILE']
-            }
-            # Record stats
-            if not session.get("demo_mode", False):
-                ts_stats.add_derivative('top users', _is_local(request))
+       
 
         if task_defs:
             generate_tasks = _generate_tasks.delay(task_defs, dataset_params, context['total_tweets'], dataset_path,
