@@ -37,6 +37,8 @@ app.config['EMAIL_USERNAME'] = os.environ.get('EMAIL_USERNAME')
 app.config['EMAIL_PASSWORD'] = os.environ.get('EMAIL_PASSWORD')
 app.config['ADMIN_EMAIL'] = os.environ.get('ADMIN_EMAIL')
 app.config['ES_TIMEOUT'] = int(os.environ.get('ES_TIMEOUT', '20'))
+# Maximum rows to display on the datasets stats page per statistic
+app.config['MAX_TOP_ROWS_DS_STATS'] = 10
 
 # ElasticSearch setup
 es_connections.create_connection(hosts=['elasticsearch'], timeout=app.config['ES_TIMEOUT'], sniff_on_start=True,
@@ -149,29 +151,7 @@ def dataset(dataset_id):
             # Record stats
             if not session.get("demo_mode", False):
                 ts_stats.add_derivative('tweet csv', _is_local(request))
-        if request.form.get('generate_mentions', '').lower() == 'true':
-            task_defs['mentions'] = {
-                'max_per_file': app.config['MAX_PER_CSV_FILE']
-            }
-            # Record stats
-            if not session.get("demo_mode", False):
-                ts_stats.add_derivative('mentions', _is_local(request))
-
-        if request.form.get('generate_top_mentions', '').lower() == 'true':
-            task_defs['top_mentions'] = {
-                'max_per_file': app.config['MAX_PER_CSV_FILE']
-            }
-            # Record stats
-            if not session.get("demo_mode", False):
-                ts_stats.add_derivative('top mentions', _is_local(request))
-
-        if request.form.get('generate_top_users', '').lower() == 'true':
-            task_defs['top_users'] = {
-                'max_per_file': app.config['MAX_PER_CSV_FILE']
-            }
-            # Record stats
-            if not session.get("demo_mode", False):
-                ts_stats.add_derivative('top users', _is_local(request))
+       
 
         if task_defs:
             generate_tasks = _generate_tasks.delay(task_defs, dataset_params, context['total_tweets'], dataset_path,
@@ -390,6 +370,7 @@ def _prepare_dataset_view(dataset_params, clear_cache=False):
                                                tweet_limit=tweet_limit,
                                                clear_cache=clear_cache)
     context.update(search_context)
+    context['max_rows'] = app.config['MAX_TOP_ROWS_DS_STATS']
     context['sample_tweet_html'] = []
     oembed_error = False
     for tweet_id in context['sample_tweet_ids']:
@@ -438,7 +419,7 @@ def _search_to_search_context(search, dataset_params, tweet_limit=None, clear_ca
         context['top_mentions'] = _buckets_to_list(search_response.aggregations.top_mentions.buckets)
         context['top_hashtags'] = _buckets_to_list(search_response.aggregations.top_hashtags.buckets)
         context['top_urls'] = _buckets_to_list(search_response.aggregations.top_urls.buckets)
-        context['tweet_types'] = _buckets_to_list(search_response.aggregations.tweet_types.buckets)
+        context['tweet_types'] = _buckets_to_list(search_response.aggregations.tweet_types.buckets) 
         context['created_at_min_value'] = search_response.aggregations.created_at_min.value
         context['created_at_max_value'] = search_response.aggregations.created_at_max.value
         context['sample_tweet_ids'] = []

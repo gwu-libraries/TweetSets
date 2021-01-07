@@ -18,7 +18,8 @@ def generate_tasks(self, task_defs, dataset_params, total_tweets, dataset_path, 
     tasks = []
     task_args = [self, total_tweets, dataset_path, generate_update_increment]
     for task_name, task_kwargs in task_defs.items():
-        tasks.append(task_class_map[task_name](*task_args, **task_kwargs))
+        if task_name in task_class_map:
+            tasks.append(task_class_map[task_name](*task_args, **task_kwargs))
     search = dataset_params_to_search(dataset_params)
     source = set()
 
@@ -450,10 +451,7 @@ class GenerateTopUsersTask(BaseGenerateTask):
 task_class_map = {
     'tweet_ids': GenerateTweetIdsTask,
     'tweet_json': GenerateTweetJSONTask,
-    'tweet_csv': GenerateTweetCSVTask,
-    'mentions': GenerateMentionsTask,
-    'top_mentions': GenerateTopMentionsTask,
-    'top_users': GenerateTopUsersTask
+    'tweet_csv': GenerateTweetCSVTask
 }
 
 
