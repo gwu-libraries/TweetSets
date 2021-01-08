@@ -80,7 +80,7 @@
         {% if messages %}
                 {% for category, message in messages %}
                     <div class="row">
-                        <div class="alert {% if category != 'message' %} alert-{{category}} {% else %} alert-info {% endif %}" role="alert">{{ message | safe }}</div>
+                        <div class="alert {% if category != 'message' %} alert-{{category}} {% else %} alert-info {% endif %}" role="status">{{ message | safe }}</div>
                     </div>
                 {% endfor %}
         {% endif %}
@@ -168,21 +168,21 @@
                                 </div>
                                 <h4 class="col-sm-offset-1">Posted by</h4>
                                 <div class="form-group">
-                                    <label for="posterContainsAny" class="col-sm-2 control-label">Contains any screen name</label>
+                                    <label for="posterContainsAny" class="col-sm-2 control-label">Poster screen names</label>
                                     <div class="col-sm-10">
                                         <textarea class="form-control" rows="2" id="posterContainsAny" name="limit_poster_any">{{ limit_poster_any }}</textarea>
-                                        <p class="help-block">Tweet posted by any of these screen names (OR). @ is optional. Case sensitive.</p>
-                                            <input type="checkbox" name="limit_poster_retweets_also" value="true" {% if limit_poster_retweets_also == 'true' %}checked{% endif %}>
-                                                Also retweets or quotes of these screen names.
+                                        <p class="help-block">Tweets posted by any of these screen names (OR). @ is optional. Case sensitive.</p>
+                                            <input type="checkbox" id="limit_poster_retweets_also" name="limit_poster_retweets_also" value="true" {% if limit_poster_retweets_also == 'true' %}checked{% endif %}>
+                                            <label for="limit_poster_retweets_also">Include retweets or quotes of posts by these screen names.</label>
                                     </div>
                                 </div>
                                 <div class="form-group">
-                                    <label for="posterUserIdContainsAny" class="col-sm-2 control-label">Contains any user id</label>
+                                    <label for="posterUserIdContainsAny" class="col-sm-2 control-label">Poster user ids</label>
                                     <div class="col-sm-10">
                                         <textarea class="form-control" rows="2" id="posterUserIdContainsAny" name="limit_poster_user_id_any">{{ limit_poster_user_id_any }}</textarea>
-                                        <p class="help-block">Tweet posted by any of these user ids (OR).</p>
-                                            <input type="checkbox" name="limit_poster_user_id_retweets_also" value="true" {% if limit_poster_user_id_retweets_also == 'true' %}checked{% endif %}>
-                                                Also retweets or quotes of these user ids.
+                                        <p class="help-block">Tweets posted by any of these user ids (OR).</p>
+                                            <input type="checkbox" id="limit_poster_user_id_retweets_also" name="limit_poster_user_id_retweets_also" value="true" {% if limit_poster_user_id_retweets_also == 'true' %}checked{% endif %}>
+                                            <label for="limit_poster_user_id_retweets_also">Include retweets or quotes of these user ids.</label>
                                     </div>
                                 </div>
                                 <h4 class="col-sm-offset-1">In reply to</h4>
@@ -333,10 +333,10 @@
                         $("#limitForm").submit();
                     });
 
-		    $('#datasetNameModal').submit(function( event ) {
-			event.preventDefault();
-                        $("input[name='dataset_name']" ).val($("input[name='dataset_name_modal']").val());
-                        $("#limitForm").submit();
+                    $('#datasetNameModalForm').submit(function( event ) {
+                        event.preventDefault();
+                            $("input[name='dataset_name']" ).val($("input[name='dataset_name_modal']").val());
+                            $("#limitForm").submit();
                     });
                 });
                 </script>
@@ -505,11 +505,11 @@
                                         progressBarStatus.text(data['status']);
                                         if (data['state'] != 'PENDING' && data['state'] != 'PROGRESS') {
                                             window.location.hash = 'datasetExports';
-                                            window.location.href='{{ url_for('dataset', dataset_id=dataset_id) }}#datasetExports';
+                                            window.location.href='{{ url_for("dataset", dataset_id=dataset_id) }}#datasetExports';
                                         }
                                         else {
                                             window.location.hash = 'datasetExports';
-                                            window.location.href='{{ url_for('dataset', dataset_id=dataset_id) }}?reload=true#datasetExports';
+                                            window.location.href='{{ url_for("dataset", dataset_id=dataset_id) }}?reload=true#datasetExports';
                                             // rerun in 2 seconds
                                             setTimeout(function() {
                                                 update_progress(url, progressBar, progressBarStatus);
@@ -562,7 +562,7 @@
                             <div class="panel-heading"><h2 class="panel-title">Generate Export Actions</h2></div>
                             <div class="panel-body">
                                 {% if total_tweets > 0 %}
-                                <form class="form-horizontal" action="{{ url_for('dataset', dataset_id=dataset_id) }}" method="POST">
+                                <form id="datasetExportsForm" class="form-horizontal" action="{{ url_for('dataset', dataset_id=dataset_id) }}" method="POST">
                                     {% if is_local_mode %}
                                        <div class="checkbox">
                                           <label>
@@ -586,10 +586,10 @@
                                           <p class="help-block">Generate files containing the tweet ids of the dataset.</p>
                                       </label>
                                     </div>
-                                     <button type="submit" name="generate_tasks" value="true" class="btn btn-primary" {% if task_id %} disabled="true" {% endif %}>Generate</button>
+                                    <button type="submit" form="datasetExportsForm" name="generate_tasks" value="true" class="btn btn-primary" {% if task_id %} disabled="true" {% endif %}>Generate</button>
                                 </form>
                                 {% else %}
-                                <div class="alert alert-warning" role="alert">No tweets found, refine the dataset parameters to generate an export.</div>
+                                <div class="alert alert-warning" role="alert" atomic-live="true">No tweets found, refine the dataset parameters to generate an export.</div>
                                 {% endif %}
                             </div>
                         </div>
@@ -622,18 +622,19 @@
                 <button type="button" class="close" data-dismiss="modal" aria-hidden="false">
                 &times;
                 </button>
-                <h3 class="modal-title" id="myModalLabel">Provide a name for the dataset</h3>
+               <h3 class="modal-title" id="myModalLabel">Dataset name</h3>
             </div>
             <div class="modal-body">
-                <form name="modal-form" class="form-horizontal" id="datasetNameModal">
-                     <input class="form-control" type="text" name="dataset_name_modal" value="" />
+                <form name="modal-form" class="form-horizontal" id="datasetNameModalForm">
+                    <label for="dataset_name_modal">Provide a name for the dataset</label> 
+                    <input class="form-control" type="text" id="dataset_name_modal" name="dataset_name_modal" value="" />
                 </form>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-default" data-dismiss="modal">
                 Close
                 </button>
-                <button type="button" type="submit" class="btn btn-primary" id="createModalSubmit" data-dismiss="modal">
+                <button type="submit" form="datasetNameModalForm" class="btn btn-primary" id="createModalSubmit" data-dismiss="modal">
                 Create dataset
                 </button>
             </div>

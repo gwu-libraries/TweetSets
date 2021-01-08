@@ -1,0 +1,26 @@
+body {
+  color: #222;
+}
+
+a {
+  color: #2971a7;
+}
+
+caption {
+  color:#222;
+  font-size: 30px;
+}
+
+.badge {
+  background-color: #666;
+}
+
+.help-block {
+  color: #222;
+}  
+
+.nav-pills>li.active>a,
+.nav-pills>li.active>a:focus,
+.nav-pills>li.active>a:hover {
+  background-color: #2971A7;
+}
