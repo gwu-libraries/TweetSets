@@ -37,6 +37,8 @@ app.config['EMAIL_USERNAME'] = os.environ.get('EMAIL_USERNAME')
 app.config['EMAIL_PASSWORD'] = os.environ.get('EMAIL_PASSWORD')
 app.config['ADMIN_EMAIL'] = os.environ.get('ADMIN_EMAIL')
 app.config['ES_TIMEOUT'] = int(os.environ.get('ES_TIMEOUT', '20'))
+app.config['CONSENT_BUTTON_TEXT'] = os.environ.get('CONSENT_BUTTON_TEXT')
+app.config['CONSENT_HTML'] = os.environ.get('CONSENT_HTML')
 # Maximum rows to display on the datasets stats page per statistic
 app.config['MAX_TOP_ROWS_DS_STATS'] = 10
 
@@ -90,7 +92,9 @@ def about():
     return render_template('about.html',
                            tweet_count=_tweet_count(clear_cache='clear_cache' in request.args),
                            prev_datasets=json.loads(request.cookies.get('prev_datasets', '[]')),
-                           is_local_mode=_is_local_mode(request))
+                           is_local_mode=_is_local_mode(request),
+                           consent_html = app.config['CONSENT_HTML'],
+                           consent_button_text = app.config['CONSENT_BUTTON_TEXT'])
 
 
 @app.route('/datasets')
