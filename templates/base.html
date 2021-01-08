@@ -26,7 +26,17 @@
     <script async src="//platform.twitter.com/widgets.js" charset="utf-8"></script>
     <script type="text/javascript" src="{{ url_for('static', filename='jquery/jquery-ui/jquery-ui.min.js') }}"></script>
     <script type="text/javascript" src="{{ url_for('static', filename='cookie_consent/cookie_consent.js') }}"></script>
-   
+
+    <!-- Global site tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id={{ google }}"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+
+        gtag('config', '{{ google }}');
+    </script>
+
     {% block script %}
     {% endblock %}
     
