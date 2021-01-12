@@ -113,7 +113,9 @@ def dataset_list():
                            is_local_mode=_is_local_mode(request),
                            server_mode=app.config['SERVER_MODE'],
                            datasets=search.execute(),
-                           prev_datasets=json.loads(request.cookies.get('prev_datasets', '[]')))
+                           prev_datasets=json.loads(request.cookies.get('prev_datasets', '[]')),
+                           consent_html = app.config['CONSENT_HTML'],
+                           consent_button_text = app.config['CONSENT_BUTTON_TEXT'])
 
 
 @app.route('/dataset/<dataset_id>', methods=['GET', 'POST'])
@@ -188,6 +190,10 @@ def dataset(dataset_id):
     context['filenames_list'] = filenames_list
 
     context['dataset_id'] = dataset_id
+
+    context['consent_html'] = app.config['CONSENT_HTML']
+    context['consent_button_text'] = app.config['CONSENT_BUTTON_TEXT']
+
     return render_template('dataset.html', **context)
 
 
@@ -235,6 +241,9 @@ def limit_dataset():
                 app.logger.info(dataset_id)
                 ts_stats.add_source_dataset(dataset_id.meta.id, is_local)
         return resp
+
+    context['consent_html'] = app.config['CONSENT_HTML']
+    context['consent_button_text'] = app.config['CONSENT_BUTTON_TEXT']
 
     return render_template('dataset.html', **context)
 
@@ -302,17 +311,23 @@ def stats():
                            local_recent_dataset_stats=ts_stats.datasets_stats(since_datetime=since, local_only=True),
                            source_dataset_stats=source_dataset_stats,
                            source_dataset_names=source_dataset_names,
-                           derivatives_stats=ts_stats.derivatives_stats(since_datetime=since))
+                           derivatives_stats=ts_stats.derivatives_stats(since_datetime=since),
+                           consent_html = app.config['CONSENT_HTML'],
+                           consent_button_text = app.config['CONSENT_BUTTON_TEXT'])
 
 
 @app.route('/help')
 def help():
-    return render_template('help.html')
+    return render_template('help.html',
+                           consent_html = app.config['CONSENT_HTML'],
+                           consent_button_text = app.config['CONSENT_BUTTON_TEXT'])
 
 
 @app.route('/citing')
 def citing():
-    return render_template('citing.html')
+    return render_template('citing.html',
+                           consent_html = app.config['CONSENT_HTML'],
+                           consent_button_text = app.config['CONSENT_BUTTON_TEXT'])
 
 
 Node = namedtuple('Node', ['name', 'total_storage', 'available_storage', 'storage_status'])
@@ -354,7 +369,9 @@ def healthcheck():
         response_code = 500
     return render_template('healthcheck.html',
                            cluster_status=cluster_status,
-                           nodes=nodes), response_code
+                           nodes=nodes,
+                           consent_html = app.config['CONSENT_HTML'],
+                           consent_button_text = app.config['CONSENT_BUTTON_TEXT']), response_code
 
 
 @app.errorhandler(ElasticsearchException)
