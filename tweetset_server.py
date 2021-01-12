@@ -475,6 +475,9 @@ def _dataset_path(dataset_id):
 def _dataset_params_to_context(dataset_params):
     context = dict()
     for key, value in dataset_params.items():
+        # Ignore email in dataset_params.json
+        if key == 'requestor_email':
+            continue
         if key != 'dataset_name':
             context['limit_{}'.format(key)] = value
         else:
