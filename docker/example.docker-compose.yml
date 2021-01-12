@@ -115,6 +115,8 @@ services:
         - HOST=${HOSTNAME}
         - ES_TIMEOUT
         - SERVER_TIMEOUT
+        - CONSENT_HTML
+        - CONSENT_BUTTON_TEXT
       restart: always
   # For development
 #  server-flaskrun:
@@ -147,6 +149,8 @@ services:
 #        - SERVER_MODE
 #        - IP_RANGE
 #        - ES_TIMEOUT
+#        - CONSENT_HTML
+#        - CONSENT_BUTTON_TEXT
   worker:
       image: gwul/tweetsets-worker
 #      build:

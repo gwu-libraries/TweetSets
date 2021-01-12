@@ -1,16 +1,18 @@
 <html lang="en">
 <head>
     <!-- Latest compiled and minified CSS -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='bootstrap/3.3.7/css/bootstrap.min.css') }}" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u">
+    <link rel="stylesheet" href="{{ url_for('static', filename='bootstrap/3.3.7/css/bootstrap.min.css') }}" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u"/>
 
     <!-- Optional theme -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='bootstrap/3.3.7/css/bootstrap-theme.min.css') }}" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp">
+    <link rel="stylesheet" href="{{ url_for('static', filename='bootstrap/3.3.7/css/bootstrap-theme.min.css') }}" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp"/>
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='datatables/1.10.15/css/jquery.dataTables.min.css') }}"/>
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='datatables/1.10.15/css/dataTables.bootstrap.min.css') }}"/>
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='jquery/jquery-ui/jquery-ui.min.css') }}">
 
     <!-- TweetSets CSS -->
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/main.css') }}">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='gw/gw_footer.css') }}" />
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='cookie_consent/cookie_consent.css') }}" />
     {% block css %}
     {% endblock %}
 
@@ -23,6 +25,7 @@
     <script type="text/javascript" src="{{ url_for('static', filename='datatables/1.10.15/js/dataTables.bootstrap.min.js') }}"></script>
     <script async src="//platform.twitter.com/widgets.js" charset="utf-8"></script>
     <script type="text/javascript" src="{{ url_for('static', filename='jquery/jquery-ui/jquery-ui.min.js') }}"></script>
+    <script type="text/javascript" src="{{ url_for('static', filename='cookie_consent/cookie_consent.js') }}"></script>
    
     {% block script %}
     {% endblock %}
@@ -30,6 +33,23 @@
     <title>{% block title %}{% endblock %} - TweetSets</title>
 </head>
 <body>
+    <div class="alert cookiealert" role="alert">
+      <div class="container">
+        <div class="row align-items-center">
+          <!-- The "safe" filter is needed to disable automatic HTML escaping;
+               this allows us to use HTML tags in the consent text,
+               for example to include an <a> tag for a link -->
+          <div id="cookie_text" class="col-xs-9 vcenter">
+            {{ consent_html | safe }}
+          </div>
+          <div id="cookie_button" class="col-xs-2 vcenter">
+            <button type="button" class="btn btn-primary btn-sm acceptcookies">
+              {{ consent_button_text }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
     <main>
     {% if session.get("demo_mode") %}
         <div class="alert alert-info" role="alert">You're in demo mode.</div>
@@ -38,14 +58,71 @@
     {% endblock %}
     </main> 
     {% block footer %}
-        <footer>
-        <div class="container"> 
-            <div class="row">
-                    <hr>
-                    <a href="{{ url_for('about') }}">Home</a>  |  <a href="{{ url_for('help') }}">Help</a>  |  <a href="{{ url_for('citing') }}">Citing</a>  |  <a href="{{ url_for('stats') }}">Statistics</a>  |  <a href="{{ url_for('healthcheck') }}">Healthcheck</a>  |  <a href="https://github.com/gwu-libraries/TweetSets">Github</a>  |  <a href="mailto:sfm@gwu.edu">Contact</a>
-            </div>
+    <footer>
+      <div class="footer-upper">
+        <div class="container">
+          <div class="row">
+            <hr>
+            <strong>TweetSets is a service of <a href="https://library.gwu.edu/" target="_blank">GW Libraries</a></strong>
+          </div>
+          <div class="row">
+            <a href="{{ url_for('about') }}">Home</a>  |  <a href="{{ url_for('help') }}">Help</a>  |  <a href="{{ url_for('citing') }}">Citing</a>  |  <a href="{{ url_for('stats') }}">Statistics</a>  |  <a href="{{ url_for('healthcheck') }}">Healthcheck</a>  |  <a href="https://github.com/gwu-libraries/TweetSets">Github</a>  |  <a href="mailto:sfm@gwu.edu">Contact</a>
+          </div>
         </div>
-	</footer>
+      </div>
+      <div class="footer-lower">
+        <div class="container">
+          <div class="row align-items-center">
+            <div id="footer-logo" class="col-xs-2 vcenter">
+              <a href="https://www.gwu.edu/" rel="home" target="_blank" aria-label="The George Washington University, Washington, DC, opens in new window">
+                <img typeof="foaf:Image" src="{{ url_for('static', filename='images/gw/gw_primary_2c_rev.png') }}" alt="The George Washington University, Washington, DC">
+              </a>
+            </div>
+            <div id="footer-links" class="col-xs-9 vcenter">
+              <div class="row-one">
+                <ul>
+                  <li>
+                    <a href="https://www.campusadvisories.gwu.edu/?utm_medium=link&amp;utm_campaign=editorial-footer&amp;utm_source=campus-advisories" target="_blank" aria-label="View the latest Campus Advisories, opens in new window">Campus Advisories</a>
+		  </li>
+		  <li>
+                    <a href="https://compliance.gwu.edu/sites/g/files/zaxdzs2791/f/downloads/FINAL%20Equal%20Opportunity%20Nondiscrimination%20and%20antiharassment%205.16.19.pdf/?utm_medium=link&amp;utm_campaign=editorial-footer&amp;utm_source=EEO-nondiscrimination-policy" target="_blank" aria-label="EO/Nondiscrimination Policy (PDF), opens in new window">EO/Nondiscrimination Policy (PDF)</a>
+		  </li>
+		  <li>
+                    <a href="https://www.gwu.edu/privacy-notice/?utm_medium=link&amp;utm_campaign=editorial-footer&amp;utm_source=privacy-notice" target="_blank" aria-label="Privacy Notice, opens in new window">Privacy Notice</a>
+		  </li>
+		</ul>
+              </div>
+              <div class="row-two">
+                <ul>
+                  <li>
+                    <a href="https://www.gwu.edu/contact-gw/?utm_medium=link&amp;utm_campaign=editorial-footer&amp;utm_source=contact-gw" target="_blank" aria-label="Contact GW with general questions or comments, opens in new window">Contact GW</a>
+                  </li>
+                  <li>
+	            <a href="https://accessibility.gwu.edu/?utm_medium=link&amp;utm_campaign=editorial-footer&amp;utm_source=accessibility" target="_blank" aria-label="Visit GW's main accessibility website, opens in new window">Accessibility</a>
+                  </li>
+                  <li>
+		    <a href="https://www.gwu.edu/terms-use/?utm_medium=link&amp;utm_campaign=editorial-footer&amp;utm_source=terms-use" target="_blank" aria-label="Terms of Use, opens in new window">Terms of Use</a>
+                  </li>
+                  <li>
+		    <a href="https://www.gwu.edu/copyright/?utm_medium=link&amp;utm_campaign=editorial-footer&amp;utm_source=copyright" target="_blank" aria-label="Copyright information for GW websites, opens in new window">Copyright</a>
+                  </li>
+                  <li>
+		    <a href="https://www.gwu.edu/az-index/?utm_medium=link&amp;utm_campaign=editorial-footer&amp;utm_source=az-index" target="_blank" aria-label="A-Z Index, opens in new window">A-Z Index</a>
+                  </li>
+		</ul>
+              </div> 
+              <div class="row-three">
+                <ul>
+                   <li>GW is committed to digital accessibility. If you experience a barrier that affects your ability to access content on this page, let us know via the
+	             <a href="https://accessibility.gwu.edu/accessibility-feedback-form/?utm_medium=link&amp;utm_campaign=editorial-footer&amp;utm_source=accessibility-feedback" target="_blank" aria-label="Accessibility Feedback Form, opens in new window">Accessibility Feedback Form</a>.
+		   </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </footer>
     {% endblock %}
 </body>
 </html>
