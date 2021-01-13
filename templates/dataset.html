@@ -550,6 +550,12 @@
                             <div class="panel-body">
                                 {% if total_tweets > 0 %}
                                 <form id="datasetExportsForm" class="form-horizontal" action="{{ url_for('dataset', dataset_id=dataset_id) }}" method="POST">
+                                    <div class="">
+                                        <label>
+                                            <input type="text" name="requester_email" value="">
+                                            <p class="help-block">Please enter an email address so that we may notify you if there are problems with your export.</p>
+                                        </label>
+                                    </div>
                                     {% if is_local_mode %}
                                        <div class="checkbox">
                                           <label>

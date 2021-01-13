@@ -189,9 +189,16 @@ def dataset(dataset_id):
     context['filenames_list'] = filenames_list
 
     context['dataset_id'] = dataset_id
+<<<<<<< HEAD
 
     context['consent_html'] = app.config['CONSENT_HTML']
     context['consent_button_text'] = app.config['CONSENT_BUTTON_TEXT']
+=======
+    # Save the user's emails to the dataset params file (if supplied)
+    if request.form.get('requester_email'):
+        dataset_params['requester_email'] = request.form['requester_email']
+        write_json(os.path.join(dataset_path, 'dataset_params.json'), dataset_params)
+>>>>>>> Email field added and saves to dataset_params.json
 
     return render_template('dataset.html', **context)
 
@@ -476,7 +483,7 @@ def _dataset_params_to_context(dataset_params):
     context = dict()
     for key, value in dataset_params.items():
         # Ignore email in dataset_params.json
-        if key == 'requestor_email':
+        if key == 'requester_email':
             continue
         if key != 'dataset_name':
             context['limit_{}'.format(key)] = value
@@ -493,6 +500,7 @@ def _form_to_dataset_params(form):
     dataset_params['source_dataset'] = form['limit_source_datasets']
     if 'dataset_name' in form:
         dataset_params['dataset_name'] = form['dataset_name']
+
     return dataset_params
 
 
