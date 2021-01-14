@@ -151,12 +151,10 @@ if __name__ == '__main__':
     # Subparsers
     subparsers = parser.add_subparsers(dest='command', help='command help')
 
-    update_parser = subparsers.add_parser('update', help='update dataset metadata')
+    update_parser = subparsers.add_parser('update', help='update dataset metadata (including statistics)')
     update_parser.add_argument('dataset_identifier', help='identifier (a UUID) for the dataset')
     update_parser.add_argument('path', help='path of dataset')
     update_parser.add_argument('--filename', help='filename of dataset file', default='dataset.json')
-    update_parser.add_argument('--stats', action='store_true', help='Also update dataset statistics')
-    update_parser.add_argument('--create', action='store_true', help='Create if does not exist.')
 
     delete_parser = subparsers.add_parser('delete', help='delete dataset and tweets')
     delete_parser.add_argument('dataset_identifier', help='identifier (a UUID) for the dataset')
