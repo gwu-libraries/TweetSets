@@ -4,7 +4,6 @@ from jinja2 import evalcontextfilter, Markup
 from elasticsearch_dsl.connections import connections as es_connections
 from elasticsearch.exceptions import ElasticsearchException
 import os
-from celery import Celery
 import requests
 import fnmatch
 from models import DatasetDocument
@@ -13,7 +12,7 @@ from datetime import date, datetime, timedelta
 import json
 import ipaddress
 from collections import namedtuple
-from utils import read_json, write_json, short_uid, dataset_params_to_search
+from utils import read_json, write_json, short_uid, dataset_params_to_search, make_celery
 from stats import TweetSetStats
 import tasks
 
@@ -56,24 +55,6 @@ app.logger.debug('ElasticSearch timeout is %s', app.config['ES_TIMEOUT'])
 app.config['CELERY_BROKER_URL'] = 'redis://redis:6379/0'
 app.config['CELERY_RESULT_BACKEND'] = 'redis://redis:6379/0'
 
-#celery = Celery(app.name, broker=app.config['CELERY_BROKER_URL'])
-#celery.conf.update(app.config)
-def make_celery(app):
-    celery = Celery(
-        app.name,
-        backend=app.config['CELERY_RESULT_BACKEND'],
-        broker=app.config['CELERY_BROKER_URL']
-    )
-    celery.conf.update(app.config)
-
-    class ContextTask(celery.Task):
-        def __call__(self, *args, **kwargs):
-            with app.app_context():
-                return self.run(*args, **kwargs)
-
-    celery.Task = ContextTask
-    return celery
-
 celery = make_celery(app)
 
 redis = redispy.StrictRedis(host='redis', port=6379, db=1, decode_responses=True)
@@ -87,7 +68,6 @@ if app.config['IP_RANGE']:
         ip_ranges.append(ipaddress.IPv4Network(address))
 
 # Email on error
-# TO DO --> move if statement with debug test down to line 85
 if not app.debug and app.config['ADMIN_EMAIL'] and app.config['EMAIL_SMTP'] and app.config['EMAIL_FROM']:
 
     import logging
@@ -144,7 +124,6 @@ def dataset_list():
 @app.route('/dataset/<dataset_id>', methods=['GET', 'POST'])
 def dataset(dataset_id):
     dataset_path = _dataset_path(dataset_id)
-
     # Read dataset_params
     try:
         dataset_params = read_json(os.path.join(dataset_path, 'dataset_params.json'))
@@ -153,10 +132,9 @@ def dataset(dataset_id):
     # Create context
     context = _prepare_dataset_view(dataset_params, clear_cache='clear_cache' in request.args)
 
-    # Generate tasks
     # Add requester email to dataset_params
     dataset_params['requester_email'] = request.form.get('requester_email', '')
-
+    # Generate tasks
     generate_tasks_filepath = os.path.join(dataset_path, 'generate_tasks.json')
     if request.form.get('generate_tasks', '').lower() == 'true' and not os.path.exists(
             generate_tasks_filepath):
@@ -164,6 +142,8 @@ def dataset(dataset_id):
         task_defs = {}
         # Include email for notification
         task_defs['requester_email'] = dataset_params['requester_email']
+        # Include URL to dataset
+        task_defs['dataset_url'] = '{}#datasetExports'.format(request.base_url)
         if request.form.get('generate_tweet_ids', '').lower() == 'true':
             task_defs['tweet_ids'] = {
                 'max_per_file': app.config['MAX_PER_TXT_FILE']

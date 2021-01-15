@@ -79,28 +79,26 @@ def generate_tasks(self, task_defs, dataset_params, total_tweets, dataset_path, 
     generate_task_filepath = os.path.join(dataset_path, 'generate_tasks.json')
     if os.path.exists(generate_task_filepath):
         os.remove(generate_task_filepath)
-
-    #msg = task_defs['message_obj']
-    #msg.subject = 'TweetSets Data Extract Complete'
-    #msg.body = 'Your data extract is ready.'
-    #task_defs['mailer'].send(msg)
-    #logger.debug(self.app.conf)
+    # Notify user if email provided
     if task_defs.get('requester_email'):
-        send_email(task_defs['requester_email'])
-        
+        send_email(email_address=task_defs['requester_email'],
+                    dataset_name=dataset_params['dataset_name'],
+                    url_for_extract=task_defs['dataset_url'])
+
     return {'current': tweet_count + 1, 'total': total_tweets,
             'status': 'Completed.'}
 
-def send_email(email_address):
-    # Send email on task completion
+def send_email(email_address, dataset_name, url_for_extract):
+    '''Sends an email on task completion to the user requesting the extract.'''
+    # Get current Flask app context (for configuration variables)
     app = current_app._get_current_object()
     mail = Mail(app)
     msg = Message(subject='TweetSets Data Extract Complete',
                 sender=app.config['ADMIN_EMAIL'],
                 recipients=[email_address])
-    # To Do --> Add path to dataset
-    msg.body = 'Your data extract is ready.'
+    msg.html = 'Your data extract for dataset <em>{}</em> is ready <a href={}>for downloading</a>.'.format(dataset_name, url_for_extract)
     mail.send(msg)
+    return
 
 class BaseGenerateTask:
     def __init__(self, state, total_tweets, dataset_path, generate_update_increment, file_filter=None, source=None):
