@@ -13,7 +13,6 @@ from datetime import date, datetime, timedelta
 import json
 import ipaddress
 from collections import namedtuple
-
 from utils import read_json, write_json, short_uid, dataset_params_to_search
 from stats import TweetSetStats
 import tasks
@@ -41,6 +40,12 @@ app.config['CONSENT_BUTTON_TEXT'] = os.environ.get('CONSENT_BUTTON_TEXT')
 app.config['CONSENT_HTML'] = os.environ.get('CONSENT_HTML')
 # Maximum rows to display on the datasets stats page per statistic
 app.config['MAX_TOP_ROWS_DS_STATS'] = 10
+# Flask-Mail configs
+app.config['MAIL_SERVER'] = app.config['EMAIL_SMTP']
+app.config['MAIL_PORT'] = app.config['EMAIL_PORT']
+app.config['MAIL_USERNAME'] = app.config['EMAIL_USERNAME']
+app.config['MAIL_PASSWORD'] = app.config['EMAIL_PASSWORD']
+app.config['MAIL_USE_TLS'] = app.config['USE_TLS']
 
 # ElasticSearch setup
 es_connections.create_connection(hosts=['elasticsearch'], timeout=app.config['ES_TIMEOUT'], sniff_on_start=True,
@@ -51,8 +56,25 @@ app.logger.debug('ElasticSearch timeout is %s', app.config['ES_TIMEOUT'])
 app.config['CELERY_BROKER_URL'] = 'redis://redis:6379/0'
 app.config['CELERY_RESULT_BACKEND'] = 'redis://redis:6379/0'
 
-celery = Celery(app.name, broker=app.config['CELERY_BROKER_URL'])
-celery.conf.update(app.config)
+#celery = Celery(app.name, broker=app.config['CELERY_BROKER_URL'])
+#celery.conf.update(app.config)
+def make_celery(app):
+    celery = Celery(
+        app.name,
+        backend=app.config['CELERY_RESULT_BACKEND'],
+        broker=app.config['CELERY_BROKER_URL']
+    )
+    celery.conf.update(app.config)
+
+    class ContextTask(celery.Task):
+        def __call__(self, *args, **kwargs):
+            with app.app_context():
+                return self.run(*args, **kwargs)
+
+    celery.Task = ContextTask
+    return celery
+
+celery = make_celery(app)
 
 redis = redispy.StrictRedis(host='redis', port=6379, db=1, decode_responses=True)
 
@@ -65,7 +87,9 @@ if app.config['IP_RANGE']:
         ip_ranges.append(ipaddress.IPv4Network(address))
 
 # Email on error
+# TO DO --> move if statement with debug test down to line 85
 if not app.debug and app.config['ADMIN_EMAIL'] and app.config['EMAIL_SMTP'] and app.config['EMAIL_FROM']:
+
     import logging
     from logging.handlers import SMTPHandler
 
@@ -82,7 +106,6 @@ if not app.debug and app.config['ADMIN_EMAIL'] and app.config['EMAIL_SMTP'] and 
                                credentials=('sfm_no_reply@email.gwu.edu', 'noreply4SFM!'), secure=secure)
     mail_handler.setLevel(logging.ERROR)
     app.logger.addHandler(mail_handler)
-
 
 @app.route('/')
 def about():
@@ -131,11 +154,16 @@ def dataset(dataset_id):
     context = _prepare_dataset_view(dataset_params, clear_cache='clear_cache' in request.args)
 
     # Generate tasks
+    # Add requester email to dataset_params
+    dataset_params['requester_email'] = request.form.get('requester_email', '')
+
     generate_tasks_filepath = os.path.join(dataset_path, 'generate_tasks.json')
     if request.form.get('generate_tasks', '').lower() == 'true' and not os.path.exists(
             generate_tasks_filepath):
         app.logger.info('Generating task for {}'.format(dataset_id))
         task_defs = {}
+        # Include email for notification
+        task_defs['requester_email'] = dataset_params['requester_email']
         if request.form.get('generate_tweet_ids', '').lower() == 'true':
             task_defs['tweet_ids'] = {
                 'max_per_file': app.config['MAX_PER_TXT_FILE']
@@ -192,8 +220,7 @@ def dataset(dataset_id):
     context['consent_html'] = app.config['CONSENT_HTML']
     context['consent_button_text'] = app.config['CONSENT_BUTTON_TEXT']
     # Save the user's emails to the dataset params file (if supplied)
-    if request.form.get('requester_email'):
-        dataset_params['requester_email'] = request.form['requester_email']
+    if dataset_params['requester_email']:
         write_json(os.path.join(dataset_path, 'dataset_params.json'), dataset_params)
 
     return render_template('dataset.html', **context)

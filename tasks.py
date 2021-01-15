@@ -7,6 +7,8 @@ from utils import dataset_params_to_search
 import logging
 from twarc import json2csv
 import zipfile
+from flask import current_app
+from flask_mail import Mail, Message
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +16,6 @@ logger = logging.getLogger(__name__)
 def generate_tasks(self, task_defs, dataset_params, total_tweets, dataset_path, generate_update_increment=None,
                    zip_bytes_threshold=1000000000):
     generate_update_increment = generate_update_increment or 10000
-
     tasks = []
     task_args = [self, total_tweets, dataset_path, generate_update_increment]
     for task_name, task_kwargs in task_defs.items():
@@ -79,9 +80,27 @@ def generate_tasks(self, task_defs, dataset_params, total_tweets, dataset_path, 
     if os.path.exists(generate_task_filepath):
         os.remove(generate_task_filepath)
 
+    #msg = task_defs['message_obj']
+    #msg.subject = 'TweetSets Data Extract Complete'
+    #msg.body = 'Your data extract is ready.'
+    #task_defs['mailer'].send(msg)
+    #logger.debug(self.app.conf)
+    if task_defs.get('requester_email'):
+        send_email(task_defs['requester_email'])
+        
     return {'current': tweet_count + 1, 'total': total_tweets,
             'status': 'Completed.'}
 
+def send_email(email_address):
+    # Send email on task completion
+    app = current_app._get_current_object()
+    mail = Mail(app)
+    msg = Message(subject='TweetSets Data Extract Complete',
+                sender=app.config['ADMIN_EMAIL'],
+                recipients=[email_address])
+    # To Do --> Add path to dataset
+    msg.body = 'Your data extract is ready.'
+    mail.send(msg)
 
 class BaseGenerateTask:
     def __init__(self, state, total_tweets, dataset_path, generate_update_increment, file_filter=None, source=None):
@@ -105,7 +124,6 @@ class BaseGenerateTask:
         self.state.update_state(state=state,
                                 meta={'current': current, 'total': total,
                                       'status': status})
-
 
 class GenerateTweetIdsTask(BaseGenerateTask):
     def __init__(self, *args, max_per_file=None):

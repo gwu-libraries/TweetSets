@@ -8,6 +8,7 @@ click==7.1.2
 elasticsearch~=7.10
 elasticsearch-dsl~=7.3
 Flask==1.1.2
+Flask-Mail==0.9.1
 idna==2.5
 itsdangerous==1.1.0
 Jinja2==2.11.2
