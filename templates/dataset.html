@@ -11,6 +11,13 @@
       $( "#created_at_to" ).datepicker(options);
     } );
 
+    function isEmail(email) {
+        /* From https://html.spec.whatwg.org/multipage/input.html#valid-e-mail-address */
+        var regex = /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/
+        return regex.test(email);
+    }
+
+
     function toCSV(data, filename) {
         /* Create CSV from JSON. From https://stackoverflow.com/questions/16078544/export-to-csv-using-jquery-and-html */
         let csv = Papa.unparse(data);
@@ -552,7 +559,7 @@
                                 <form id="datasetExportsForm" class="form-horizontal" action="{{ url_for('dataset', dataset_id=dataset_id) }}" method="POST">
                                     <div class="form-horizontal">
                                         <label for="emailInput">
-                                            <p class="help-block">Please enter an email address so that we may notify you if there are problems with your export.</p>
+                                            <p class="help-block">Please enter an email address so that we may notify you when your export is ready.</p>
                                             <input type="text" class="form-control" id="emailInput" name="requester_email" value="" placeholder="Email">
                                         </label>
                                     </div>
@@ -579,7 +586,7 @@
                                           <p class="help-block">Generate files containing the tweet ids of the dataset.</p>
                                       </label>
                                     </div>
-                                    <button type="submit" form="datasetExportsForm" name="generate_tasks" value="true" class="btn btn-primary" {% if task_id %} disabled="true" {% endif %}>Generate</button>
+                                    <button type="submit" id="datasetExportsId" form="datasetExportsForm" name="generate_tasks" value="true" class="btn btn-primary" {% if task_id %} disabled="true" {% endif %}>Generate</button>
                                 </form>
                                 {% else %}
                                 <div class="alert alert-warning" role="alert" atomic-live="true">No tweets found with the current dataset parameters. Please refine the dataset parameters to create an export.</div>
@@ -644,12 +651,29 @@
         $(".csv_download_link").on("click", function(e) {
             /* Get the ID of the target clicked.*/
             let link_id = $(e.target).attr("id");
-            /* Prevent click propagation. */
-            e.stopPropagation();
             /* Get data associated with this id. */
             let data = $("#stats-panel").data(link_id);
             /* Call toCSV() on this element. */
             toCSV.apply(this, [data, link_id + ".csv"]);
         });
+        $("#datasetExportsForm").on("submit", function(e) {
+            /* Remove the alert if it exists */
+            $("#emailAlert").remove
+            /* Get the value of the email input element */
+            let form = $(e.currentTarget),
+                email = form.find("#emailInput").val();
+            /* Validate */
+            if (isEmail(email)) {
+                return;
+            }
+            else {
+                e.preventDefault();
+                /* Add an alert element if not already present. */
+                let emailAlert = $("#emailAlert");
+                if (emailAlert.length == 0) {
+                    form.append("<div class='alert alert-warning' role='alert' id='emailAlert'>Please enter a valid email address</div>");
+                }
+            }
+        })
 </script>
 {% endblock %}
