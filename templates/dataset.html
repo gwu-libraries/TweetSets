@@ -463,18 +463,16 @@
             <div role="tabpanel" class="tab-pane" id="sourceDatasets">
                 <div class="row">
                     <div class="panel panel-default">
-                        <div class="panel-heading"><h2 class="panel-title">Source datasets</h2></div>
+                        <div class="panel-heading"><h2 class="panel-title">Source dataset</h2></div>
                         <div class="panel-body">
-                            {% for dataset in source_datasets %}
-                                <div class="panel panel-default">
-                                    <div class="panel-heading" role="tab" id="heading{{ dataset.meta.id }}">
-                                        <h4 class="panel-title">{{ dataset.name }}</h4>
-                                    </div>
-                                    <div class="panel-body">
-                                        {% include 'source_dataset_snippet.html' %}
-                                    </div>
+                            <div class="panel panel-default">
+                                <div class="panel-heading" role="tab" id="heading{{ source_dataset.meta.id }}">
+                                    <h4 class="panel-title">{{ source_dataset.name }}</h4>
                                 </div>
-                            {% endfor %}
+                                <div class="panel-body">
+                                    {% include 'source_dataset_snippet.html' %}
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
