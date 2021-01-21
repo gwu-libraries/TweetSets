@@ -25,8 +25,8 @@
                         });
                     </script>
             {% endif %}
-            <h1>Select source datasets</h1>
-            <p class="help-block">Select the source datasets from which to create a new dataset.</p>
+            <h1>Select source dataset</h1>
+            <p class="help-block">Select the source dataset from which to create a new dataset.</p>
         </div>
     </div>
     {% if dataset_list_msg %}
@@ -39,15 +39,15 @@
     {% endif %}
     <div class="row">
         <form class="form-horizontal" action="{{ url_for('limit_dataset') }}" method="POST">
-            <div class="panel-group" id="accordion" role="tablist" aria-multiselectable="true">
+            <div class="panel-group" id="accordion" role="tablist">
                 {% for dataset in datasets %}
                     <div class="panel panel-default">
                         <div class="panel-heading" role="tab" id="heading{{ dataset.meta.id }}">
                             <h4 class="panel-title">
-                                <div class="checkbox">
+                                <div class="radio">
                                     <label>
-                                        <input type="checkbox" name="limit_source_datasets" value="{{ dataset.meta.id }}">
-                                            <a role="button" data-toggle="collapse" data-parent="#accordion" href="#collapse{{ dataset.meta.id }}" aria-expanded="true" aria-controls="collapse{{ dataset.meta.id }}">{{ dataset.name }}</a> {% if dataset.tweet_count %}<span class="badge">{{ dataset.tweet_count | nf }} tweets</span>{% endif %}
+                                        <input type="radio" name="limit_source_datasets" value="{{ dataset.meta.id }}" aria-labelledby="dataset{{ dataset.meta.id }}">
+                                            <a role="button" id="dataset{{ dataset.meta.id }}" data-toggle="collapse" data-parent="#accordion" href="#collapse{{ dataset.meta.id }}" aria-expanded="true" aria-controls="collapse{{ dataset.meta.id }}">{{ dataset.name }}</a> {% if dataset.tweet_count %}<span class="badge">{{ dataset.tweet_count | nf }} tweets</span>{% endif %}
                                     </label>
                                 </div>
                             </h4>
@@ -61,17 +61,17 @@
                 {% endfor %}
             </div>
             {% if server_mode == 'both' and not is_local_mode %}
-                <p class="text-info">Tip: Only public datasets are available. Additional Local datasets may be available if you are affiliated with this institution and are on the proper network, e.g., on-campus or using VPN.</p>
+                <p class="text-info">Tip: Only public datasets are available. Additional local datasets may be available if you are affiliated with this institution and are on the proper network, e.g., on-campus or using VPN.</p>
             {% endif %}
             <button type="submit" class="btn btn-default" disabled>Select</button>
-            <p class="help-block">Select the checked source datasets. Next step is to select the tweets.</p>
+            <p class="help-block">Select the source dataset. Next step is to select the tweets.</p>
         </form>
         <script>
-            var checkboxes = $("input[name='limit_source_datasets']");
+            var radio = $("input[name='limit_source_datasets']");
             var submitBtn = $("button[type='submit']");
 
-            checkboxes.click(function() {
-                submitBtn.attr("disabled", !checkboxes.is(":checked"));
+            radio.click(function() {
+                submitBtn.attr("disabled", !radio.is(":checked"));
             });
         </script>
     </div>

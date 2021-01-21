@@ -69,7 +69,7 @@
             {% endif %}
             {% if not dataset_id %}
                 <h1>Select tweets in dataset</h1>
-                <p class="help-block">Limit the tweets selected from the source datasets. Once completed, create the dataset.</p>
+                <p class="help-block">Limit the tweets exported from the source dataset. Once completed, create the dataset.</p>
             {% else %}
                 <h1>Dataset: {{ dataset_name }}</h1>
                 <p class="help-block">The parameters are frozen. Generate and download dataset exports.</p>
@@ -95,7 +95,7 @@
             <li role="presentation" class="active"><a href="#datasetParametersActions" aria-controls="datasetParametersActions" role="tab" data-toggle="tab" id="datasetParametersActionsTab">Dataset parameters / actions</a></li>
             <li role="presentation"><a href="#datasetStatistics" aria-controls="datasetStatistics" role="tab" data-toggle="tab" id="datasetStatisticsTab">Dataset statistics</a></li>
             <li role="presentation"><a href="#sampleTweets" aria-controls="sampleTweets" role="tab" data-toggle="tab" id="sampleTweetsTab">Sample tweets</a></li>
-            <li role="presentation"><a href="#sourceDatasets" aria-controls="sourceDatasets" role="tab" data-toggle="tab" id="sourceDatasetsTab">Source datasets</a></li>
+            <li role="presentation"><a href="#sourceDatasets" aria-controls="sourceDatasets" role="tab" data-toggle="tab" id="sourceDatasetsTab">Source dataset</a></li>
             {% if dataset_id %}
                 <li role="presentation"><a href="#datasetExports" aria-controls="datasetExports" role="tab" data-toggle="tab" id="datasetExportsTab">Dataset exports</a></li>
             {% endif %}
@@ -111,19 +111,8 @@
                             <div class="panel-heading"><h2 class="panel-title">Dataset parameters</h2></div>
                             <div class="panel-body">
                                 <div class="col-sm-offset-1">
-                                    <h4>Source datasets</h4>
-                                </div>
-                                <div class="form-group">
-                                    <div class="checkbox col-sm-offset-2">
-                                        {% for dataset in source_datasets %}
-                                            <div class="checkbox">
-                                              <label>
-                                                <input type="checkbox" name="limit_source_datasets" value="{{ dataset.meta.id }}" {% if dataset.meta.id in limit_source_datasets %}checked{% endif %}>
-                                                {{ dataset.name }}
-                                              </label>
-                                            </div>
-                                        {% endfor %}
-                                    </div>
+                                    <h4>Source dataset: {{ source_dataset.name }}</h4>
+                                    <input type="hidden" name="limit_source_datasets" value="{{ source_dataset.meta.id }}">
                                 </div>
                                 <div class="col-sm-offset-1">
                                     <h4>Tweet text</h4>

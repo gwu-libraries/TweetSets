@@ -157,7 +157,6 @@ def dataset(dataset_id):
             # Record stats
             if not session.get("demo_mode", False):
                 ts_stats.add_derivative('tweet csv', _is_local(request))
-       
 
         if task_defs:
             generate_tasks = _generate_tasks.delay(task_defs, dataset_params, context['total_tweets'], dataset_path,
@@ -207,7 +206,7 @@ def _add_filenames(label, filter, dataset_path, filename_list):
 @app.route('/dataset', methods=['POST'])
 def limit_dataset():
     dataset_params = _form_to_dataset_params(request.form)
-    if list(dataset_params.keys()) == ['source_datasets']:
+    if list(dataset_params.keys()) == ['source_dataset']:
         dataset_params['tweet_type_original'] = 'true'
         dataset_params['tweet_type_retweet'] = 'true'
         dataset_params['tweet_type_quote'] = 'true'
@@ -237,9 +236,9 @@ def limit_dataset():
         if not session.get("demo_mode", False):
             is_local = _is_local(request)
             ts_stats.add_dataset(is_local, context['total_tweets'])
-            for dataset_id in context['source_datasets']:
-                app.logger.info(dataset_id)
-                ts_stats.add_source_dataset(dataset_id.meta.id, is_local)
+            dataset_id = context['source_dataset']
+            app.logger.info(dataset_id)
+            ts_stats.add_source_dataset(dataset_id.meta.id, is_local)
         return resp
 
     context['consent_html'] = app.config['CONSENT_HTML']
@@ -301,7 +300,7 @@ def stats():
     source_dataset_names = {}
     # Get the names of the datasets.
     if source_dataset_stats:
-        for source_dataset in DatasetDocument.mget([stat.dataset_id for stat in source_dataset_stats]):
+        for source_dataset in DatasetDocument.get([stat.dataset_id for stat in source_dataset_stats]):
             if source_dataset:
                 source_dataset_names[source_dataset.meta.id] = source_dataset.name
     return render_template('stats.html',
@@ -403,21 +402,20 @@ def _prepare_dataset_view(dataset_params, clear_cache=False):
             except OembedException:
                 # Skip further Oembed attemts
                 oembed_error = True
-    source_datasets = DatasetDocument.mget(dataset_params['source_datasets'])
-    context['source_datasets'] = source_datasets
+    source_dataset = DatasetDocument.get(dataset_params['source_dataset'])
+    context['source_dataset'] = source_dataset
     dataset_created_at_min = None
     dataset_created_at_max = None
-    for dataset in source_datasets:
-        if dataset.first_tweet_created_at:
-            if dataset_created_at_min:
-                dataset_created_at_min = min(dataset_created_at_min, dataset.first_tweet_created_at)
-            else:
-                dataset_created_at_min = dataset.first_tweet_created_at
-        if dataset.last_tweet_created_at:
-            if dataset_created_at_max:
-                dataset_created_at_max = max(dataset_created_at_max, dataset.last_tweet_created_at)
-            else:
-                dataset_created_at_max = dataset.last_tweet_created_at
+    if source_dataset.first_tweet_created_at:
+        if dataset_created_at_min:
+            dataset_created_at_min = min(dataset_created_at_min, source_dataset.first_tweet_created_at)
+        else:
+            dataset_created_at_min = source_dataset.first_tweet_created_at
+    if source_dataset.last_tweet_created_at:
+        if dataset_created_at_max:
+            dataset_created_at_max = max(dataset_created_at_max, source_dataset.last_tweet_created_at)
+        else:
+            dataset_created_at_max = source_dataset.last_tweet_created_at
     context['dataset_created_at_min'] = dataset_created_at_min
     context['dataset_created_at_max'] = dataset_created_at_max
 
@@ -489,7 +487,7 @@ def _form_to_dataset_params(form):
     for key, value in form.items():
         if key.startswith('limit_') and key != 'limit_source_datasets':
             dataset_params[key[6:]] = value
-    dataset_params['source_datasets'] = form.getlist('limit_source_datasets')
+    dataset_params['source_dataset'] = form['limit_source_datasets']
     if 'dataset_name' in form:
         dataset_params['dataset_name'] = form['dataset_name']
     return dataset_params

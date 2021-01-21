@@ -37,7 +37,7 @@ def generate_tasks(self, task_defs, dataset_params, total_tweets, dataset_path, 
         source.update(task.source)
 
     if source:
-        search.source(list(source))
+        search.source(task.source)
 
     tweet_count = 0
     for tweet_count, hit in enumerate(search.scan()):
