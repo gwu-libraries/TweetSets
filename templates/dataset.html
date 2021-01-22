@@ -224,7 +224,7 @@
                                         <input type="text" class="form-control" id="created_at_from" name="limit_created_at_from" value="{{ limit_created_at_from }}" pattern="[0-9]{4}-[0-9]{1,2}-[0-9]{1,2}">
                                     </div>
                                     <div class="col-sm-6">
-                                        <p class="help-block">Created at date is greater than or equal to.{% if created_at_min %} First tweet in limited dataset is {{ created_at_min.strftime('%Y-%m-%d') }}.{% endif %}{% if dataset_created_at_min %} First tweet in source dataset(s) is {{ dataset_created_at_min.strftime('%Y-%m-%d') }}.{% endif %}</p>
+                                        <p class="help-block">Created at date is greater than or equal to.{% if created_at_min %} First tweet in limited dataset is {{ created_at_min.strftime('%Y-%m-%d') }}.{% endif %}{% if dataset_created_at_min %} First tweet in source dataset is {{ dataset_created_at_min.strftime('%Y-%m-%d') }}.{% endif %}</p>
                                     </div>
                                 </div>
                                 <div class="form-group">
@@ -233,7 +233,7 @@
                                         <input type="text" class="form-control" id="created_at_to" name="limit_created_at_to" value="{{ limit_created_at_to }}" pattern="[0-9]{4}-[0-9]{1,2}-[0-9]{1,2}">
                                     </div>
                                     <div class="col-sm-6">
-                                        <p class="help-block">Created at date is less than or equal to.{% if created_at_max %} Last tweet in limited dataset is {{ created_at_max.strftime('%Y-%m-%d') }}.{% endif %}{% if dataset_created_at_max %} Last tweet in source dataset(s) is {{ dataset_created_at_max.strftime('%Y-%m-%d') }}.{% endif %}</p>
+                                        <p class="help-block">Created at date is less than or equal to.{% if created_at_max %} Last tweet in limited dataset is {{ created_at_max.strftime('%Y-%m-%d') }}.{% endif %}{% if dataset_created_at_max %} Last tweet in source dataset is {{ dataset_created_at_max.strftime('%Y-%m-%d') }}.{% endif %}</p>
                                     </div>
                                 </div>
                                 <h4 class="col-sm-offset-1">Entities</h4>
@@ -300,7 +300,7 @@
                                             <p class="help-block">Return to limiting the tweets in the dataset using the dataset parameters.</p>
                                         {% endif %}
                                         <a href="{{ url_for('dataset_list') }}" class="btn btn-default">Start over</a>
-                                        <p class="help-block">Return to selecting source datasets.</p>
+                                        <p class="help-block">Return to selecting source dataset.</p>
                                     </div>
                                 </div>
                             </div>
@@ -542,7 +542,7 @@
                         </div>
                     {% endfor %}
                     {% if filenames_list %}
-                    <p class="text-info">Tip: See the public link(s) on the Source datasources tab for citing these dataset(s).</p>
+                    <p class="text-info">Tip: See the public link on the Source dataset tab for citing this dataset.</p>
                     {% endif %}
                     <div class="row">
                         <div id="datasetExportsActions" class="panel panel-default">
