@@ -300,7 +300,7 @@ def stats():
     source_dataset_names = {}
     # Get the names of the datasets.
     if source_dataset_stats:
-        for source_dataset in DatasetDocument.get([stat.dataset_id for stat in source_dataset_stats]):
+        for source_dataset in DatasetDocument.mget([stat.dataset_id for stat in source_dataset_stats]):
             if source_dataset:
                 source_dataset_names[source_dataset.meta.id] = source_dataset.name
     return render_template('stats.html',
