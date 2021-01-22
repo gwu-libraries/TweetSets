@@ -1,52 +1,52 @@
 <dl class="dl-horizontal">
-    {% if dataset.description %}
+    {% if source_dataset.description %}
         <dt>Decription</dt>
-        <dd>{{ dataset.description }}</dd>
+        <dd>{{ source_dataset.description }}</dd>
     {% endif %}
-    {% if dataset.tags %}
+    {% if source_dataset.tags %}
         <dt>Tags</dt>
         <dd>
             <ul>
-                {% for tag in dataset.tags %}
+                {% for tag in source_dataset.tags %}
                     <li>{{ tag }}</li>
                 {% endfor %}
             </ul>
         </dd>
     {% endif %}
-    {% if dataset.creators %}
+    {% if source_dataset.creators %}
         <dt>Creators</dt>
         <dd>
             <ul>
-                {% for creator in dataset.creators %}
+                {% for creator in source_dataset.creators %}
                     <li>{{ creator }}</li>
                 {% endfor %}
             </ul>
         </dd>
     {% endif %}
-    {% if dataset.link %}
+    {% if source_dataset.link %}
         <dt>Public link</dt>
-        <dd><a href="{{ dataset.link }}" target="_blank">{{ dataset.link }}</a><p class="help-block">See the public version for citing this dataset.</p></dd>
+        <dd><a href="{{ source_dataset.link }}" target="_blank">{{ source_dataset.link }}</a><p class="help-block">See the public version for citing this dataset.</p></dd>
     {% endif %}
-    {% if dataset.created %}
+    {% if source_dataset.created %}
         <dt>First loaded</dt>
-        <dd>{{ dataset.created.strftime('%Y-%m-%d') }}</dd>
+        <dd>{{ source_dataset.created.strftime('%Y-%m-%d') }}</dd>
     {% endif %}
-    {% if dataset.updated %}
+    {% if source_dataset.updated %}
         <dt>Updated</dt>
-        <dd>{{ dataset.updated.strftime('%Y-%m-%d') }}</dd>
+        <dd>{{ source_dataset.updated.strftime('%Y-%m-%d') }}</dd>
     {% endif %}
-    {% if dataset.first_tweet_created_at %}
+    {% if source_dataset.first_tweet_created_at %}
         <dt>First tweet</dt>
-        <dd>{{ dataset.first_tweet_created_at.strftime('%Y-%m-%d') }}</dd>
+        <dd>{{ source_dataset.first_tweet_created_at.strftime('%Y-%m-%d') }}</dd>
     {% endif %}
-    {% if dataset.last_tweet_created_at %}
+    {% if source_dataset.last_tweet_created_at %}
         <dt>Last tweet</dt>
-        <dd>{{ dataset.last_tweet_created_at.strftime('%Y-%m-%d') }}</dd>
+        <dd>{{ source_dataset.last_tweet_created_at.strftime('%Y-%m-%d') }}</dd>
     {% endif %}
-    {% if dataset.tweet_count %}
+    {% if source_dataset.tweet_count %}
         <dt>Tweet count</dt>
-        <dd>{{ dataset.tweet_count | nf }}</dd>
+        <dd>{{ source_dataset.tweet_count | nf }}</dd>
     {% endif %}
     <dt>ID</dt>
-    <dd>{{ dataset.meta.id }}</dd>
+    <dd>{{ source_dataset.meta.id }}</dd>
 </dl>

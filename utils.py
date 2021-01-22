@@ -25,10 +25,9 @@ def short_uid(length, exists_func):
 
 
 def dataset_params_to_search(dataset_params, skip_aggs=False, max_aggs=1000):
-    indexes = []
-    for source_dataset in dataset_params.get('source_datasets'):
-        indexes.append(get_tweets_index_name(source_dataset))
-    search = Search(index=indexes).extra(track_total_hits=True)
+    source_dataset = dataset_params.get('source_dataset')
+    index = get_tweets_index_name(source_dataset)
+    search = Search(index=index).extra(track_total_hits=True)
 
     # Query
     q = None
