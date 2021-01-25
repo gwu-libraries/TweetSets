@@ -94,7 +94,7 @@ def send_email(email_address, dataset_name, url_for_extract):
     app = current_app._get_current_object()
     mail = Mail(app)
     msg = Message(subject='TweetSets Data Extract Complete',
-                sender=app.config['ADMIN_EMAIL'],
+                sender=app.config['EMAIL_FROM'],
                 recipients=[email_address])
     msg.html = 'Your data extract for dataset <em>{}</em> is ready <a href={}>for downloading</a>.'.format(dataset_name, url_for_extract)
     mail.send(msg)

@@ -560,7 +560,7 @@
                                     <div class="form-horizontal">
                                         <label for="emailInput">
                                             <p class="help-block">Please enter an email address so that we may notify you when your export is ready.</p>
-                                            <input type="text" class="form-control" id="emailInput" name="requester_email" value="" placeholder="Email">
+                                            <input type="text" class="form-control" id="emailInput" name="requester_email" value="" placeholder="Email" required>
                                         </label>
                                     </div>
                                     {% if is_local_mode %}
@@ -671,7 +671,7 @@
                 /* Add an alert element if not already present. */
                 let emailAlert = $("#emailAlert");
                 if (emailAlert.length == 0) {
-                    form.append("<div class='alert alert-warning' role='alert' id='emailAlert'>Please enter a valid email address</div>");
+                    form.after("<div class='alert alert-warning' role='alert' id='emailAlert'>Please enter a valid email address</div>");
                 }
             }
         })
