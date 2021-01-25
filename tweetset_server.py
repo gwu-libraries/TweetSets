@@ -83,7 +83,7 @@ if not app.debug and app.config['ADMIN_EMAIL'] and app.config['EMAIL_SMTP'] and 
     mail_handler = SMTPHandler((app.config['EMAIL_SMTP'], app.config['EMAIL_PORT']),
                                app.config['EMAIL_FROM'],
                                [app.config['ADMIN_EMAIL']], 'TweetSet error on {}'.format(app.config['HOST']),
-                               credentials=('sfm_no_reply@email.gwu.edu', 'noreply4SFM!'), secure=secure)
+                               credentials=('sfm_no_reply@email.gwu.edu', app.config['EMAIL_PASSWORD']), secure=secure)
     mail_handler.setLevel(logging.ERROR)
     app.logger.addHandler(mail_handler)
 
