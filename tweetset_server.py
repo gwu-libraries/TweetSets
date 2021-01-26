@@ -4,7 +4,6 @@ from jinja2 import evalcontextfilter, Markup
 from elasticsearch_dsl.connections import connections as es_connections
 from elasticsearch.exceptions import ElasticsearchException
 import os
-from celery import Celery
 import requests
 import fnmatch
 from models import DatasetDocument
@@ -13,8 +12,7 @@ from datetime import date, datetime, timedelta
 import json
 import ipaddress
 from collections import namedtuple
-
-from utils import read_json, write_json, short_uid, dataset_params_to_search
+from utils import read_json, write_json, short_uid, dataset_params_to_search, make_celery
 from stats import TweetSetStats
 import tasks
 
@@ -41,6 +39,12 @@ app.config['CONSENT_BUTTON_TEXT'] = os.environ.get('CONSENT_BUTTON_TEXT')
 app.config['CONSENT_HTML'] = os.environ.get('CONSENT_HTML')
 # Maximum rows to display on the datasets stats page per statistic
 app.config['MAX_TOP_ROWS_DS_STATS'] = 10
+# Flask-Mail configs
+app.config['MAIL_SERVER'] = app.config['EMAIL_SMTP']
+app.config['MAIL_PORT'] = app.config['EMAIL_PORT']
+app.config['MAIL_USERNAME'] = app.config['EMAIL_USERNAME']
+app.config['MAIL_PASSWORD'] = app.config['EMAIL_PASSWORD']
+app.config['MAIL_USE_TLS'] = app.config['USE_TLS']
 
 # ElasticSearch setup
 es_connections.create_connection(hosts=['elasticsearch'], timeout=app.config['ES_TIMEOUT'], sniff_on_start=True,
@@ -51,8 +55,7 @@ app.logger.debug('ElasticSearch timeout is %s', app.config['ES_TIMEOUT'])
 app.config['CELERY_BROKER_URL'] = 'redis://redis:6379/0'
 app.config['CELERY_RESULT_BACKEND'] = 'redis://redis:6379/0'
 
-celery = Celery(app.name, broker=app.config['CELERY_BROKER_URL'])
-celery.conf.update(app.config)
+celery = make_celery(app)
 
 redis = redispy.StrictRedis(host='redis', port=6379, db=1, decode_responses=True)
 
@@ -66,6 +69,7 @@ if app.config['IP_RANGE']:
 
 # Email on error
 if not app.debug and app.config['ADMIN_EMAIL'] and app.config['EMAIL_SMTP'] and app.config['EMAIL_FROM']:
+
     import logging
     from logging.handlers import SMTPHandler
 
@@ -79,10 +83,9 @@ if not app.debug and app.config['ADMIN_EMAIL'] and app.config['EMAIL_SMTP'] and 
     mail_handler = SMTPHandler((app.config['EMAIL_SMTP'], app.config['EMAIL_PORT']),
                                app.config['EMAIL_FROM'],
                                [app.config['ADMIN_EMAIL']], 'TweetSet error on {}'.format(app.config['HOST']),
-                               credentials=('sfm_no_reply@email.gwu.edu', 'noreply4SFM!'), secure=secure)
+                               credentials=('sfm_no_reply@email.gwu.edu', app.config['EMAIL_PASSWORD']), secure=secure)
     mail_handler.setLevel(logging.ERROR)
     app.logger.addHandler(mail_handler)
-
 
 @app.route('/')
 def about():
@@ -121,7 +124,6 @@ def dataset_list():
 @app.route('/dataset/<dataset_id>', methods=['GET', 'POST'])
 def dataset(dataset_id):
     dataset_path = _dataset_path(dataset_id)
-
     # Read dataset_params
     try:
         dataset_params = read_json(os.path.join(dataset_path, 'dataset_params.json'))
@@ -130,12 +132,18 @@ def dataset(dataset_id):
     # Create context
     context = _prepare_dataset_view(dataset_params, clear_cache='clear_cache' in request.args)
 
+    # Add requester email to dataset_params
+    dataset_params['requester_email'] = request.form.get('requester_email', '')
     # Generate tasks
     generate_tasks_filepath = os.path.join(dataset_path, 'generate_tasks.json')
     if request.form.get('generate_tasks', '').lower() == 'true' and not os.path.exists(
             generate_tasks_filepath):
         app.logger.info('Generating task for {}'.format(dataset_id))
         task_defs = {}
+        # Include email for notification
+        task_defs['requester_email'] = dataset_params['requester_email']
+        # Include URL to dataset
+        task_defs['dataset_url'] = '{}#datasetExports'.format(request.base_url)
         if request.form.get('generate_tweet_ids', '').lower() == 'true':
             task_defs['tweet_ids'] = {
                 'max_per_file': app.config['MAX_PER_TXT_FILE']
@@ -189,9 +197,11 @@ def dataset(dataset_id):
     context['filenames_list'] = filenames_list
 
     context['dataset_id'] = dataset_id
-
     context['consent_html'] = app.config['CONSENT_HTML']
     context['consent_button_text'] = app.config['CONSENT_BUTTON_TEXT']
+    # Save the user's emails to the dataset params file (if supplied)
+    if dataset_params['requester_email']:
+        write_json(os.path.join(dataset_path, 'dataset_params.json'), dataset_params)
 
     return render_template('dataset.html', **context)
 
@@ -475,6 +485,9 @@ def _dataset_path(dataset_id):
 def _dataset_params_to_context(dataset_params):
     context = dict()
     for key, value in dataset_params.items():
+        # Ignore email in dataset_params.json
+        if key == 'requester_email':
+            continue
         if key != 'dataset_name':
             context['limit_{}'.format(key)] = value
         else:
@@ -490,6 +503,7 @@ def _form_to_dataset_params(form):
     dataset_params['source_dataset'] = form['limit_source_datasets']
     if 'dataset_name' in form:
         dataset_params['dataset_name'] = form['dataset_name']
+
     return dataset_params
 
 

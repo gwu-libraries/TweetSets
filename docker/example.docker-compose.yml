@@ -172,6 +172,13 @@ services:
         - LOGGING_LEVEL=${WORKER_LOGGING_LEVEL}
         - TZ
         - ES_TIMEOUT
+        - EMAIL_PORT
+        - EMAIL_SMTP
+        - EMAIL_FROM
+        - EMAIL_USERNAME
+        - EMAIL_PASSWORD
+        - ADMIN_EMAIL
+        - USE_TLS
       restart: always
   # This will exit. That's OK.
   loader:

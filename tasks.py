@@ -7,6 +7,8 @@ from utils import dataset_params_to_search
 import logging
 from twarc import json2csv
 import zipfile
+from flask import current_app
+from flask_mail import Mail, Message
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +16,6 @@ logger = logging.getLogger(__name__)
 def generate_tasks(self, task_defs, dataset_params, total_tweets, dataset_path, generate_update_increment=None,
                    zip_bytes_threshold=1000000000):
     generate_update_increment = generate_update_increment or 10000
-
     tasks = []
     task_args = [self, total_tweets, dataset_path, generate_update_increment]
     for task_name, task_kwargs in task_defs.items():
@@ -78,10 +79,26 @@ def generate_tasks(self, task_defs, dataset_params, total_tweets, dataset_path, 
     generate_task_filepath = os.path.join(dataset_path, 'generate_tasks.json')
     if os.path.exists(generate_task_filepath):
         os.remove(generate_task_filepath)
+    # Notify user if email provided
+    if task_defs.get('requester_email'):
+        send_email(email_address=task_defs['requester_email'],
+                    dataset_name=dataset_params['dataset_name'],
+                    url_for_extract=task_defs['dataset_url'])
 
     return {'current': tweet_count + 1, 'total': total_tweets,
             'status': 'Completed.'}
 
+def send_email(email_address, dataset_name, url_for_extract):
+    '''Sends an email on task completion to the user requesting the extract.'''
+    # Get current Flask app context (for configuration variables)
+    app = current_app._get_current_object()
+    mail = Mail(app)
+    msg = Message(subject='TweetSets Data Extract Complete',
+                sender=app.config['EMAIL_FROM'],
+                recipients=[email_address])
+    msg.html = 'Your data extract for dataset <em>{}</em> is ready <a href={}>for downloading</a>.'.format(dataset_name, url_for_extract)
+    mail.send(msg)
+    return
 
 class BaseGenerateTask:
     def __init__(self, state, total_tweets, dataset_path, generate_update_increment, file_filter=None, source=None):
@@ -105,7 +122,6 @@ class BaseGenerateTask:
         self.state.update_state(state=state,
                                 meta={'current': current, 'total': total,
                                       'status': status})
-
 
 class GenerateTweetIdsTask(BaseGenerateTask):
     def __init__(self, *args, max_per_file=None):
