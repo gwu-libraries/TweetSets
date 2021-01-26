@@ -201,7 +201,7 @@ loader Elasticsearch is on the same machine as TweetSets (e.g., in a small devel
         --py-files dist/TweetSets-2.0-py3.6.egg,dependencies.zip \
         --conf spark.driver.bindAddress=0.0.0.0 \
         --conf spark.driver.host=$SPARK_DRIVER_HOST \
-        tweetset_loader.py spark-reload dataset-id
+        tweetset_loader.py spark-reload dataset-id /dataset/path/to
 
 where `dataset-id` is the id of the dataset, which can be found by viewing the collection's `ID` metadata field via the Tweetsets UI.
 
