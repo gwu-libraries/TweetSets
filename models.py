@@ -59,6 +59,7 @@ class TweetDocument(Document):
     mention_user_ids = Keyword()
     mention_screen_names = Keyword()
     hashtags = Keyword()
+    lang = Keyword()
     favorite_count = Integer()
     retweet_count = Integer()
     retweeted_quoted_user_id = Keyword()
@@ -111,6 +112,7 @@ def to_tweet(tweet_json, dataset_id, index_name, store_tweet=False):
     tweet.hashtags = tweet_hashtags(entities)
     tweet.favorite_count = tweet_json['favorite_count']
     tweet.retweet_count = tweet_json['retweet_count']
+    tweet.lang = tweet_json['lang']
     tweet.has_media = 'media' in entities
     tweet.urls = urls(entities, type)
     tweet.has_geo = tweet.has_geo = True if tweet_json.get('geo') or tweet_json.get('place') or tweet_json.get(

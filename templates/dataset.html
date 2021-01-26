@@ -243,6 +243,14 @@
                                         <p class="help-block">Created at date is less than or equal to. Includes tweets through 23:59:59 UTC on this date. {% if created_at_max %} Last tweet in limited dataset is {{ created_at_max.strftime('%Y-%m-%d') }}.{% endif %}{% if dataset_created_at_max %} Last tweet in source dataset is {{ dataset_created_at_max.strftime('%Y-%m-%d') }}.{% endif %}</p>
                                     </div>
                                 </div>
+                                <h4 class="col-sm-offset-1">Language</h4>
+                                <div class="form-group">
+                                    <label for="tweetLanguages" class="col-sm-2 control-label">Language is any of</label>
+                                    <div class="col-sm-10">
+                                        <textarea class="form-control" rows="2" id="tweetLanguages" name="limit_languages">{{ limit_languages }}</textarea>
+                                        <p class="help-block">Tweet language is one of the following (OR). Provide a comma-separated list of two-letter <a href="https://datahub.io/core/language-codes" target="_blank" aria-label="BCP 47 language codes, opens in new window">BCP 47 language codes</a> (e.g. en,es). See Twitter <a href="https://developer.twitter.com/en/docs/tweets/filter-realtime/guides/basic-stream-parameters#language" target="_blank" aria-label="Twitter language metadata documentation, opens in new window">language</a> for more information.</p>
+                                    </div>
+                                </div>
                                 <h4 class="col-sm-offset-1">Entities</h4>
                                 <div class="form-group">
                                     <div class="checkbox col-sm-offset-2">

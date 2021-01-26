@@ -159,6 +159,14 @@ def dataset_params_to_search(dataset_params, skip_aggs=False, max_aggs=1000):
     if created_at_dict:
         q = _and(q, Q('range', created_at=created_at_dict))
 
+    # Languages
+    if dataset_params.get('languages'):
+        languages = []
+        for language in re.split(', *', dataset_params['languages']):
+            languages.append(language)
+        if languages:
+            any_q = _and(q, Q('terms', lang=languages))
+
     # Has media
     if dataset_params.get('has_media', '').lower() == 'true':
         q = _and(q, Q('term', has_media=True))
