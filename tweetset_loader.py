@@ -151,12 +151,10 @@ if __name__ == '__main__':
     # Subparsers
     subparsers = parser.add_subparsers(dest='command', help='command help')
 
-    update_parser = subparsers.add_parser('update', help='update dataset metadata')
+    update_parser = subparsers.add_parser('update', help='update dataset metadata (including statistics)')
     update_parser.add_argument('dataset_identifier', help='identifier (a UUID) for the dataset')
     update_parser.add_argument('path', help='path of dataset')
     update_parser.add_argument('--filename', help='filename of dataset file', default='dataset.json')
-    update_parser.add_argument('--stats', action='store_true', help='Also update dataset statistics')
-    update_parser.add_argument('--create', action='store_true', help='Create if does not exist.')
 
     delete_parser = subparsers.add_parser('delete', help='delete dataset and tweets')
     delete_parser.add_argument('dataset_identifier', help='identifier (a UUID) for the dataset')
@@ -231,6 +229,14 @@ if __name__ == '__main__':
         dataset.delete()
         log.info('Deleted {}'.format(dataset.meta.id))
         delete_tweet_index(dataset_id)
+    if args.command == 'update':
+        dataset = to_dataset(read_json(os.path.join(args.path, args.filename)),
+                             dataset_id=dataset_id)
+        dataset.save()
+        update_dataset_stats(dataset)
+        log.info('Updated dataset {}'.format(dataset_id))
+        print('Updated dataset {}'.format(dataset_id))
+
     if args.command in ('create', 'spark-create'):
         if dataset_id is None:
             dataset_id = short_uid(6, exists_func=lambda uid: DatasetDocument.get(uid, ignore=404) is not None)

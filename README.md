@@ -189,6 +189,34 @@ loader Elasticsearch is on the same machine as TweetSets (e.g., in a small devel
         --conf spark.driver.host=$SPARK_DRIVER_HOST \
         tweetset_loader.py spark-create /dataset/path/to
 
+### Reloading an existing set with Apache Spark
+1. Start and connect to a loader container:
+
+        docker-compose -f loader.docker-compose.yml run --rm loader /bin/bash
+2. Invoke the loader:
+
+        spark-submit \
+        --jars elasticsearch-hadoop.jar \
+        --master spark://$SPARK_MASTER_HOST:7101 \
+        --py-files dist/TweetSets-2.0-py3.6.egg,dependencies.zip \
+        --conf spark.driver.bindAddress=0.0.0.0 \
+        --conf spark.driver.host=$SPARK_DRIVER_HOST \
+        tweetset_loader.py spark-reload dataset-id /dataset/path/to
+
+where `dataset-id` is the id of the dataset, which can be found by viewing the collection's `ID` metadata field via the Tweetsets UI.
+
+Note that running `spark-reload` does *not* re-read `dataset.json` and update the dataset descriptive metadata.
+To update the dataset descriptive metadata to match `dataset.json` if it has been changed,
+invoke the loader with an `update` command:
+
+        spark-submit \
+        --jars elasticsearch-hadoop.jar \
+        --master spark://$SPARK_MASTER_HOST:7101 \
+        --py-files dist/TweetSets-2.0-py3.6.egg,dependencies.zip \
+        --conf spark.driver.bindAddress=0.0.0.0 \
+        --conf spark.driver.host=$SPARK_DRIVER_HOST \
+        tweetset_loader.py update dataset-id /dataset/path/to
+
 ## Kibana
 Elastic's [Kibana](https://www.elastic.co/products/kibana) is a general-purpose framework for exploring, 
 analyzing, and visualizing data. Since the tweets are already indexed in ElasticSearch, they are ready
