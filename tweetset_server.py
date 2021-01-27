@@ -1,3 +1,4 @@
+import click
 from flask import Flask, render_template, request, send_file, jsonify, redirect, url_for, flash, make_response, \
     session, abort
 from jinja2 import evalcontextfilter, Markup
@@ -20,6 +21,7 @@ import tasks
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'secret')
 app.config['DATASETS_PATH'] = '/tweetsets_data/datasets'
+app.config['EXTRACTS_PATH'] = '/tweetsets_data/extracts'
 app.config['MAX_PER_JSON_FILE'] = os.environ.get('MAX_PER_JSON_FILE', 10000000)
 app.config['MAX_PER_CSV_FILE'] = os.environ.get('MAX_PER_CSV_FILE', 250000)
 app.config['MAX_PER_TXT_FILE'] = os.environ.get('MAX_PER_TXT_FILE', 25000000)
@@ -165,7 +167,6 @@ def dataset(dataset_id):
             # Record stats
             if not session.get("demo_mode", False):
                 ts_stats.add_derivative('tweet csv', _is_local(request))
-
         if task_defs:
             generate_tasks = _generate_tasks.delay(task_defs, dataset_params, context['total_tweets'], dataset_path,
                                                    generate_update_increment=app.config[
@@ -618,6 +619,54 @@ def status_filter(eval_ctx, status):
         else:
             return result
     return status
+
+# Command-line tool for creating full data extracts 
+@app.cli.command('create-extract')
+@click.argument('dataset_id')
+def create_extract(dataset_id):
+    '''Given the unique identifier for a TweetSets dataset, submits a task to generate the extracts (ID\'s, JSON, CSV) for the whole dataset and saves to local storage.'''
+    def get_file_limits():
+        '''Returns the limits for each type of extract, as set in environment variables, or uses the default.'''
+        return (app.config['MAX_PER_TXT_FILE'],
+                app.config['MAX_PER_JSON_FILE'],
+                app.config['MAX_PER_CSV_FILE'])
+    
+    def construct_path(dataset_id):
+        '''Constructs the path to save the extract, given its unique ID, creating the directory if necessary.'''
+        path = os.path.join(app.config['EXTRACTS_PATH'], dataset_id)
+        if not os.path.exists(path):
+            os.makedirs(path)
+        return path
+
+    def get_tweet_count(dataset_params):
+        '''Retrieve total count of Tweets in dataset from ES index, using the dataset ID provided as a field in dataset_params.'''
+        search = dataset_params_to_search(dataset_params, skip_aggs=True)
+        search_response = search.execute()
+        return search_response.hits.total.value
+
+    # Create the minimally necessary params for this extract
+    dataset_params = {'tweet_type_original': 'true', 'tweet_type_quote': 'true', 'tweet_type_retweet': 'true', 'tweet_type_reply': 'true'}
+    dataset_params.update({'source_dataset': dataset_id,
+                            'dataset_name': 'full-extract-of-{}'.format(dataset_id)})
+    # Create the task definitions
+    keys = ['tweet_ids', 'tweet_json', 'tweet_csv']
+    # File limits
+    task_defs = {key: {'max_per_file': value} 
+                    for key, value in zip(keys, get_file_limits())}
+    # Email for notification
+    task_defs['requester_email'] = app.config['ADMIN_EMAIL']
+    # URL for extract
+    task_defs['dataset_url'] = app.config['HOST']
+    # Dataset path
+    dataset_path = construct_path(dataset_id)
+    # Total tweets in index
+    total_tweets = get_tweet_count(dataset_params)
+    task = _generate_tasks.delay(task_defs, 
+                                        dataset_params, 
+                                        total_tweets, 
+                                        dataset_path)
+    print('Task ID {}'.format(task.id))
+
 
 
 # Task

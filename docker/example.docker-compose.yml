@@ -91,6 +91,7 @@ services:
           - ${SERVER_PORT}:8080
       volumes:
         - ${TWEETSETS_DATA_PATH}/datasets:/tweetsets_data/datasets
+        - ${TWEETSETS_DATA_PATH}/extracts:/tweetsets_data/extracts
         # Link in a file containing a message to be displayed on dataset list page, e.g., for other
         # collections that are available, but not loaded.
         - "./dataset_list_msg.txt:/opt/tweetsets/dataset_list_msg.txt"
@@ -136,6 +137,7 @@ services:
 #          - ${SERVER_PORT}:5000
 #      volumes:
 #        - /tweetsets_data/datasets:/tweetsets_data/datasets
+#        - /tweetsets_data/datasets:/tweetsets_data/datasets
 #        # Link in a file containing a message to be displayed on dataset list page, e.g., for other
 #        # collections that are available, but not loaded.
 #        - "./dataset_list_msg.txt:/opt/tweetsets/dataset_list_msg.txt"
@@ -166,6 +168,7 @@ services:
         - elasticsearch:elasticsearch
       volumes:
         - ${TWEETSETS_DATA_PATH}/datasets:/tweetsets_data/datasets
+        - ${TWEETSETS_DATA_PATH}/extracts:/tweetsets_data/extracts
       networks:
         - tweetsets
       environment:
