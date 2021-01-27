@@ -301,6 +301,12 @@ def dataset_status(task_id):
     return jsonify(response)
 
 
+@app.route('/full-dataset/<source_dataset_id>')
+def full_dataset(source_dataset_id):
+    #placeholder template
+    return render_template('help.html')
+
+
 @app.route('/stats')
 def stats():
     # Handle demo mode
