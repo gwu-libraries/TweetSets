@@ -11,6 +11,7 @@ ADD models.py /opt/tweetsets/
 ADD utils.py /opt/tweetsets/
 ADD stats.py /opt/tweetsets/
 ADD tasks.py /opt/tweetsets/
+ADD tweetset_extractor.py /opt/tweetsets
 ADD templates/ /opt/tweetsets/templates/
 ADD static /opt/tweetsets/static/
 
