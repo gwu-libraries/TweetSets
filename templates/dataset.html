@@ -330,7 +330,7 @@
                             !$('input[name*="limit_has_"]').is(':checked') &&
                             !$('input[type="text"]').val() &&
                             !$('input[type="number"]').val() &&
-                            $('input[name*="limit_tweet_type_"]').val() ) {
+                            $('input[name^="limit_tweet_type_"]:checked').length === 4 ) {
                             window.location.href = "{{ url_for('full_dataset', source_dataset_id=source_dataset.meta.id) }}";
                         } else {
                             $(this).click();
