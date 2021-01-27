@@ -37,6 +37,7 @@ app.config['ADMIN_EMAIL'] = os.environ.get('ADMIN_EMAIL')
 app.config['ES_TIMEOUT'] = int(os.environ.get('ES_TIMEOUT', '20'))
 app.config['CONSENT_BUTTON_TEXT'] = os.environ.get('CONSENT_BUTTON_TEXT')
 app.config['CONSENT_HTML'] = os.environ.get('CONSENT_HTML')
+app.config['GOOGLE_TAG'] = os.environ.get('GOOGLE_TAG')
 # Maximum rows to display on the datasets stats page per statistic
 app.config['MAX_TOP_ROWS_DS_STATS'] = 10
 # Flask-Mail configs
@@ -87,6 +88,15 @@ if not app.debug and app.config['ADMIN_EMAIL'] and app.config['EMAIL_SMTP'] and 
     mail_handler.setLevel(logging.ERROR)
     app.logger.addHandler(mail_handler)
 
+
+@app.context_processor
+def base_vars():
+    consent_html = app.config['CONSENT_HTML']
+    consent_button_text = app.config['CONSENT_BUTTON_TEXT']
+    google_tag = app.config['GOOGLE_TAG']
+    return dict(consent_html=consent_html, consent_button_text=consent_button_text, google_tag=google_tag)
+
+
 @app.route('/')
 def about():
     # For testing
@@ -96,8 +106,7 @@ def about():
                            tweet_count=_tweet_count(clear_cache='clear_cache' in request.args),
                            prev_datasets=json.loads(request.cookies.get('prev_datasets', '[]')),
                            is_local_mode=_is_local_mode(request),
-                           consent_html = app.config['CONSENT_HTML'],
-                           consent_button_text = app.config['CONSENT_BUTTON_TEXT'])
+                           )
 
 
 @app.route('/datasets')
@@ -117,8 +126,7 @@ def dataset_list():
                            server_mode=app.config['SERVER_MODE'],
                            datasets=search.execute(),
                            prev_datasets=json.loads(request.cookies.get('prev_datasets', '[]')),
-                           consent_html = app.config['CONSENT_HTML'],
-                           consent_button_text = app.config['CONSENT_BUTTON_TEXT'])
+                           )
 
 
 @app.route('/dataset/<dataset_id>', methods=['GET', 'POST'])
@@ -251,9 +259,6 @@ def limit_dataset():
             ts_stats.add_source_dataset(dataset_id.meta.id, is_local)
         return resp
 
-    context['consent_html'] = app.config['CONSENT_HTML']
-    context['consent_button_text'] = app.config['CONSENT_BUTTON_TEXT']
-
     return render_template('dataset.html', **context)
 
 
@@ -320,23 +325,18 @@ def stats():
                            local_recent_dataset_stats=ts_stats.datasets_stats(since_datetime=since, local_only=True),
                            source_dataset_stats=source_dataset_stats,
                            source_dataset_names=source_dataset_names,
-                           derivatives_stats=ts_stats.derivatives_stats(since_datetime=since),
-                           consent_html = app.config['CONSENT_HTML'],
-                           consent_button_text = app.config['CONSENT_BUTTON_TEXT'])
+                           derivatives_stats=ts_stats.derivatives_stats(since_datetime=since)
+                           )
 
 
 @app.route('/help')
 def help():
-    return render_template('help.html',
-                           consent_html = app.config['CONSENT_HTML'],
-                           consent_button_text = app.config['CONSENT_BUTTON_TEXT'])
+    return render_template('help.html')
 
 
 @app.route('/citing')
 def citing():
-    return render_template('citing.html',
-                           consent_html = app.config['CONSENT_HTML'],
-                           consent_button_text = app.config['CONSENT_BUTTON_TEXT'])
+    return render_template('citing.html')
 
 
 Node = namedtuple('Node', ['name', 'total_storage', 'available_storage', 'storage_status'])
@@ -378,9 +378,7 @@ def healthcheck():
         response_code = 500
     return render_template('healthcheck.html',
                            cluster_status=cluster_status,
-                           nodes=nodes,
-                           consent_html = app.config['CONSENT_HTML'],
-                           consent_button_text = app.config['CONSENT_BUTTON_TEXT']), response_code
+                           nodes=nodes), response_code
 
 
 @app.errorhandler(ElasticsearchException)
