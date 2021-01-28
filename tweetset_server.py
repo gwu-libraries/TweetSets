@@ -314,7 +314,6 @@ def dataset_status(task_id):
 
     return jsonify(response)
 
-
 @app.route('/stats')
 def stats():
     # Handle demo mode

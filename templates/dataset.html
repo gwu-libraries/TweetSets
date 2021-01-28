@@ -118,7 +118,7 @@
                             <div class="panel-heading"><h2 class="panel-title">Dataset parameters</h2></div>
                             <div class="panel-body">
                                 <div class="col-sm-offset-1">
-                                    <h4>Source dataset: {{ source_dataset.name }}</h4>
+                                    <h3>Source dataset: {{ source_dataset.name }}</h3>
                                     <input type="hidden" name="limit_source_datasets" value="{{ source_dataset.meta.id }}">
                                 </div>
                                 <div class="col-sm-offset-1">
@@ -324,11 +324,25 @@
                         submitBtn.attr("disabled", !checkboxes.is(":checked"));
                     });
 
+                    /* check for empty form limits before redirecting or showing modal */
+                    $( "button[data-target*='datasetNameModal']" ).click(function() {
+                        if( !$('textarea').val() &&
+                            !$('input[name*="limit_has_"]').is(':checked') &&
+                            !$('input[type="text"]').val() &&
+                            !$('input[type="number"]').val() &&
+                            $('input[name^="limit_tweet_type_"]:checked').length === 4 ) {
+                            window.location.href = "{{ url_for('full_dataset', source_dataset_id=source_dataset.meta.id) }}";
+                        } else {
+                            $(this).click();
+                        };
+                    });
+
                     $('#createModalSubmit').click(function() {
                         $("input[name='dataset_name']" ).val($("input[name='dataset_name_modal']").val());
                         $("#limitForm").submit();
                     });
 
+                    /* modal to provide dataset name and submit form with limits */
                     $('#datasetNameModalForm').submit(function( event ) {
                         event.preventDefault();
                             $("input[name='dataset_name']" ).val($("input[name='dataset_name_modal']").val());
@@ -454,6 +468,7 @@
                                 <div class="form-group">
                                     <div class="col-sm-offset-1">
                                         {% if not dataset_id %}
+                                            
                                             <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#datasetNameModal">Create dataset</button>
                                             <p class="help-block">Freeze the dataset parameters to allow generating dataset exports.</p>
                                             <input type="hidden"  name="dataset_name" value="" />
