@@ -118,6 +118,7 @@ services:
         - SERVER_TIMEOUT
         - CONSENT_HTML
         - CONSENT_BUTTON_TEXT
+        - GOOGLE_TAG
       restart: always
   # For development
 #  server-flaskrun:
@@ -153,6 +154,7 @@ services:
 #        - ES_TIMEOUT
 #        - CONSENT_HTML
 #        - CONSENT_BUTTON_TEXT
+#        - GOOGLE_TAG
   worker:
       image: gwul/tweetsets-worker
 #      build:
