@@ -217,6 +217,27 @@ invoke the loader with an `update` command:
         --conf spark.driver.host=$SPARK_DRIVER_HOST \
         tweetset_loader.py update dataset-id /dataset/path/to
 
+### Creating a manual extract (dataset)
+Full extracts of existing datasets can be created from the command line. 
+
+1. Launch a shell session in the server container:
+```
+docker exec -it ts_server_1 /bin/bash
+```
+or 
+```
+docker exec -it ts_server-flaskrun_1 /bin/bash
+```
+
+2. Issue the command to create the extract, where `dataset-id` is the id of the dataset, which can be found by viewing the collection's `ID` metadata field via the Tweetsets UI.
+
+```
+python tweetset_server.py create-extract dataset_id
+```
+
+3. Upon completion, an email will be sent to the address in the `ADMIN_EMAIL` field of the `.env` file.
+
+
 ## Kibana
 Elastic's [Kibana](https://www.elastic.co/products/kibana) is a general-purpose framework for exploring, 
 analyzing, and visualizing data. Since the tweets are already indexed in ElasticSearch, they are ready
