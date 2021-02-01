@@ -331,7 +331,8 @@
                             !$('input[type="text"]').val() &&
                             !$('input[type="number"]').val() &&
                             $('input[name^="limit_tweet_type_"]:checked').length === 4 ) {
-                            window.location.href = "{{ url_for('full_dataset', source_dataset_id=source_dataset.meta.id) }}";
+                            console.log($("#limitForm"));
+                            $("#limitForm").submit();
                         } else {
                             $(this).click();
                         };
@@ -502,6 +503,11 @@
             {% if dataset_id %}
                 <div role="tabpanel" class="tab-pane" id="datasetExports">
                     {% if task_id %}
+                        {% if full_dataset %}
+                            {% set dataset_url_type = 'full-dataset' %}
+                        {% else %}
+                            {% set dataset_url_type = 'dataset' %}
+                        {% endif %}
                         <script>
                                 function update_progress(url, progressBar, progressBarStatus) {
                                     // send GET request to status URL
@@ -514,11 +520,11 @@
                                         progressBarStatus.text(data['status']);
                                         if (data['state'] != 'PENDING' && data['state'] != 'PROGRESS') {
                                             window.location.hash = 'datasetExports';
-                                            window.location.href='{{ url_for("dataset", dataset_id=dataset_id) }}#datasetExports';
+                                            window.location.href='{{ url_for(dataset_url_type, dataset_id=dataset_id) }}#datasetExports';
                                         }
                                         else {
                                             window.location.hash = 'datasetExports';
-                                            window.location.href='{{ url_for("dataset", dataset_id=dataset_id) }}?reload=true#datasetExports';
+                                            window.location.href='{{ url_for(dataset_url_type, dataset_id=dataset_id) }}?reload=true#datasetExports';
                                             // rerun in 2 seconds
                                             setTimeout(function() {
                                                 update_progress(url, progressBar, progressBarStatus);
@@ -566,50 +572,51 @@
                     {% if filenames_list %}
                     <p class="text-info">Tip: See the public link on the Source dataset tab for citing this dataset.</p>
                     {% endif %}
-                    <div class="row">
-                        <div id="datasetExportsActions" class="panel panel-default">
-                            <div class="panel-heading"><h2 class="panel-title">Generate Export Actions</h2></div>
-                            <div class="panel-body">
-                                {% if total_tweets > 0 %}
-                                <form id="datasetExportsForm" class="form-horizontal" action="{{ url_for('dataset', dataset_id=dataset_id) }}" method="POST">
-                                    <div class="form-horizontal">
-                                        <label for="emailInput">
-                                            <p class="help-block">Please enter an email address so that we may notify you when your export is ready.</p>
-                                            <input type="text" class="form-control" id="emailInput" name="requester_email" value="" placeholder="Email" required>
+                    {% if not full_dataset %}
+                        <div class="row">
+                            <div id="datasetExportsActions" class="panel panel-default">
+                                <div class="panel-heading"><h2 class="panel-title">Generate Export Actions</h2></div>
+                                <div class="panel-body">
+                                    {% if total_tweets > 0 %}
+                                    <form id="datasetExportsForm" class="form-horizontal" action="{{ url_for('dataset', dataset_id=dataset_id) }}" method="POST">
+                                        <div class="form-horizontal">
+                                            <label for="emailInput">
+                                                <p class="help-block">Please enter an email address so that we may notify you when your export is ready.</p>
+                                                <input type="text" class="form-control" id="emailInput" name="requester_email" value="" placeholder="Email" required>
+                                            </label>
+                                        </div>
+                                        {% if is_local_mode %}
+                                        <div class="checkbox">
+                                            <label>
+                                                <input type="checkbox" name="generate_tweet_json" value="true">
+                                                Generate tweet JSON
+                                                <p class="help-block">Generate files containing the tweet JSON of the dataset.</p>
+                                            </label>
+                                            </div>
+                                        <div class="checkbox">
+                                            <label>
+                                                <input type="checkbox" name="generate_tweet_csv" value="true">
+                                                Generate tweet CSV
+                                                <p class="help-block">Generate files containing tweet text and select metadata in CSV (can be used with Excel).</p>
+                                            </label>
+                                            </div>
+                                        {% endif %}
+                                        <div class="checkbox">
+                                        <label>
+                                            <input type="checkbox" name="generate_tweet_ids" value="true">
+                                            Generate tweet ids
+                                            <p class="help-block">Generate files containing the tweet ids of the dataset.</p>
                                         </label>
-                                    </div>
-                                    {% if is_local_mode %}
-                                       <div class="checkbox">
-                                          <label>
-                                            <input type="checkbox" name="generate_tweet_json" value="true">
-                                            Generate tweet JSON
-                                              <p class="help-block">Generate files containing the tweet JSON of the dataset.</p>
-                                          </label>
                                         </div>
-                                       <div class="checkbox">
-                                          <label>
-                                            <input type="checkbox" name="generate_tweet_csv" value="true">
-                                            Generate tweet CSV
-                                              <p class="help-block">Generate files containing tweet text and select metadata in CSV (can be used with Excel).</p>
-                                          </label>
-                                        </div>
+                                        <button type="submit" id="datasetExportsId" form="datasetExportsForm" name="generate_tasks" value="true" class="btn btn-primary" {% if task_id %} disabled="true" {% endif %}>Generate</button>
+                                    </form>
+                                    {% else %}
+                                    <div class="alert alert-warning" role="alert" atomic-live="true">No tweets found with the current dataset parameters. Please refine the dataset parameters to create an export.</div>
                                     {% endif %}
-                                    <div class="checkbox">
-                                      <label>
-                                        <input type="checkbox" name="generate_tweet_ids" value="true">
-                                        Generate tweet ids
-                                          <p class="help-block">Generate files containing the tweet ids of the dataset.</p>
-                                      </label>
-                                    </div>
-                                    <button type="submit" id="datasetExportsId" form="datasetExportsForm" name="generate_tasks" value="true" class="btn btn-primary" {% if task_id %} disabled="true" {% endif %}>Generate</button>
-                                </form>
-                                {% else %}
-                                <div class="alert alert-warning" role="alert" atomic-live="true">No tweets found with the current dataset parameters. Please refine the dataset parameters to create an export.</div>
-                                {% endif %}
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    
+                    {% endif %}
                 </div>
             {% endif %}
         </div>

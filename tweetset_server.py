@@ -135,15 +135,13 @@ def dataset_list():
 def dataset(dataset_id, full_dataset=False):
     dataset_path = _dataset_path(dataset_id, full_dataset=full_dataset)
     # Read dataset_params
-    if full_dataset:
-        return render_template('help.html')
     try:
         dataset_params = read_json(os.path.join(dataset_path, 'dataset_params.json'))
     except FileNotFoundError:
         abort(404)
     # Create context
-    context = _prepare_dataset_view(dataset_params, clear_cache='clear_cache' in request.args)
-
+    context = _prepare_dataset_view(dataset_params, clear_cache='clear_cache' in request.args,
+                                    full_dataset=full_dataset)
     # Add requester email to dataset_params
     dataset_params['requester_email'] = request.form.get('requester_email', '')
     # Generate tasks
@@ -213,7 +211,6 @@ def dataset(dataset_id, full_dataset=False):
     # Save the user's emails to the dataset params file (if supplied)
     if dataset_params['requester_email']:
         write_json(os.path.join(dataset_path, 'dataset_params.json'), dataset_params)
-
     return render_template('dataset.html', **context)
 
 
@@ -227,15 +224,11 @@ def _add_filenames(label, filter, dataset_path, filename_list):
 @app.route('/dataset', methods=['POST'])
 def limit_dataset():
     dataset_params = _form_to_dataset_params(request.form)
-    if list(dataset_params.keys()) == ['source_dataset']:
-        dataset_params['tweet_type_original'] = 'true'
-        dataset_params['tweet_type_retweet'] = 'true'
-        dataset_params['tweet_type_quote'] = 'true'
-        dataset_params['tweet_type_reply'] = 'true'
+    # Create context for template 
     context = _prepare_dataset_view(dataset_params, clear_cache='clear_cache' in request.args)
-    # If a user-defined extract, save the dataset_params to disk
-    if request.form.get('dataset_name'):
-        dataset_name = request.form['dataset_name']
+    # If params contains a name, assume user-defined dataset needs to be created
+    if dataset_params.get('dataset_name'): 
+        dataset_name = dataset_params['dataset_name']
         dataset_id = short_uid(8, lambda uid: os.path.exists(_dataset_path(uid)))
         app.logger.info('Creating {} ({})'.format(dataset_name, dataset_id))
         # Create dataset path
@@ -261,8 +254,14 @@ def limit_dataset():
             dataset_id = context['source_dataset']
             ts_stats.add_source_dataset(dataset_id.meta.id, is_local)
         return resp
-    # If no dataset_name set, assume the request is for a full extract
-    else:
+    # If params contains only a source dataset, request is coming from /datasets
+    elif set(dataset_params.keys()) == {'source_dataset'}:
+        # Toggle the default Tweet types
+        context.update({'limit_tweet_type_{}'.format(key): 'true' 
+                        for key in ('original', 'quote', 'retweet', 'reply')})
+        return render_template('dataset.html', **context)
+    # If other params present but empty, assume the request is for a full extract
+    elif _is_full_extract(dataset_params):
         # Dataset ID is just the UUID for the source datasets
         dataset_id = dataset_params['source_dataset']
         dataset_path = _dataset_path(dataset_id, full_dataset=True)
@@ -270,11 +269,9 @@ def limit_dataset():
         if not os.path.exists(dataset_path):
             create_extract(dataset_id)
         # Redirect to full-dataset route
-        redirect('{}#datasetExports'.format(url_for('full-dataset', dataset_id=dataset_id)),
-                                      code=303)
-
-    return render_template('dataset.html', **context)
-
+        return redirect('{}#datasetExports'.format(url_for('full-dataset', dataset_id=dataset_id)),code=303)
+    else:
+        return render_template('dataset.html', **context)
 
 @app.route('/dataset_file/<dataset_id>/<filename>')
 def dataset_file(dataset_id, filename):
@@ -399,7 +396,7 @@ def handle_bad_request(e):
     return render_template('es_error.html')
 
 
-def _prepare_dataset_view(dataset_params, clear_cache=False):
+def _prepare_dataset_view(dataset_params, clear_cache=False, full_dataset=False):
     context = _dataset_params_to_context(dataset_params)
     tweet_limit = 0
     try:
@@ -445,6 +442,8 @@ def _prepare_dataset_view(dataset_params, clear_cache=False):
 
     # Mode
     context['is_local_mode'] = _is_local_mode(request)
+    # Whether a full extract
+    context['full_dataset'] = full_dataset
     return context
 
 
@@ -602,6 +601,12 @@ def _get_ipaddr(req):
     else:
         return req.remote_addr or '127.0.0.1'
 
+def _is_full_extract(dataset_params):
+    '''Checks for the presence of parameters limiting the extract. Returns True if these are absent, meaning the user has requested a full extract.'''
+    # Exclude empty parameters
+    params = {k: v for k, v in dataset_params.items() if v}
+    return set(params.keys()) == {'source_dataset', 'tweet_type_original', 'tweet_type_reply', 'tweet_type_quote', 'tweet_type_retweet'}
+
 
 @app.template_filter('nf')
 def number_format_filter(num):
@@ -652,11 +657,14 @@ def create_extract(dataset_id):
         search = dataset_params_to_search(dataset_params, skip_aggs=True)
         search_response = search.execute()
         return search_response.hits.total.value
-
+    # Dataset path
+    dataset_path = construct_path(dataset_id)
     # Create the minimally necessary params for this extract
     dataset_params = {'tweet_type_original': 'true', 'tweet_type_quote': 'true', 'tweet_type_retweet': 'true', 'tweet_type_reply': 'true'}
     dataset_params.update({'source_dataset': dataset_id,
                             'dataset_name': 'full-extract-of-{}'.format(dataset_id)})
+    # Save to disk 
+    write_json(os.path.join(dataset_path, 'dataset_params.json'), dataset_params)
     # Create the task definitions
     keys = ['tweet_ids', 'tweet_json', 'tweet_csv']
     # File limits
@@ -666,8 +674,6 @@ def create_extract(dataset_id):
     task_defs['requester_email'] = app.config['ADMIN_EMAIL']
     # URL for extract
     task_defs['dataset_url'] = app.config['HOST']
-    # Dataset path
-    dataset_path = construct_path(dataset_id)
     # Total tweets in index
     total_tweets = get_tweet_count(dataset_params)
     task = _generate_tasks.delay(task_defs, 
