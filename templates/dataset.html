@@ -502,12 +502,12 @@
             </div>
             {% if dataset_id %}
                 <div role="tabpanel" class="tab-pane" id="datasetExports">
-                    {% if task_id %}
-                        {% if full_dataset %}
-                            {% set dataset_url_type = 'full-dataset' %}
+                    {% if full_dataset %}
+                            {% set dataset_url_type = 'full_dataset' %}
                         {% else %}
                             {% set dataset_url_type = 'dataset' %}
-                        {% endif %}
+                     {% endif %}
+                    {% if task_id %}
                         <script>
                                 function update_progress(url, progressBar, progressBarStatus) {
                                     // send GET request to status URL
@@ -562,7 +562,7 @@
                                 <div class="panel-body">
                                     <ul class="list-group">
                                     {% for filename in filenames %}
-                                        <li class="list-group-item"><a href="{{ url_for('dataset_file', dataset_id=dataset_id, filename=filename) }}">{{ filename }}</a></li>
+                                        <li class="list-group-item"><a href="{{ url_for(dataset_url_type + '_file', dataset_id=dataset_id, filename=filename) }}">{{ filename }}</a></li>
                                     {% endfor %}
                                     </ul>
                                 </div>
