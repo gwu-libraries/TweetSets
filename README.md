@@ -80,6 +80,7 @@ Clusters must have at least a primary node and two additional nodes.
 
         mkdir -p /tweetset_data/redis
         mkdir -p /tweetset_data/datasets
+        mkdir -p /tweetset_data/full_datasets
         mkdir -p /tweetset_data/elasticsearch
         chown -R 1000:1000 /tweetset_data/elasticsearch
 
