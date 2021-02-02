@@ -206,8 +206,6 @@ def dataset(dataset_id, full_dataset=False):
     context['filenames_list'] = filenames_list
 
     context['dataset_id'] = dataset_id
-    context['consent_html'] = app.config['CONSENT_HTML']
-    context['consent_button_text'] = app.config['CONSENT_BUTTON_TEXT']
     # Save the user's emails to the dataset params file (if supplied)
     if dataset_params['requester_email']:
         write_json(os.path.join(dataset_path, 'dataset_params.json'), dataset_params)
@@ -260,8 +258,8 @@ def limit_dataset():
         context.update({'limit_tweet_type_{}'.format(key): 'true' 
                         for key in ('original', 'quote', 'retweet', 'reply')})
         return render_template('dataset.html', **context)
-    # If other params present but empty, assume the request is for a full extract
-    elif _is_full_extract(dataset_params):
+    # If is_full_dataset has is True, full dataset request made via Create dataset button
+    elif dataset_params.get('is_full_dataset'):
         # Dataset ID is just the UUID for the source datasets
         dataset_id = dataset_params['source_dataset']
         dataset_path = _dataset_path(dataset_id, full_dataset=True)
@@ -516,7 +514,8 @@ def _form_to_dataset_params(form):
     dataset_params['source_dataset'] = form['limit_source_datasets']
     if 'dataset_name' in form:
         dataset_params['dataset_name'] = form['dataset_name']
-
+    if form.get('is_full_dataset'):
+        dataset_params['is_full_dataset'] = True
     return dataset_params
 
 
@@ -601,12 +600,6 @@ def _get_ipaddr(req):
         return req.access_route[0]
     else:
         return req.remote_addr or '127.0.0.1'
-
-def _is_full_extract(dataset_params):
-    '''Checks for the presence of parameters limiting the extract. Returns True if these are absent, meaning the user has requested a full extract.'''
-    # Exclude empty parameters
-    params = {k: v for k, v in dataset_params.items() if v}
-    return set(params.keys()) == {'source_dataset', 'tweet_type_original', 'tweet_type_reply', 'tweet_type_quote', 'tweet_type_retweet'}
 
 
 @app.template_filter('nf')
