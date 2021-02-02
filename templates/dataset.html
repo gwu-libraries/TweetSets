@@ -93,7 +93,7 @@
         {% endif %}
     {% endwith %}
     {% if dataset_id %}
-        <div class="well well-sm">Link for this dataset: <a href="{{ request.base_url }}">{{ request.base_url }}</a></div>
+        <div class="well well-sm">Link for this dataset: <a href="{{ request.base_url }}#datasetExports">{{ request.base_url }}</a></div>
     {% endif %}
 
 
@@ -113,6 +113,7 @@
         <div class="tab-content">
             <div role="tabpanel" class="tab-pane active" id="datasetParametersActions">
                 <form id="limitForm" class="form-horizontal" action="{{ url_for('limit_dataset') }}#datasetStatistics" method="POST">
+                    <input type="hidden" name="is_full_dataset" value="" >
                     <div class="row">
                         <div id="datasetParameters" class="panel panel-default">
                             <div class="panel-heading"><h2 class="panel-title">Dataset parameters</h2></div>
@@ -331,7 +332,8 @@
                             !$('input[type="text"]').val() &&
                             !$('input[type="number"]').val() &&
                             $('input[name^="limit_tweet_type_"]:checked').length === 4 ) {
-                            $("#limitForm").submit(); 
+                            $('input[name="is_full_dataset"]').val(true);
+                            $('#limitForm').submit(); 
                         } else { 
                             $('#datasetNameModal').modal('show') 
                         }
