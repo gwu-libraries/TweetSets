@@ -36,6 +36,14 @@
         gtag('js', new Date());
 
         gtag('config', '{{ google_tag }}');
+
+        function downloadLink(label, dataset_id, filename) {
+          gtag('event', 'download', {
+            'event_category': label,
+            'event_label': dataset_id,
+            'value': filename
+          });
+        }
     </script>
     {% endif %}
 
