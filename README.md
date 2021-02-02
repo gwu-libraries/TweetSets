@@ -233,7 +233,7 @@ docker exec -it ts_server-flaskrun_1 /bin/bash
 2. Issue the command to create the extract, where `dataset-id` is the id of the dataset, which can be found by viewing the collection's `ID` metadata field via the Tweetsets UI.
 
 ```
-python tweetset_server.py create-extract dataset_id
+flask create-extract dataset_id
 ```
 
 3. Upon completion, an email will be sent to the address in the `ADMIN_EMAIL` field of the `.env` file.
