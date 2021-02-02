@@ -267,7 +267,7 @@ def limit_dataset():
         dataset_path = _dataset_path(dataset_id, full_dataset=True)
         # Does the path exist? If not, generate extract
         if not os.path.exists(dataset_path):
-            create_extract(dataset_id)
+            _create_extract(dataset_id)
         # Redirect to full_dataset route
         return redirect('{}#datasetExports'.format(url_for('full_dataset', dataset_id=dataset_id)),code=303)
     else:
@@ -638,7 +638,7 @@ def status_filter(eval_ctx, status):
             return result
     return status
 
-def create_extract(dataset_id):
+def _create_extract(dataset_id):
     '''Given the unique identifier for a TweetSets dataset, submits a task to generate the extracts (ID\'s, JSON, CSV) for the whole dataset and saves to local storage.'''
     def get_file_limits():
         '''Returns the limits for each type of extract, as set in environment variables, or uses the default.'''
@@ -688,8 +688,8 @@ def create_extract(dataset_id):
 # Command-line tool for creating full data extracts 
 @app.cli.command('create-extract')
 @click.argument('dataset_id')
-def cli_create_extract(dataset_id):
-    create_extract(dataset_id)
+def create_extract(dataset_id):
+    _create_extract(dataset_id)
 
 # Task
 @celery.task(bind=True)
