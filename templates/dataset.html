@@ -298,7 +298,7 @@
                                         {% if not dataset_id %}
                                             <button type="submit" class="btn btn-primary">Preview</button>
                                             <p class="help-block">Get a sample of tweets in the dataset and see dataset statistics.</p>
-                                            <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#datasetNameModal">Create dataset</button>
+                                            <button type="button" class="btn btn-primary datasetNameModal">Create dataset</button>
                                             <p class="help-block">Freeze the dataset parameters to allow generating dataset exports.</p>
                                             <input type="hidden"  name="dataset_name" value="" />
 
@@ -325,17 +325,16 @@
                     });
 
                     /* check for empty form limits before redirecting or showing modal */
-                    $( "button[data-target*='datasetNameModal']" ).click(function() {
+                    $( ".datasetNameModal" ).click(function() {
                         if( !$('textarea').val() &&
                             !$('input[name*="limit_has_"]').is(':checked') &&
                             !$('input[type="text"]').val() &&
                             !$('input[type="number"]').val() &&
                             $('input[name^="limit_tweet_type_"]:checked').length === 4 ) {
-                            console.log($("#limitForm"));
-                            $("#limitForm").submit();
-                        } else {
-                            $(this).click();
-                        };
+                            $("#limitForm").submit(); 
+                        } else { 
+                            $('#datasetNameModal').modal('show') 
+                        }
                     });
 
                     $('#createModalSubmit').click(function() {
@@ -429,7 +428,7 @@
                                 <div class="form-group">
                                     <div class="col-sm-offset-1">
                                         {% if not dataset_id %}
-                                            <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#datasetNameModal">Create dataset</button>
+                                            <button type="button" class="btn btn-primary datasetNameModal">Create dataset</button>
                                             <p class="help-block">Freeze the dataset parameters to allow generating dataset exports.</p>
                                             <input type="hidden"  name="dataset_name" value="" />
                                         {% endif %}
@@ -469,8 +468,7 @@
                                 <div class="form-group">
                                     <div class="col-sm-offset-1">
                                         {% if not dataset_id %}
-                                            
-                                            <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#datasetNameModal">Create dataset</button>
+                                            <button type="button" class="btn btn-primary datasetNameModal">Create dataset</button>
                                             <p class="help-block">Freeze the dataset parameters to allow generating dataset exports.</p>
                                             <input type="hidden"  name="dataset_name" value="" />
                                         {% endif %}
