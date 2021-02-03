@@ -563,7 +563,7 @@
                                     <ul class="list-group">
                                     {% for filename in filenames %}
                                         {% if full_dataset %}
-                                            <li class="list-group-item"><a href="{{ url_for(dataset_url_type + '_file', dataset_id=dataset_id, filename=filename) }}" onclick="downloadLink('{{ label }}', '{{ dataset_id}}', '{{ filename }}');">{{ filename }}</a></li>
+                                            <li class="list-group-item"><a href="{{ url_for(dataset_url_type + '_file', dataset_id=dataset_id, filename=filename) }}">{{ filename }}</a></li>
                                         {% else %}
                                             <li class="list-group-item"><a href="{{ url_for(dataset_url_type + '_file', dataset_id=dataset_id, filename=filename) }}">{{ filename }}</a></li>
                                         {% endif %}
