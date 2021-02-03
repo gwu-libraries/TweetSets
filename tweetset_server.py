@@ -130,7 +130,7 @@ def dataset_list():
                            prev_datasets=json.loads(request.cookies.get('prev_datasets', '[]')),
                            )
 
-@app.route('/full_dataset/<dataset_id>', methods=['GET', 'POST'], defaults={'full_dataset': True}, endpoint='full_dataset')
+@app.route('/full-dataset/<dataset_id>', methods=['GET', 'POST'], defaults={'full_dataset': True}, endpoint='full_dataset')
 @app.route('/dataset/<dataset_id>', methods=['GET', 'POST'])
 def dataset(dataset_id, full_dataset=False):
     dataset_path = _dataset_path(dataset_id, full_dataset=full_dataset)
@@ -268,8 +268,8 @@ def limit_dataset():
     else:
         return render_template('dataset.html', **context)
 
-@app.route('/full_dataset_file/<dataset_id>/<filename>', defaults={'full_dataset': True}, endpoint='full_dataset_file')
-@app.route('/dataset_file/<dataset_id>/<filename>')
+@app.route('/full-dataset-file/<dataset_id>/<filename>', defaults={'full_dataset': True}, endpoint='full_dataset_file')
+@app.route('/dataset-file/<dataset_id>/<filename>')
 def dataset_file(dataset_id, filename, full_dataset=False):
     filepath = os.path.join(_dataset_path(dataset_id, full_dataset), filename)
     return send_file(filepath, as_attachment=True, attachment_filename=filename)
