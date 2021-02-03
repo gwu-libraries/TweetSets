@@ -197,8 +197,8 @@ def dataset(dataset_id, full_dataset=False):
 
     # Check for existing exports
     filenames_list = []
-    _add_filenames('Generated tweet JSON files', 'tweets-*.jsonl.zip', dataset_path, filenames_list)
-    _add_filenames('Generated tweet CSV files', 'tweets-*.csv.zip', dataset_path, filenames_list)
+    _add_filenames('Generated tweet JSON files', 'tweets-*.jsonl.zip', dataset_path, filenames_list, hide=not context['is_local_mode'])
+    _add_filenames('Generated tweet CSV files', 'tweets-*.csv.zip', dataset_path, filenames_list, hide=not context['is_local_mode'])
     _add_filenames('Generated tweet id files', 'tweet-ids-*.txt.zip', dataset_path, filenames_list)
     _add_filenames('Generated mentions files', 'mention-*.csv.zip', dataset_path, filenames_list)
     _add_filenames('Generated top mentions files', 'top-mentions-*.csv.zip', dataset_path, filenames_list)
@@ -212,9 +212,9 @@ def dataset(dataset_id, full_dataset=False):
     return render_template('dataset.html', **context)
 
 
-def _add_filenames(label, filter, dataset_path, filename_list):
+def _add_filenames(label, filter, dataset_path, filename_list, hide=False):
     filenames = fnmatch.filter(os.listdir(dataset_path), filter)
-    if filenames:
+    if filenames and not hide:
         filenames.sort()
         filename_list.append((label, filenames))
 
@@ -223,6 +223,10 @@ def _add_filenames(label, filter, dataset_path, filename_list):
 def limit_dataset():
     dataset_params = _form_to_dataset_params(request.form)
     # Create context for template 
+    # Need to add these values if we're coming from the /datasets route in order for the cache to get set correctly
+    if set(dataset_params.keys()) == {'source_dataset'}:
+        dataset_params.update({'tweet_type_{}'.format(key): 'true' 
+                        for key in ('original', 'quote', 'retweet', 'reply')})
     context = _prepare_dataset_view(dataset_params, clear_cache='clear_cache' in request.args)
     # If params contains a name, assume user-defined dataset needs to be created
     if dataset_params.get('dataset_name'): 
@@ -252,13 +256,6 @@ def limit_dataset():
             dataset_id = context['source_dataset']
             ts_stats.add_source_dataset(dataset_id.meta.id, is_local)
         return resp
-    # If params contains only a source dataset, request is coming from /datasets
-    elif set(dataset_params.keys()) == {'source_dataset'}:
-        # Toggle the default Tweet types
-        context.update({'limit_tweet_type_{}'.format(key): 'true' 
-                        for key in ('original', 'quote', 'retweet', 'reply')})
-        return render_template('dataset.html', **context)
-    # If is_full_dataset has is True, full dataset request made via Create dataset button
     elif dataset_params.get('is_full_dataset'):
         # Dataset ID is just the UUID for the source datasets
         dataset_id = dataset_params['source_dataset']
