@@ -93,7 +93,7 @@
         {% endif %}
     {% endwith %}
     {% if dataset_id %}
-        <div class="well well-sm">Link for this dataset: <a href="{{ request.base_url }}">{{ request.base_url }}</a></div>
+        <div class="well well-sm">Link for this dataset: <a href="{{ request.base_url }}#datasetExports">{{ request.base_url }}</a></div>
     {% endif %}
 
 
@@ -113,12 +113,13 @@
         <div class="tab-content">
             <div role="tabpanel" class="tab-pane active" id="datasetParametersActions">
                 <form id="limitForm" class="form-horizontal" action="{{ url_for('limit_dataset') }}#datasetStatistics" method="POST">
+                    <input type="hidden" name="is_full_dataset" value="" >
                     <div class="row">
                         <div id="datasetParameters" class="panel panel-default">
                             <div class="panel-heading"><h2 class="panel-title">Dataset parameters</h2></div>
                             <div class="panel-body">
                                 <div class="col-sm-offset-1">
-                                    <h4>Source dataset: {{ source_dataset.name }}</h4>
+                                    <h3>Source dataset: {{ source_dataset.name }}</h3>
                                     <input type="hidden" name="limit_source_datasets" value="{{ source_dataset.meta.id }}">
                                 </div>
                                 <div class="col-sm-offset-1">
@@ -298,7 +299,7 @@
                                         {% if not dataset_id %}
                                             <button type="submit" class="btn btn-primary">Preview</button>
                                             <p class="help-block">Get a sample of tweets in the dataset and see dataset statistics.</p>
-                                            <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#datasetNameModal">Create dataset</button>
+                                            <button type="button" class="btn btn-primary datasetNameModal">Create dataset</button>
                                             <p class="help-block">Freeze the dataset parameters to allow generating dataset exports.</p>
                                             <input type="hidden"  name="dataset_name" value="" />
 
@@ -324,11 +325,26 @@
                         submitBtn.attr("disabled", !checkboxes.is(":checked"));
                     });
 
+                    /* check for empty form limits before redirecting or showing modal */
+                    $( ".datasetNameModal" ).click(function() {
+                        if( !$('textarea').val() &&
+                            !$('input[name*="limit_has_"]').is(':checked') &&
+                            !$('input[type="text"]').val() &&
+                            !$('input[type="number"]').val() &&
+                            $('input[name^="limit_tweet_type_"]:checked').length === 4 ) {
+                            $('input[name="is_full_dataset"]').val(true);
+                            $('#limitForm').submit(); 
+                        } else { 
+                            $('#datasetNameModal').modal('show') 
+                        }
+                    });
+
                     $('#createModalSubmit').click(function() {
                         $("input[name='dataset_name']" ).val($("input[name='dataset_name_modal']").val());
                         $("#limitForm").submit();
                     });
 
+                    /* modal to provide dataset name and submit form with limits */
                     $('#datasetNameModalForm').submit(function( event ) {
                         event.preventDefault();
                             $("input[name='dataset_name']" ).val($("input[name='dataset_name_modal']").val());
@@ -414,7 +430,7 @@
                                 <div class="form-group">
                                     <div class="col-sm-offset-1">
                                         {% if not dataset_id %}
-                                            <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#datasetNameModal">Create dataset</button>
+                                            <button type="button" class="btn btn-primary datasetNameModal">Create dataset</button>
                                             <p class="help-block">Freeze the dataset parameters to allow generating dataset exports.</p>
                                             <input type="hidden"  name="dataset_name" value="" />
                                         {% endif %}
@@ -454,7 +470,7 @@
                                 <div class="form-group">
                                     <div class="col-sm-offset-1">
                                         {% if not dataset_id %}
-                                            <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#datasetNameModal">Create dataset</button>
+                                            <button type="button" class="btn btn-primary datasetNameModal">Create dataset</button>
                                             <p class="help-block">Freeze the dataset parameters to allow generating dataset exports.</p>
                                             <input type="hidden"  name="dataset_name" value="" />
                                         {% endif %}
@@ -486,6 +502,11 @@
             </div>
             {% if dataset_id %}
                 <div role="tabpanel" class="tab-pane" id="datasetExports">
+                    {% if full_dataset %}
+                            {% set dataset_url_type = 'full_dataset' %}
+                        {% else %}
+                            {% set dataset_url_type = 'dataset' %}
+                     {% endif %}
                     {% if task_id %}
                         <script>
                                 function update_progress(url, progressBar, progressBarStatus) {
@@ -499,11 +520,11 @@
                                         progressBarStatus.text(data['status']);
                                         if (data['state'] != 'PENDING' && data['state'] != 'PROGRESS') {
                                             window.location.hash = 'datasetExports';
-                                            window.location.href='{{ url_for("dataset", dataset_id=dataset_id) }}#datasetExports';
+                                            window.location.href='{{ url_for(dataset_url_type, dataset_id=dataset_id) }}#datasetExports';
                                         }
                                         else {
                                             window.location.hash = 'datasetExports';
-                                            window.location.href='{{ url_for("dataset", dataset_id=dataset_id) }}?reload=true#datasetExports';
+                                            window.location.href='{{ url_for(dataset_url_type, dataset_id=dataset_id) }}?reload=true#datasetExports';
                                             // rerun in 2 seconds
                                             setTimeout(function() {
                                                 update_progress(url, progressBar, progressBarStatus);
@@ -541,7 +562,11 @@
                                 <div class="panel-body">
                                     <ul class="list-group">
                                     {% for filename in filenames %}
-                                        <li class="list-group-item"><a href="{{ url_for('dataset_file', dataset_id=dataset_id, filename=filename) }}">{{ filename }}</a></li>
+                                        {% if full_dataset %}
+                                            <li class="list-group-item"><a href="{{ url_for(dataset_url_type + '_file', dataset_id=dataset_id, filename=filename) }}">{{ filename }}</a></li>
+                                        {% else %}
+                                            <li class="list-group-item"><a href="{{ url_for(dataset_url_type + '_file', dataset_id=dataset_id, filename=filename) }}">{{ filename }}</a></li>
+                                        {% endif %}
                                     {% endfor %}
                                     </ul>
                                 </div>
@@ -549,52 +574,53 @@
                         </div>
                     {% endfor %}
                     {% if filenames_list %}
-                    <p class="text-info">Tip: See the public link on the Source dataset tab for citing this dataset.</p>
+                        <p class="text-info">Tip: See the public link on the Source dataset tab for citing this dataset.</p>
                     {% endif %}
-                    <div class="row">
-                        <div id="datasetExportsActions" class="panel panel-default">
-                            <div class="panel-heading"><h2 class="panel-title">Generate Export Actions</h2></div>
-                            <div class="panel-body">
-                                {% if total_tweets > 0 %}
-                                <form id="datasetExportsForm" class="form-horizontal" action="{{ url_for('dataset', dataset_id=dataset_id) }}" method="POST">
-                                    <div class="form-horizontal">
-                                        <label for="emailInput">
-                                            <p class="help-block">Please enter an email address so that we may notify you when your export is ready.</p>
-                                            <input type="text" class="form-control" id="emailInput" name="requester_email" value="" placeholder="Email" required>
+                    {% if not full_dataset %}
+                        <div class="row">
+                            <div id="datasetExportsActions" class="panel panel-default">
+                                <div class="panel-heading"><h2 class="panel-title">Generate Export Actions</h2></div>
+                                <div class="panel-body">
+                                    {% if total_tweets > 0 %}
+                                    <form id="datasetExportsForm" class="form-horizontal" action="{{ url_for('dataset', dataset_id=dataset_id) }}" method="POST">
+                                        <div class="form-horizontal">
+                                            <label for="emailInput">
+                                                <p class="help-block">Please enter an email address so that we may notify you when your export is ready.</p>
+                                                <input type="text" class="form-control" id="emailInput" name="requester_email" value="" placeholder="Email" required>
+                                            </label>
+                                        </div>
+                                        {% if is_local_mode %}
+                                        <div class="checkbox">
+                                            <label>
+                                                <input type="checkbox" name="generate_tweet_json" value="true">
+                                                Generate tweet JSON
+                                                <p class="help-block">Generate files containing the tweet JSON of the dataset.</p>
+                                            </label>
+                                            </div>
+                                        <div class="checkbox">
+                                            <label>
+                                                <input type="checkbox" name="generate_tweet_csv" value="true">
+                                                Generate tweet CSV
+                                                <p class="help-block">Generate files containing tweet text and select metadata in CSV (can be used with Excel).</p>
+                                            </label>
+                                            </div>
+                                        {% endif %}
+                                        <div class="checkbox">
+                                        <label>
+                                            <input type="checkbox" name="generate_tweet_ids" value="true">
+                                            Generate tweet ids
+                                            <p class="help-block">Generate files containing the tweet ids of the dataset.</p>
                                         </label>
-                                    </div>
-                                    {% if is_local_mode %}
-                                       <div class="checkbox">
-                                          <label>
-                                            <input type="checkbox" name="generate_tweet_json" value="true">
-                                            Generate tweet JSON
-                                              <p class="help-block">Generate files containing the tweet JSON of the dataset.</p>
-                                          </label>
                                         </div>
-                                       <div class="checkbox">
-                                          <label>
-                                            <input type="checkbox" name="generate_tweet_csv" value="true">
-                                            Generate tweet CSV
-                                              <p class="help-block">Generate files containing tweet text and select metadata in CSV (can be used with Excel).</p>
-                                          </label>
-                                        </div>
+                                        <button type="submit" id="datasetExportsId" form="datasetExportsForm" name="generate_tasks" value="true" class="btn btn-primary" {% if task_id %} disabled="true" {% endif %}>Generate</button>
+                                    </form>
+                                    {% else %}
+                                    <div class="alert alert-warning" role="alert" atomic-live="true">No tweets found with the current dataset parameters. Please refine the dataset parameters to create an export.</div>
                                     {% endif %}
-                                    <div class="checkbox">
-                                      <label>
-                                        <input type="checkbox" name="generate_tweet_ids" value="true">
-                                        Generate tweet ids
-                                          <p class="help-block">Generate files containing the tweet ids of the dataset.</p>
-                                      </label>
-                                    </div>
-                                    <button type="submit" id="datasetExportsId" form="datasetExportsForm" name="generate_tasks" value="true" class="btn btn-primary" {% if task_id %} disabled="true" {% endif %}>Generate</button>
-                                </form>
-                                {% else %}
-                                <div class="alert alert-warning" role="alert" atomic-live="true">No tweets found with the current dataset parameters. Please refine the dataset parameters to create an export.</div>
-                                {% endif %}
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    
+                    {% endif %}
                 </div>
             {% endif %}
         </div>
