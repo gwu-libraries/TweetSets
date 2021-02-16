@@ -11,44 +11,53 @@
     <div class="row">
         <h1>Step-by-step guide to TweetSets</h1>
         <br />
-        <div class="panel panel-info">
-            <div class="panel-heading"><h3>Step 1: Select one or more source datasets and click Select.</h3></div>
+        <div class="panel panel-primary">
+            <div class="panel-heading panel-title">Step 1: Select a source dataset and click Select.</div>
             <div class="panel-body">
-                <img src="{{ url_for('static', filename='images/help/select_source_dataset.png') }}" />
-                <p>Tip: Click on a dataset name to get more information.</p>
-                <img src="{{ url_for('static', filename='images/help/source_dataset_info.png') }}" />
+                <p>Click on a dataset name to get more information.</p>
+                <img src="{{ url_for('static', filename='images/help/select_source_dataset.png') }}" class="help-img" alt="List of
+                 source datasets with an arrow pointing to the radio button in front of a selected dataset."/>
+                <br />
+                <img src="{{ url_for('static', filename='images/help/source_dataset_info.png') }}" class="help-img" alt="Panel with arrow pointing to 
+                  source dataset name and metadata displayed below." />
             </div>
         </div>
-        <div class="panel panel-info">
-            <div class="panel-heading"><h3>Step 2: Limit the dataset by entering on keywords, hashtags, and other parameters and then click Preview. Repeat until you've created the desired dataset.</h3></div>
+        <div class="panel panel-primary">
+            <div class="panel-heading panel-title">Step 2: Limit the dataset by entering keywords, hashtags, and other criteria and then click Preview.</div>
             <div class="panel-body">
-                <img src="{{ url_for('static', filename='images/help/limit_dataset.png') }}" />
-                <h4>Tip: For stats on your dataset, see the Dataset statistics tab.</h4>
-                <img src="{{ url_for('static', filename='images/help/dataset_statistics.png') }}" />
-                <h4>Tip: To view some sample tweets, see the Sample tweets tab.</h4>
-                <img src="{{ url_for('static', filename='images/help/sample_tweets.png') }}" />
+                <img src="{{ url_for('static', filename='images/help/limit_dataset.png') }}" class="help-img" alt="Dataset parameters / action tab selected, 
+                  with term typed in the Contains all form field."/>
+                <p>For stats on your dataset, see the Dataset statistics tab.</p>
+                <img src="{{ url_for('static', filename='images/help/dataset_statistics.png') }}" class="help-img" alt="Dataset statistics tab selected
+                  with example statistics about the number of tweets and kinds of tweets in the dataset." />
+                <p>To view some sample tweets, see the Sample tweets tab.</p>
+                <img src="{{ url_for('static', filename='images/help/sample_tweets.png') }}" class="help-img" alt='Sample tweets tab selected with 
+                  tweet by @Olympics.' />
             </div>
         </div>
-        <div class="panel panel-info">
-            <div class="panel-heading"><h3>Step 3: Click Create dataset to create the dataset.</h3></div>
+        <div class="panel panel-primary">
+            <div class="panel-heading panel-title">Step 3: Click Create dataset.</div>
             <div class="panel-body">
-                <p>This freezes the dataset parameters.</p>
-                <h4>Tip: Your dataset now has a URL.</h4>
-                <img src="{{ url_for('static', filename='images/help/dataset_link.png') }}" />
-                <h4>Tip: You can find your datasets under Previous datasets.</h4>
-                <img src="{{ url_for('static', filename='images/help/previous_datasets.png') }}" />
+                <img src="{{ url_for('static', filename='images/help/create_dataset.png') }}" class="help-img" alt="Red arrow pointing to the Create dataset button."/>
+                <p>This freezes the dataset parameters. If you did not enter any parameters, you will be taken to a page with a list of available files for download.</p>
             </div>
         </div>
-        <div class="panel panel-info">
-            <div class="panel-heading"><h3>Step 4: From the Dataset exports tab, generate and download dataset exports.</h3></div>
+        <div class="panel panel-primary">
+            <div class="panel-heading panel-title">Step 4: Generate and download dataset exports.</div>
             <div class="panel-body">
-                <img src="{{ url_for('static', filename='images/help/derivative_actions.png') }}" />
-                <h4>Tip: Be patient. These make take a while.</h4>
-                <img src="{{ url_for('static', filename='images/help/progress.png') }}" />
-                <h4>Ready for download.</h4>
-                <img src="{{ url_for('static', filename='images/help/derivative_files.png') }}" />
-            </div>
-        </div>
+                <p>Enter your email address and select the file formats you would like. Tweet JSON and Tweet CSV are only available to users on the GW network. </p>
+                <img src="{{ url_for('static', filename='images/help/request_dataset.png') }}" class="help-img" alt="Form showing email address box and checkboxes
+                    for tweet JSON, tweet CSV, and tweet IDs." />
+                <p>You will receive an email when the dataset files have been created. Be patient. Extracts from large datasets make take hours or days to complete. </p>
+                <p>Your dataset now has a URL which you can return to later.</p>
+                <img src="{{ url_for('static', filename='images/help/dataset_link.png') }}" class="help-img" alt="Arrow pointing to gray box showing message 'Link 
+                for this dataset' and a URL."/>
+                <p>You can find your datasets under Previous datasets.</p>
+                <img src="{{ url_for('static', filename='images/help/previous_datasets.png') }}" class="help-img" alt="Arrow pointing to Previous datasets button
+                on home page."/>
+                <p>Files when ready for download.</p>
+                <img src="{{ url_for('static', filename='images/help/derivative_files.png') }}" class="help-img" alt="Dataset exports tab is highlighted and two 
+                sections on the page, 'Generated tweet CSV files' and 'Generated tweet id files' contain links to .zip files."/>
     </div>
 </div>
 {% endblock %}
