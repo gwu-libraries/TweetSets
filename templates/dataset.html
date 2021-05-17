@@ -327,7 +327,7 @@
 
                     /* check for empty form limits before redirecting or showing modal */
                     $( ".datasetNameModal" ).click(function() {
-                        if( !$('textarea').val() &&
+			 if ($('textarea').filter(function() { return this.value === ''; }).length === 10 &&
                             !$('input[name*="limit_has_"]').is(':checked') &&
                             !$('input[type="text"]').val() &&
                             !$('input[type="number"]').val() &&
