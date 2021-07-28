@@ -19,6 +19,8 @@ ADD tweetset_loader.py /opt/tweetsets/
 ADD models.py /opt/tweetsets/
 ADD utils.py /opt/tweetsets/
 ADD spark_utils.py /opt/tweetsets/
+ADD tweetsets_schema.json /opt/tweetsets/
+ADD tweetsets_sql_exp.sql /opt/tweetsets
 ADD setup.py /opt/tweetsets/
 ADD elasticsearch-hadoop-7.9.2.jar /opt/tweetsets/elasticsearch-hadoop.jar
 ADD tweetset_cli.py /opt/tweetsets/
