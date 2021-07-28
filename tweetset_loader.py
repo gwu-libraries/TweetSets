@@ -341,17 +341,18 @@ if __name__ == '__main__':
             df = make_spark_df(spark, 
                                 schema=ts_schema, 
                                 sql=ts_sql, 
-                                path_to_dataset=','.join(filepath_list), 
+                                #path_to_dataset=','.join(filepath_list), 
+                                path_to_dataset=filepath_list,
                                 dataset_id=dataset_id)
             df.write.format('org.elasticsearch.spark.sql').options(**es_conf).save()
             # TO DO --> Replace path with environment variable
-            path_to_extracts = '/dataset/' + dataset_id
-            os.mkdir(path_to_extracts)
-            extract_tweet_ids(df, path_to_extracts + '/tweet_ids')
-            extract_tweet_json(df, path_to_extracts + '/tweet_json')
-            extract_csv(df, path_to_extracts + '/tweet_csv')
-            extract_mentions(df, spark, path_to_extracts=path_to_extracts + '/tweet_mentions')
-            agg_mentions(df, spark, path_to_extracts=path_to_extracts + '/tweet_mentions')
+            path_to_extract = '/dataset/' + dataset_id
+            os.mkdir(path_to_extract)
+            extract_tweet_ids(df, path_to_extract + '/tweet_ids')
+            extract_tweet_json(df, path_to_extract + '/tweet_json')
+            extract_csv(df, path_to_extract + '/tweet_csv')
+            extract_mentions(df, spark, path_to_extract=path_to_extract + '/tweet_mentions')
+            agg_mentions(df, spark, path_to_extract=path_to_extract + '/tweet_mentions')
 
 
         finally:

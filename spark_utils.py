@@ -31,7 +31,7 @@ def load_schema(path_to_schema):
     :param path_to_schema: path to a Spark schema JSON document on disk'''
     with open(path_to_schema, 'r') as f:
         schema = json.load(f)
-        return schema
+        return StructType.fromJson(schema)
 
 def load_sql(path_to_sql):
     '''Load Spark SQL code for TweetSets data transform
@@ -69,7 +69,7 @@ def make_column_mapping(df_columns, array_fields):
     # Add remaining fields from the DataFrame if they are used by json2csv
     column_mapping.update({k: k for k in df_columns if k in json2csv.get_headings()})
     # Set array flag for those fields that require it
-    column_mapping = {k: (v, False if k in array_fields else True) for k,v in column_mapping.items()}
+    column_mapping = {k: (v, True if k in array_fields else False) for k,v in column_mapping.items()}
     return column_mapping
 
 
@@ -78,15 +78,17 @@ def extract_csv(df, path_to_extract):
     :param df: Spark DataFrame
     :parm path_to_extract: string of path to folder for files'''
     column_mapping = make_column_mapping(df.columns, ['text', 'hashtags', 'urls'])
-    for k, v in column_mapping:
+    #print('COLUMN MAPPING', column_mapping)
+    for k, v in column_mapping.items():
         # Need convert fields stored as arrays
         if v[1]:
             # Concat arrays with whitespace
             df = df.withColumn(k, F.concat_ws(' ', df[k]))
             # rename columns as necessary
-            if k != v[0]:
-                df = df.withColumnRenamed(k, v[0])
+        if k != v[0]:
+            df = df.withColumnRenamed(k, v[0])
     # We select only the columns identified in json2csv, skipping the user_urls column (which may have been deprecated)
+    #print('DATAFRAME COLUMNS', df.columns)
     csv_columns = [c for c in json2csv.get_headings() if c != 'user_urls']
     df.select(csv_columns).write.csv(path_to_extract, compression='gzip')
 
