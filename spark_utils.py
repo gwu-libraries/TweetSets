@@ -91,6 +91,7 @@ def extract_csv(df, path_to_extract):
         if k != v[0]:
             df = df.withColumnRenamed(k, v[0])
     # We select only the columns identified in json2csv, skipping the user_urls column (which may have been deprecated)
+    #print('DATAFRAME COLUMNS', df.columns)
     csv_columns = [c for c in json2csv.get_headings() if c != 'user_urls']
     df_csv = df.select(csv_columns)
     # Remove newlines in the text and user_location fields
