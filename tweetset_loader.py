@@ -345,7 +345,7 @@ if __name__ == '__main__':
                                 dataset_id=dataset_id)
             df.write.format('org.elasticsearch.spark.sql').options(**es_conf).save()
             # TO DO --> Replace path with environment variable
-            path_to_extracts = '/storage/dataset_loading/' + dataset_id
+            path_to_extracts = '/dataset/' + dataset_id
             os.mkdir(path_to_extracts)
             extract_tweet_ids(df, path_to_extracts + '/tweet_ids')
             extract_tweet_json(df, path_to_extracts + '/tweet_json')
