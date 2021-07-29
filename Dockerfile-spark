@@ -1,4 +1,4 @@
-FROM python:3.6
+FROM python:3.6-stretch
 MAINTAINER TweetSets <sfm@gwu.edu> 
 
 # Based on https://hub.docker.com/r/gettyimages/spark/~/dockerfile/
