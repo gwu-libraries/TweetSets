@@ -1,4 +1,4 @@
-FROM python:3.8
+FROM python:3.6-stretch
 MAINTAINER TweetSets <sfm@gwu.edu>
 
 ADD requirements.txt /opt/tweetsets/
