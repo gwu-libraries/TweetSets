@@ -327,17 +327,17 @@
 
                     /* check for empty form limits before redirecting or showing modal */
                     $( ".datasetNameModal" ).click(function() {
-			            if ($('textarea').filter(function() { return !$(this).val() }).length === 10 &&
-                            !$('input[name*="limit_has_"]').is(':checked') &&
-                            /* two text type inputs, for Created At dates */
-                            $('input[id^=created_at').filter(function() { return !$(this).val() }).length === 2 &&
-                            /* one number type input, for Limit */
-                            $('input[type="number"]').filter(function() { return !$(this).val() }).length === 1 &&
-                            $('input[name^="limit_tweet_type_"]:checked').length === 4 ) {
-                              $('input[name="is_full_dataset"]').val(true);
-                              $('#limitForm').submit(); 
+                        if ($('textarea').filter(function() { return !$(this).val() }).length === 10 && 
+                        !$('input[name*="limit_has_"]').is(':checked') &&
+                        /* two text type inputs, for Created At dates */
+                        $('input[id^=created_at').filter(function() { return !$(this).val() }).length === 2 &&
+                        /* one number type input, for Limit */
+                        $('input[type="number"]').filter(function() { return !$(this).val() }).length === 1 &&
+                        $('input[name^="limit_tweet_type_"]:checked').length === 4 ) {
+                          $('input[name="is_full_dataset"]').val(true);
+                          $('#limitForm').submit(); 
                         } else { 
-                            $('#datasetNameModal').modal('show') 
+                          $('#datasetNameModal').modal('show') 
                         }
                     });
 
