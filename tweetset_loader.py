@@ -312,6 +312,11 @@ if __name__ == '__main__':
         tweet_index.create()
 
         spark = SparkSession.builder.appName('TweetSets').getOrCreate()
+        # Make Spark v3 use the v2 time parser
+        # TO DO --> update Spark SQL code to use the new time parser
+        spark.conf.set("spark.sql.legacy.timeParserPolicy","LEGACY")
+        # Set UTC as the time zone
+        spark.conf.set('spark.sql.session.timeZone', 'UTC')
         try:
             es_conf = {"es.nodes": os.environ.get('ES_HOST', 'elasticsearch'),
                        "es.port": "9200",

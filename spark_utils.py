@@ -16,7 +16,8 @@ def make_spark_df(spark, schema, sql, path_to_dataset, dataset_id):
     # Read JSON files as Spark DataFrame
     df = spark.read.schema(schema).json(path_to_dataset)
     # Add the full Tweet JSON as a separate field
-    df = df.withColumn("tweet", F.to_json(F.struct([df[x] for x in df.columns])))
+    # Option for Spark v3 to write null fields as nulls (not skip)
+    df = df.withColumn("tweet", F.to_json(F.struct([df[x] for x in df.columns]), {'ignoreNullFields': 'false'}))
     df.createOrReplaceTempView("tweets")
     # Apply SQL transform
     df = spark.sql(sql)
