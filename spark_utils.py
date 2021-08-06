@@ -89,9 +89,16 @@ def extract_csv(df, path_to_extract):
         if k != v[0]:
             df = df.withColumnRenamed(k, v[0])
     # We select only the columns identified in json2csv, skipping the user_urls column (which may have been deprecated)
-    #print('DATAFRAME COLUMNS', df.columns)
     csv_columns = [c for c in json2csv.get_headings() if c != 'user_urls']
-    df.select(csv_columns).write.option("header", "true").csv(path_to_extract, compression='gzip')
+    df_csv = df.select(csv_columns)
+    df_csv = df_csv.withColumn('text', F.regexp_replace('text', '\n|\r', ' '))
+    df_csv = df_csv.withColumn('user_location', F.regexp_replace('user_location', '\n|\r', ' '))
+    # Swap back the date fields so that the created_at field contains the unparsed version  
+    data_mapping = {'created_at': 'parsed_created_at',
+          'parsed_created_at': 'created_at'}
+    df_csv = df_csv.select([F.col(c).alias(data_mapping.get(c, c)) for c in df_csv.columns])
+    # Setting the escape character to the double quote. Otherwise, it causes problems for applications reading the CSV.
+    df_csv.write.option("header", "true").csv(path_to_extract, compression='gzip', escape='"')
 
 def extract_mentions(df, spark, path_to_extract):
     '''Creates nodes and edges of full mentions extract.

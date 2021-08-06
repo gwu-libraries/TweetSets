@@ -48,11 +48,11 @@
             source,
             user.created_at as user_created_at,
             user.default_profile_image as user_default_profile_image,
-            replace(replace(user.description, '\n', ' '), '\r', ' ') as user_description,
+            regex_replace(user.description, '\n|\r', ' ') as user_description,
             user.favourites_count as user_favourites_count,
             user.friends_count as user_friends_count,
             user.listed_count as user_listed_count,
-            replace(replace(user.name, '\n', ' '), '\r', ' ') as user_name,
+            regex_replace(user.name, '\n|\r', ' ') as user_name,
             user.statuses_count as user_statuses_count,
             tweet
         from tweets)
