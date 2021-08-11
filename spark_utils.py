@@ -22,7 +22,7 @@ def make_spark_df(spark, schema, sql, path_to_dataset, dataset_id):
     # Apply SQL transform
     df = spark.sql(sql)
     # Drop temporary columns
-    cols_to_drop = ['tweet_urls','quoted_status', 'retweeted_status', 'text_str']
+    cols_to_drop = ['tweet_urls','tweet_hashtags', 'quoted_status', 'retweeted_status', 'text_str']
     df = df.drop(*cols_to_drop)
     # Add dataset ID column and return
     return df.withColumn('dataset_id', F.lit(dataset_id))
@@ -65,7 +65,9 @@ def make_column_mapping(df_columns, array_fields):
                         'tweet_id': 'id',
                         'user_follower_count': 'user_followers_count',
                         'language': 'lang',
-                        'retweeted_quoted_user_id': 'retweet_or_quote_user_id'
+                        'retweeted_quoted_user_id': 'retweet_or_quote_user_id',
+                        'hashtags_csv': 'hashtags',
+                        'urls_csv': 'urls'
                     }
     # Add remaining fields from the DataFrame if they are used by json2csv
     column_mapping.update({k: k for k in df_columns if k in json2csv.get_headings()})
@@ -78,10 +80,12 @@ def extract_csv(df, path_to_extract):
     '''Creates CSV extract where each row is a Tweet document, using the schema in the twarc.json2csv module.
     :param df: Spark DataFrame
     :parm path_to_extract: string of path to folder for files'''
-    column_mapping = make_column_mapping(df.columns, ['text', 'hashtags', 'urls'])
+    column_mapping = make_column_mapping(df.columns, array_fields=['text'])
     #print('COLUMN MAPPING', column_mapping)
+    # The hashtags and urls fields are handled differently in the Elasticsearch index and in the CSV (per the twarc.json2csv spec). So we need to drop the ES columns before renaming the CSV-versions of these columns
+    df = df.drop('hashtags', 'urls')
     for k, v in column_mapping.items():
-        # Need convert fields stored as arrays
+        # Need to convert fields stored as arrays
         if v[1]:
             # Concat arrays with whitespace
             df = df.withColumn(k, F.concat_ws(' ', df[k]))

@@ -26,10 +26,8 @@
                                 entities.user_mentions), x -> x.id_str) as mention_user_ids,
             transform(coalesce(extended_tweet.entities.user_mentions,
                                 entities.user_mentions), x -> x.screen_name) as mention_screen_names,
-            transform(
-                    coalesce(extended_tweet.entities.hashtags,
-                        entities.hashtags), x -> lower(x.text)) as hashtags,
-            favorite_count,
+            coalesce(retweeted_status.entities.hashtags, extended_tweet.entities.hashtags, entities.hashtags) as tweet_hashtags,
+            coalesce(retweeted_status.favorite_count, favorite_count) as favorite_count,
             retweet_count,
             lang as language,
             isnotnull(entities.media) or isnotnull(extended_tweet.entities.media) 
@@ -48,11 +46,11 @@
             source,
             user.created_at as user_created_at,
             user.default_profile_image as user_default_profile_image,
-            regex_replace(user.description, '\n|\r', ' ') as user_description,
+            regexp_replace(user.description, '\n|\r', ' ') as user_description,
             user.favourites_count as user_favourites_count,
             user.friends_count as user_friends_count,
             user.listed_count as user_listed_count,
-            regex_replace(user.name, '\n|\r', ' ') as user_name,
+            regexp_replace(user.name, '\n|\r', ' ') as user_name,
             user.statuses_count as user_statuses_count,
             tweet
         from tweets)
@@ -64,21 +62,18 @@
                                                             retweeted_status.text))
                 else array(text_str)
             end as text,
-            case when tweet_type = 'quote' then quoted_status.user.id_str
-                else retweeted_status.user.id_str
-            end as retweeted_quoted_user_id,
-            case when tweet_type = 'quote' then quoted_status.user.screen_name
-                else retweeted_status.user.screen_name
-            end as retweeted_quoted_screen_name,
-            case when tweet_type = 'quote' then quoted_status.id_str
-                else retweeted_status.id_str
-            end as retweet_quoted_status_id,
+            coalesce(retweeted_status.user.id_str, quoted_status.user.id_str) as retweeted_quoted_user_id,
+            coalesce(retweeted_status.user.screen_name, quoted_status.user.screen_name) as retweeted_quoted_screen_name,
+            coalesce(retweeted_status.id_str, quoted_status.id_str) as retweet_quoted_status_id,
+            transform(tweet_hashtags, x -> lower(x.text)) as hashtags,
             case when tweet_type = 'quote' then transform(filter(tweet_urls, x -> x not like 'https://twitter.com/%'),
                                                             x -> lower(replace(lower(x), 'https://', 'http://')))
                 else transform(tweet_urls, x -> lower(replace(lower(x), 'https://', 'http://')))
             end as urls,
             /* Used by CSV */
             concat_ws(' ', coalesce(ext_media_urls, media_urls)) as media,
+            concat_ws(' ', tweet_urls) as urls_csv,
+            concat_ws(' ', transform(tweet_hashtags, x -> x.text)) as hashtags_csv,
             *
         from cte
 
