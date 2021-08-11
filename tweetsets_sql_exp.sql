@@ -32,8 +32,9 @@
             lang as language,
             isnotnull(entities.media) or isnotnull(extended_tweet.entities.media) 
                     as has_media,
-            transform(coalesce(extended_tweet.entities.urls,
-                        entities.urls), x -> coalesce(x.expanded_url, x.url)) as tweet_urls,
+            /*transform(coalesce(extended_tweet.entities.urls,
+                        entities.urls), x -> coalesce(x.expanded_url, x.url)) as tweet_urls,*/
+            coalesce(transform(extended_tweet.entities.urls, x -> x.expanded_url), transform(entities.urls, x -> x.expanded_url)) as tweet_urls,
             isnotnull(geo) or isnotnull(place) or isnotnull(coordinates) as has_geo,
             /* The following are fields used only in the CSV representation of the Tweet */
             'https://twitter.com/' || user.screen_name || '/status/' || id_str as tweet_url,
@@ -55,21 +56,19 @@
             tweet
         from tweets)
         select 
-            case when tweet_type = 'quote' then array(text_str, 
+ /*           case when tweet_type = 'quote' then array(text_str, 
                                                     coalesce(quoted_status.extended_tweet.full_text,
                                                             quoted_status.text))
-                when tweet_type = 'retweet' then array(coalesce(retweeted_status.extended_tweet.full_text,
-                                                            retweeted_status.text))
+                when */
+            case when tweet_type = 'retweet' then array(coalesce(retweeted_status.extended_tweet.full_text, retweeted_status.text))
                 else array(text_str)
             end as text,
             coalesce(retweeted_status.user.id_str, quoted_status.user.id_str) as retweeted_quoted_user_id,
             coalesce(retweeted_status.user.screen_name, quoted_status.user.screen_name) as retweeted_quoted_screen_name,
             coalesce(retweeted_status.id_str, quoted_status.id_str) as retweet_quoted_status_id,
             transform(tweet_hashtags, x -> lower(x.text)) as hashtags,
-            case when tweet_type = 'quote' then transform(filter(tweet_urls, x -> x not like 'https://twitter.com/%'),
-                                                            x -> lower(replace(lower(x), 'https://', 'http://')))
-                else transform(tweet_urls, x -> lower(replace(lower(x), 'https://', 'http://')))
-            end as urls,
+            /*case when tweet_type = 'quote' then */
+            transform(transform(tweet_urls, x -> lower(x)), x -> replace(x, 'https://', 'http://')) as urls,
             /* Used by CSV */
             concat_ws(' ', coalesce(ext_media_urls, media_urls)) as media,
             concat_ws(' ', tweet_urls) as urls_csv,
