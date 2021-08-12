@@ -44,7 +44,7 @@
             /* Unlike those above, the URL array fields may be present as empty arrays, so we can't coalesce them. We need to use array intersection to get the URL's present in the fields under root and extended_tweet, since there may be unique values in each */
             case 
                 when isnotnull(extended_tweet.entities.urls) 
-                then array_intersect(transform(extended_tweet.entities.urls , x -> x.expanded_url), transform(entities.urls, x -> x.expanded_url)) 
+                then array_union(transform(extended_tweet.entities.urls , x -> x.expanded_url), transform(entities.urls, x -> x.expanded_url)) 
                 else transform(entities.urls, x -> x.expanded_url)
             end as urls_array,
             /* These are top level struct fields, so if present, this expression returns true */
