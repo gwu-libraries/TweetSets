@@ -1,5 +1,5 @@
 from itertools import compress
-from pyspark.sql.types import *
+import pyspark.sql.types as T
 from pyspark.sql.functions import col, explode
 import pyspark.sql.functions as F
 import json
@@ -22,7 +22,7 @@ def make_spark_df(spark, schema, sql, path_to_dataset, dataset_id):
     # Apply SQL transform
     df = spark.sql(sql)
     # Drop temporary columns
-    cols_to_drop = ['tweet_urls','tweet_hashtags', 'quoted_status', 'retweeted_status', 'text_str']
+    cols_to_drop = [c for c in df.columns if c.endswith('struct') or c.endswith('array') or c.endswith('str')]
     df = df.drop(*cols_to_drop)
     # Add dataset ID column and return
     return df.withColumn('dataset_id', F.lit(dataset_id))
@@ -32,7 +32,7 @@ def load_schema(path_to_schema):
     :param path_to_schema: path to a Spark schema JSON document on disk'''
     with open(path_to_schema, 'r') as f:
         schema = json.load(f)
-        return StructType.fromJson(schema)
+        return T.StructType.fromJson(schema)
 
 def load_sql(path_to_sql):
     '''Load Spark SQL code for TweetSets data transform
@@ -95,6 +95,7 @@ def extract_csv(df, path_to_extract):
     # We select only the columns identified in json2csv, skipping the user_urls column (which may have been deprecated)
     csv_columns = [c for c in json2csv.get_headings() if c != 'user_urls']
     df_csv = df.select(csv_columns)
+    # Remove newlines in the text and user_location fields
     df_csv = df_csv.withColumn('text', F.regexp_replace('text', '\n|\r', ' '))
     df_csv = df_csv.withColumn('user_location', F.regexp_replace('user_location', '\n|\r', ' '))
     # Swap back the date fields so that the created_at field contains the unparsed version  
