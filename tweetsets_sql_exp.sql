@@ -2,7 +2,7 @@
      with tweet_cte as (
          /* SCALAR VALUES */
          select 
-            id_str as tweet_id ,
+            id_str as tweet_id,
             /* Assumes retweeted_status and quoted_status fields will be present only in Tweets of those types. */
             case when isnotnull(in_reply_to_status_id) then 'reply'
                 when isnotnull(retweeted_status) then 'retweet'
