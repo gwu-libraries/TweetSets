@@ -1,8 +1,8 @@
 
-     with cte as (
+     with tweet_cte as (
          /* SCALAR VALUES */
          select 
-            id_str as tweet_id,
+            id_str as tweet_id ,
             /* Assumes retweeted_status and quoted_status fields will be present only in Tweets of those types. */
             case when isnotnull(in_reply_to_status_id) then 'reply'
                 when isnotnull(retweeted_status) then 'retweet'
@@ -35,8 +35,12 @@
             retweeted_status as retweeted_status_struct,
             /* Assuming the following are either null or populated. There may be more values in the extended_tweet.entities fields than in the root-level (Tested on 40 GB of Tweets). */
             coalesce(extended_tweet.entities.user_mentions, entities.user_mentions) as user_mentions_array,
-            coalesce(extended_tweet.entities.hashtags, entities.hashtags) as hashtags_array
-            coalesce(extended_tweet.entities.media, entities.media) as media_array,
+            coalesce(extended_tweet.entities.hashtags, entities.hashtags) as hashtags_array,
+            /* entities.media and extended_tweet.entities.media have different schema, so we can't coalesce */
+            case 
+                when isnotnull(extended_tweet.entities.media) then transform(extended_tweet.entities.media, x -> x.media_url_https)
+                else transform(entities.media, x -> x.media_url_https)                
+            end as media_array,
             /* Unlike those above, the URL array fields may be present as empty arrays, so we can't coalesce them. We need to use array intersection to get the URL's present in the fields under root and extended_tweet, since there may be unique values in each */
             array_intersect(transform(extended_tweet.entities.urls , x -> x.expanded_url), transform(entities.urls, x -> x.expanded_url)) as urls_array,
             /* These are top level struct fields, so if present, this expression returns true */
@@ -81,9 +85,9 @@
             transform(hashtags_array, x -> lower(x.text)) as hashtags,
             transform(urls_array, x -> lower(replace(x, 'https://', 'http://'))) as urls,
             /* Present in CSV only */
-            concat_ws(' ', transform(media_array, x -> x.media_url_https)) as media,
+            concat_ws(' ', media_array) as media,
             /* CSV fields that differ from their ES representations */
             concat_ws(' ', urls_array) as urls_csv,
-            concat_ws(' ', transform(hashtags_struct, x -> x.text)) as hashtags_csv,
+            concat_ws(' ', transform(hashtags_array, x -> x.text)) as hashtags_csv,
             *
-        from cte
+        from tweet_cte
