@@ -42,7 +42,11 @@
                 else transform(entities.media, x -> x.media_url_https)                
             end as media_array,
             /* Unlike those above, the URL array fields may be present as empty arrays, so we can't coalesce them. We need to use array intersection to get the URL's present in the fields under root and extended_tweet, since there may be unique values in each */
-            array_intersect(transform(extended_tweet.entities.urls , x -> x.expanded_url), transform(entities.urls, x -> x.expanded_url)) as urls_array,
+            case 
+                when isnotnull(extended_tweet.entities.urls) 
+                then array_intersect(transform(extended_tweet.entities.urls , x -> x.expanded_url), transform(entities.urls, x -> x.expanded_url)) 
+                else transform(entities.urls, x -> x.expanded_url)
+            end as urls_array,
             /* These are top level struct fields, so if present, this expression returns true */
             isnotnull(geo) or isnotnull(place) or isnotnull(coordinates) as has_geo,
             isnotnull(entities.media) or isnotnull(extended_tweet.entities.media) as has_media,
