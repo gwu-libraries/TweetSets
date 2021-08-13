@@ -35,7 +35,7 @@
             retweeted_status as retweeted_status_struct,
             /* Assuming the following are either null or populated. There may be more values in the extended_tweet.entities fields than in the root-level (Tested on 40 GB of Tweets). */
             coalesce(extended_tweet.entities.user_mentions, entities.user_mentions) as user_mentions_array,
-            coalesce(retweeted_status.extended_tweet.entities.hashtags, retweeted_status.entities.hashtags, extended_tweet.entities.hashtags, entities.hashtags) as hashtags_array,
+            coalesce(retweeted_status.extended_tweet.entities.hashtags, extended_tweet.entities.hashtags, retweeted_status.entities.hashtags, entities.hashtags) as hashtags_array,
             /* entities.media and extended_tweet.entities.media have different schema, so we can't coalesce */
             case 
                 when isnotnull(extended_tweet.entities.media) then transform(extended_tweet.entities.media, x -> x.media_url_https)
