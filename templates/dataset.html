@@ -229,7 +229,9 @@
                                 <div class="form-group">
                                     <label for="created_at_from" class="col-sm-2 control-label">From<span class="sr-only">, format as 4 digit year hyphen 2 digit month hyphen 2 digit day</span></label>
                                     <div class="col-sm-2">
-                                        <input type="text" class="form-control" id="created_at_from" name="limit_created_at_from" value="{{ limit_created_at_from }}" pattern="[0-9]{4}-[0-9]{1,2}-[0-9]{1,2}">
+                                        <!-- Date validation pattern from https://www.html5pattern.com/Dates -->
+                                        <input type="text" class="form-control" id="created_at_from" name="limit_created_at_from" value="{{ limit_created_at_from }}" pattern="(20)[0-9]{2}-(?:(?:0[1-9]|1[0-2])-(?:0[1-9]|1[0-9]|2[0-9])|(?:(?!02)(?:0[1-9]|1[0-2])-(?:30))|(?:(?:0[13578]|1[02])-31))" 
+                                        oninvalid="setCustomValidity('Use date format YYYY-MM-DD')" oninput="setCustomValidity('')">
                                     </div>
                                     <div class="col-sm-7">
                                         <p class="help-block">Created at date is greater than or equal to. Includes tweets from 00:00:00 UTC on this date.  {% if created_at_min %} First tweet in limited dataset is {{ created_at_min.strftime('%Y-%m-%d') }}.{% endif %}{% if dataset_created_at_min %} First tweet in source dataset is {{ dataset_created_at_min.strftime('%Y-%m-%d') }}.{% endif %}</p>
@@ -238,7 +240,8 @@
                                 <div class="form-group">
                                     <label for="created_at_to" class="col-sm-2 control-label">To<span class="sr-only">, format as 4 digit year hyphen 2 digit month hyphen 2 digit day</span></label>
                                     <div class="col-sm-2">
-                                        <input type="text" class="form-control" id="created_at_to" name="limit_created_at_to" value="{{ limit_created_at_to }}" pattern="[0-9]{4}-[0-9]{1,2}-[0-9]{1,2}">
+                                        <input type="text" class="form-control" id="created_at_to" name="limit_created_at_to" value="{{ limit_created_at_to }}" pattern="(20)[0-9]{2}-(?:(?:0[1-9]|1[0-2])-(?:0[1-9]|1[0-9]|2[0-9])|(?:(?!02)(?:0[1-9]|1[0-2])-(?:30))|(?:(?:0[13578]|1[02])-31))"
+                                         oninvalid="setCustomValidity('Use date format YYYY-MM-DD')" oninput="setCustomValidity('')">
                                     </div>
                                     <div class="col-sm-7">
                                         <p class="help-block">Created at date is less than or equal to. Includes tweets through 23:59:59 UTC on this date. {% if created_at_max %} Last tweet in limited dataset is {{ created_at_max.strftime('%Y-%m-%d') }}.{% endif %}{% if dataset_created_at_max %} Last tweet in source dataset is {{ dataset_created_at_max.strftime('%Y-%m-%d') }}.{% endif %}</p>
