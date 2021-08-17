@@ -74,12 +74,11 @@ def make_column_mapping(df_columns, array_fields):
     column_mapping = {k: (v, True if k in array_fields else False) for k,v in column_mapping.items()}
     return column_mapping
 
-def extract_csv(df, path_to_extract):
+def extract_csv(df):
     '''Creates CSV extract where each row is a Tweet document, using the schema in the twarc.json2csv module.
     :param df: Spark DataFrame
     :parm path_to_extract: string of path to folder for files'''
     column_mapping = make_column_mapping(df.columns, array_fields=['text'])
-    #print('COLUMN MAPPING', column_mapping)
     # The hashtags and urls fields are handled differently in the Elasticsearch index and in the CSV (per the twarc.json2csv spec). So we need to drop the ES columns before renaming the CSV-versions of these columns
     df = df.drop('hashtags', 'urls')
     for k, v in column_mapping.items():
@@ -91,7 +90,6 @@ def extract_csv(df, path_to_extract):
         if k != v[0]:
             df = df.withColumnRenamed(k, v[0])
     # We select only the columns identified in json2csv, skipping the user_urls column (which may have been deprecated)
-    #print('DATAFRAME COLUMNS', df.columns)
     csv_columns = [c for c in json2csv.get_headings() if c != 'user_urls']
     df_csv = df.select(csv_columns)
     # Remove newlines in the text and user_location fields
@@ -104,7 +102,7 @@ def extract_csv(df, path_to_extract):
     # Setting the escape character to the double quote. Otherwise, it causes problems for applications reading the CSV.
     # Get rid of duplicate tweets
     df_csv = df_csv.dropDuplicates(['id'])
-    df_csv.write.option("header", "true").csv(path_to_extract, compression='gzip', escape='"')
+    return df_csv
 
 def extract_mentions(df, spark, path_to_extract):
     '''Creates nodes and edges of full mentions extract.
@@ -128,9 +126,8 @@ def extract_mentions(df, spark, path_to_extract):
     mention_edges = mentions_df.select('mention_user_ids', 'mention_screen_names')\
                         .distinct()
     mention_nodes = mentions_df.select('mention_user_ids', 'user_id').distinct()
-    mention_nodes.write.option("header", "true").csv(path_to_extract + '/nodes', compression='gzip')
-    mention_edges.write.option("header", "true").csv(path_to_extract + '/edges', compression='gzip')
-    
+    return mention_nodes, mention_edges
+
 def agg_mentions(df, spark, path_to_extract):
     '''Creates count of Tweets per mentioned user id.
     :param df: Spark DataFrame (after SQL transform)
@@ -149,4 +146,4 @@ def agg_mentions(df, spark, path_to_extract):
     group by mention_user_id
     '''
     mentions_agg_df = spark.sql(sql_agg)  
-    mentions_agg_df.write.option("header", "true").csv(path_to_extract + '/top_mentions', compression='gzip')
+    return mentions_agg_df

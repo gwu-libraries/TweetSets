@@ -350,10 +350,12 @@ if __name__ == '__main__':
             path_to_extract = '/dataset/' + dataset_id
             os.mkdir(path_to_extract)
             extract_tweet_ids(df, path_to_extract + '/tweet_ids')
-            extract_csv(df, path_to_extract + '/tweet_csv')
-            extract_mentions(df, spark, path_to_extract=path_to_extract + '/tweet_mentions')
-            agg_mentions(df, spark, path_to_extract=path_to_extract + '/tweet_mentions')
-
+            # Setting the escape character to the double quote. Otherwise, it causes problems for applications reading the CSV.
+            extract_csv(df).write.option("header", "true").csv(path_to_extract, compression='gzip', escape='"')
+            mention_nodes, mention_edges = extract_mentions(df, spark)
+            mention_nodes.write.option("header", "true").csv(path_to_extract + 'tweet_mentions/nodes', compression='gzip')
+            mention_edges.write.option("header", "true")..csv(path_to_extract + 'tweet_mentions//edges', compression='gzip')
+            agg_mentions(df, spark).write.option("header", "true").csv(path_to_extract + 'tweet_mention/top_mentions', compression='gzip')
         finally:
             spark.stop()
 
