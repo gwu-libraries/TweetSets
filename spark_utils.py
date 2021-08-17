@@ -128,7 +128,7 @@ def extract_mentions(df, spark, path_to_extract):
     mention_nodes = mentions_df.select('mention_user_ids', 'user_id').distinct()
     return mention_nodes, mention_edges
 
-def agg_mentions(df, spark, path_to_extract):
+def agg_mentions(df, spark):
     '''Creates count of Tweets per mentioned user id.
     :param df: Spark DataFrame (after SQL transform)
     :param spark: SparkSession object
