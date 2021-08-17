@@ -104,7 +104,7 @@ def extract_csv(df):
     df_csv = df_csv.dropDuplicates(['id'])
     return df_csv
 
-def extract_mentions(df, spark, path_to_extract):
+def extract_mentions(df, spark):
     '''Creates nodes and edges of full mentions extract.
     :param df: Spark DataFrame (after SQL transform)
     :param spark: SparkSession object

@@ -21,6 +21,7 @@ ADD utils.py /opt/tweetsets/
 ADD spark_utils.py /opt/tweetsets/
 ADD tweetsets_schema.json /opt/tweetsets/
 ADD tweetsets_sql_exp.sql /opt/tweetsets/
+ADD tests /opt/tweetsets
 ADD setup.py /opt/tweetsets/
 ADD elasticsearch-spark-30_2.12-7.13.4.jar /opt/tweetsets/elasticsearch-hadoop.jar
 ADD tweetset_cli.py /opt/tweetsets/
