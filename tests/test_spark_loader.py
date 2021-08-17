@@ -7,6 +7,7 @@ from spark_utils import *
 import json
 import unittest
 from .tweets_2_2 import tests, tests_csv
+import os
 
 
 
@@ -20,10 +21,11 @@ class TestTweet(unittest.TestCase):
         self.ts_sql = load_sql('./tweetsets_sql_exp.sql')
         self.tests = tests
         self.tests_csv = tests_csv
+        self.dir_path = os.path.dirname(os.path.realpath(__file__))
         self.df = make_spark_df(self.spark, 
                                 schema=self.ts_schema, 
                                 sql=self.ts_sql, 
-                                path_to_dataset='file:///Users/dsmith/Documents/code/tweetsets-dev/TweetSets/tests/spark-test-tweets.json',
+                                path_to_dataset='file:///' + self.dir_path + '/spark-test-tweets.json',
                                 dataset_id='test-df')
 
     def testDataFrame(self):
