@@ -6,7 +6,7 @@ celery==4.4.7
 certifi==2017.4.17
 chardet==3.0.3
 click==7.1.2
-elasticsearch~=7.11.0
+elasticsearch~=7.10.0
 elasticsearch-dsl~=7.3.0
 Flask==1.1.2
 Flask-Mail==0.9.1
