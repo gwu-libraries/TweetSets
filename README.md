@@ -265,6 +265,8 @@ Please cite TweetSets as:
   
   `python -m unittest`
 
+  The Spark loader has its own set of unit tests. These will be copied to the TweetSets/tests directory when creating the loader container. Run them within the loader container with `python -m unittest`. 
+
 ## Kibana TODO
 * Consider multiple Kibana users.
 * Consider persistence.
