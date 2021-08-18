@@ -444,7 +444,7 @@ def _prepare_dataset_view(dataset_params, clear_cache=False, full_dataset=False)
 
 
 def _search_to_search_context(search, dataset_params, tweet_limit=None, clear_cache=False):
-    cache_context = redis.get(dataset_params)
+    cache_context = redis.get(json.dumps(dataset_params))
     context = dict()
     if not cache_context or clear_cache:
         search_response = search.execute()
@@ -461,7 +461,7 @@ def _search_to_search_context(search, dataset_params, tweet_limit=None, clear_ca
         for hit in search_response:
             tweet_id = hit.meta.id
             context['sample_tweet_ids'].append(tweet_id)
-        redis.set(dataset_params, json.dumps(context), ex=24 * 60 * 60)
+        redis.set(json.dumps(dataset_params), json.dumps(context), ex=24 * 60 * 60)
     else:
         context = json.loads(cache_context)
     context['created_at_min'] = datetime.utcfromtimestamp(
