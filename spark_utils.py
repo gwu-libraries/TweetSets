@@ -30,10 +30,10 @@ def with_column_index(df):
     return df.rdd.zipWithIndex().map(lambda row: row[0] + (row[1],)).toDF(schema=new_schema)
 
 def load_rdd_with_column_index(spark, path_to_tweets):
-     '''Loads a set of JSON tweets as strings and adds a column index. We do this so that the ultimate output in the JSON extract will have the same null fields as the original.
+    '''Loads a set of JSON tweets as strings and adds a column index. We do this so that the ultimate output in the JSON extract will have the same null fields as the original.
      
-     :param spark: an initialized SparkSession object
-     :param path_to_dataset: a comma-separated list of JSON files to load'''
+    :param spark: an initialized SparkSession object
+    :param path_to_dataset: a comma-separated list of JSON files to load'''
     rdd = spark.sparkContext.textFile(path_to_tweets)
     # Define schema for the DataFrame: tweet as <String>, row as <Long>
     schema = T.StructType(
