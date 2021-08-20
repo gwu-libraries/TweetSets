@@ -5,28 +5,6 @@ import pyspark.sql.functions as F
 import json
 from twarc import json2csv
 
-def make_spark_df(spark, schema, sql, path_to_dataset, dataset_id):
-    '''Loads a set of JSON Tweets and applies the SQL transform.
-    
-    :param spark: an initialized SparkSession object
-    :param schema: a valid Spark DataFrame schema for loading a Tweet from JSONL
-    :param sql: Spark SQL to execute against the DataFrame
-    :param path_to_dataset: a comma-separated list of JSON files to load
-    :param dataset_id: a string containing the ID for this dataset'''
-    # Read JSON files as Spark DataFrame
-    df = spark.read.schema(schema).json(path_to_dataset)
-    # Add the full Tweet JSON as a separate field
-    # Option for Spark v3 to write null fields as nulls (not skip)
-    df = df.withColumn("tweet", F.to_json(F.struct([df[x] for x in df.columns]), {'ignoreNullFields': 'false'}))
-    df.createOrReplaceTempView("tweets")
-    # Apply SQL transform
-    df = spark.sql(sql)
-    # Drop temporary columns
-    cols_to_drop = [c for c in df.columns if c.endswith('struct') or c.endswith('array') or c.endswith('str')]
-    df = df.drop(*cols_to_drop)
-    # Add dataset ID column and return
-    return df.withColumn('dataset_id', F.lit(dataset_id))
-
 def load_schema(path_to_schema):
     '''Load TweetSets Spark DataFrame schema
     :param path_to_schema: path to a Spark schema JSON document on disk'''
@@ -39,6 +17,60 @@ def load_sql(path_to_sql):
     :path_to_sql: path to Spark SQL code on disk'''
     with open(path_to_sql, 'r') as f:
         return f.read()
+
+def with_column_index(df):
+    '''Adds an index column to a DataFrame. Used for joining the string representation of the JSON of the full tweet to the parsed JSON of same. (This is necessary to preserve the handling of null fields in the original Twitter API data.
+    
+    :param df: a Spark DataFrame
+    '''
+    # Add a "row" column to the DataFrame (StructField is the pyspark type used for columns, LongType is an integer)
+    new_schema = T.StructType(df.schema.fields + [T.StructField('row', T.LongType(), False),])
+    # The rdd.zipWithIndex allows us to assign a sequential index number across all partitions
+    # Solution here: https://stackoverflow.com/questions/40508489/spark-merge-2-dataframes-by-adding-row-index-number-on-both-dataframes/43746919
+    return df.rdd.zipWithIndex().map(lambda row: row[0] + (row[1],)).toDF(schema=new_schema)
+
+def load_rdd_with_column_index(spark, path_to_tweets):
+     '''Loads a set of JSON tweets as strings and adds a column index. We do this so that the ultimate output in the JSON extract will have the same null fields as the original.
+     
+     :param spark: an initialized SparkSession object
+     :param path_to_dataset: a comma-separated list of JSON files to load'''
+    rdd = spark.sparkContext.textFile(path_to_tweets)
+    # Define schema for the DataFrame: tweet as <String>, row as <Long>
+    schema = T.StructType(
+                       [
+                                T.StructField('tweet', T.StringType(), False),
+                                T.StructField('row', T.LongType(), False)
+                       ]
+    )
+    return rdd.zipWithIndex().toDF(schema=schema)
+
+def make_spark_df(spark, schema, sql, path_to_dataset, dataset_id):
+    '''Loads a set of JSON tweets and applies the SQL transform.
+    
+    :param spark: an initialized SparkSession object
+    :param schema: a valid Spark DataFrame schema for loading a tweet from JSONL
+    :param sql: Spark SQL to execute against the DataFrame
+    :param path_to_dataset: a comma-separated list of JSON files to load
+    :param dataset_id: a string containing the ID for this dataset'''
+    # Read JSON files as Spark DataFrame
+    df = spark.read.schema(schema).json(path_to_dataset)
+    # Former method: adding the tweet as a string from the already parsed JSON
+    #df = df.withColumn("tweet", F.to_json(F.struct([df[x] for x in df.columns]), {'ignoreNullFields': 'false'}))
+    # Create a temp view for the SQL ops
+    df.createOrReplaceTempView("tweets")
+    # Apply SQL transform
+    df = spark.sql(sql)
+    # Drop temporary columns
+    cols_to_drop = [c for c in df.columns if c.endswith('struct') or c.endswith('array') or c.endswith('str')]
+    df = df.drop(*cols_to_drop)
+    # Add dataset ID column 
+    df = df.withColumn('dataset_id', F.lit(dataset_id))
+    # Add column index
+    df = with_column_index(df)
+    # Create a second DF that holds the unparsed JSON of the original tweet
+    df_tweets = load_rdd_with_column_index(spark, path_to_dataset)
+    # Join on column index and drop index columns
+    return df.join(df_tweets, df.row==df_tweets.row, 'inner').drop('row')
 
 def extract_tweet_ids(df, path_to_extract):
     '''Saves Tweet ID's from a dataset to the provided path as zipped CSV files.
@@ -54,7 +86,6 @@ def extract_tweet_json(df, path_to_extract):
     # Extract ID column and save as zipped JSON
     df.select('tweet').write.text(path_to_extract,compression='gzip')
     
-
 def make_column_mapping(df_columns, array_fields):
     '''Creates mapping from TweetSets fields to CSV column headings, using headings derived from twarc.json2csv. Each key is a column name in the DataFrame created from Tweet JSON by SQL transform; each value a tuple: the first element is the name of the CSV column heading, the second element is a Boolean flag indicating whether this field is an array. (Arrays need to be transformed to strings prior to writing to CSV.)
     :param df_columns: list of columns in the transformed Spark DataFrame (includes some fields required by json2csv not indexed in Elasticsearch)
@@ -74,7 +105,6 @@ def make_column_mapping(df_columns, array_fields):
     # Set array flag for those fields that require it
     column_mapping = {k: (v, True if k in array_fields else False) for k,v in column_mapping.items()}
     return column_mapping
-
 
 def extract_csv(df, path_to_extract):
     '''Creates CSV extract where each row is a Tweet document, using the schema in the twarc.json2csv module.
@@ -130,7 +160,6 @@ def extract_mentions(df, spark, path_to_extract):
     mention_nodes.write.option("header", "true").csv(path_to_extract + '/nodes', compression='gzip')
     mention_edges.write.option("header", "true").csv(path_to_extract + '/edges', compression='gzip')
     
-
 def agg_mentions(df, spark, path_to_extract):
     '''Creates count of Tweets per mentioned user id.
     :param df: Spark DataFrame (after SQL transform)
@@ -150,6 +179,3 @@ def agg_mentions(df, spark, path_to_extract):
     '''
     mentions_agg_df = spark.sql(sql_agg)  
     mentions_agg_df.write.option("header", "true").csv(path_to_extract + '/top_mentions', compression='gzip')
-  
-
-

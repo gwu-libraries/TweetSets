@@ -1,7 +1,7 @@
 
      with tweet_cte as (
-         /* SCALAR VALUES */
          select 
+        /* SCALAR VALUES */
             id_str as tweet_id,
             /* Assumes retweeted_status and quoted_status fields will be present only in Tweets of those types. */
             case when isnotnull(in_reply_to_status_id) then 'reply'
@@ -29,7 +29,7 @@
             lang as language,
             /* retweeted_status will be null if not retweet */
             coalesce(retweeted_status.favorite_count, favorite_count) as favorite_count,
-            /* STRUCT/ARRAY FIELDS */
+        /* STRUCT/ARRAY FIELDS */
             /* Should be null when Tweet is not a quote/retweet */
             quoted_status as quoted_status_struct,
             retweeted_status as retweeted_status_struct,
@@ -50,7 +50,7 @@
             /* These are top level struct fields, so if present, this expression returns true */
             isnotnull(geo) or isnotnull(place) or isnotnull(coordinates) as has_geo,
             isnotnull(entities.media) or isnotnull(extended_tweet.entities.media) as has_media,
-            /* CSV ONLY FIELDS */
+        /* CSV ONLY FIELDS */
             'https://twitter.com/' || user.screen_name || '/status/' || id_str as tweet_url,
             /*  This is the raw date; we switch this with the created_at column after loading to ES */
             created_at as parsed_created_at,  
@@ -67,9 +67,7 @@
             user.statuses_count as user_statuses_count,
             /* Remove newline characters for CSV */
             regexp_replace(user.description, '\n|\r', ' ') as user_description,
-            regexp_replace(user.name, '\n|\r', ' ') as user_name,
-            /* FULL JSON representation of Tweet */
-            tweet
+            regexp_replace(user.name, '\n|\r', ' ') as user_name
         from tweets)
         select 
             /* Convert text to array for ES indexing */
