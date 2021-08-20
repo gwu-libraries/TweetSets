@@ -34,7 +34,7 @@ def load_rdd_with_column_index(spark, path_to_tweets):
      
     :param spark: an initialized SparkSession object
     :param path_to_dataset: a comma-separated list of JSON files to load'''
-    rdd = spark.sparkContext.textFile(path_to_tweets)
+    rdd = spark.sparkContext.textFile(','.join(path_to_tweets))
     # Define schema for the DataFrame: tweet as <String>, row as <Long>
     schema = T.StructType(
                        [
