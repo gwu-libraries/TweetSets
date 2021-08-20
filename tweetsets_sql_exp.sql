@@ -10,7 +10,7 @@
                 else 'original'
             end as tweet_type,
             /* Assumes the full_text field will be populated whenever the extended_tweet field is present. */
-            coalesce(extended_tweet.full_text, text) as text_str,
+            coalesce(extended_tweet.full_text, full_text, text) as text_str,
             in_reply_to_user_id_str as in_reply_to_user_id,
             in_reply_to_screen_name,
             in_reply_to_status_id_str as in_reply_to_status_id,
@@ -74,7 +74,7 @@
             case 
                 when tweet_type = 'retweet' 
                 /* Assumes the retweeted_status.extended_tweet.full_text field will be populated if present (i.e, never an empty string) */
-                then array(coalesce(retweeted_status_struct.extended_tweet.full_text, retweeted_status_struct.text))
+                then array(coalesce(retweeted_status_struct.extended_tweet.full_text, retweeted_status_struct.full_text, retweeted_status_struct.text))
                 else array(text_str)
             end as text,
             /* retweeted_status/quoted_status fields should be null if not populated */
