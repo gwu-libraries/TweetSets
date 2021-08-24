@@ -2,8 +2,40 @@ from itertools import compress
 import pyspark.sql.types as T
 from pyspark.sql.functions import col, explode
 import pyspark.sql.functions as F
+from pyspark.sql import Row
 import json
 from twarc import json2csv
+
+# Columns for indexing in Elasticsearch
+tweetset_columns = ['dataset_id', 
+                    'text',
+                    'tweet_type',
+                    'created_at',
+                    'user_id',
+                    'user_screen_name',
+                    'user_follower_count',
+                    'user_verified',
+                    'user_language',
+                    'user_utc_offset',
+                    'user_time_zone',
+                    'user_location',
+                    'mention_user_ids',
+                    'mention_screen_names',
+                    'hashtags',
+                    'language',
+                    'favorite_count',
+                    'retweet_count',
+                    'retweeted_quoted_user_id',
+                    'retweeted_quoted_screen_name',
+                    'retweet_quoted_status_id',
+                    'in_reply_to_user_id',
+                    'in_reply_to_screen_name',
+                    'in_reply_to_status_id',
+                    'has_media',
+                    'urls',
+                    'has_geo',
+                    'tweet',
+                    'tweet_id']
 
 def load_schema(path_to_schema):
     '''Load TweetSets Spark DataFrame schema
@@ -18,31 +50,21 @@ def load_sql(path_to_sql):
     with open(path_to_sql, 'r') as f:
         return f.read()
 
-def with_column_index(df):
-    '''Adds an index column to a DataFrame. Used for joining the string representation of the JSON of the full tweet to the parsed JSON of same. (This is necessary to preserve the handling of null fields in the original Twitter API data.
-    
-    :param df: a Spark DataFrame
-    '''
-    # Add a "row" column to the DataFrame (StructField is the pyspark type used for columns, LongType is an integer)
-    new_schema = T.StructType(df.schema.fields + [T.StructField('row', T.LongType(), False),])
-    # The rdd.zipWithIndex allows us to assign a sequential index number across all partitions
-    # Solution here: https://stackoverflow.com/questions/40508489/spark-merge-2-dataframes-by-adding-row-index-number-on-both-dataframes/43746919
-    return df.rdd.zipWithIndex().map(lambda row: row[0] + (row[1],)).toDF(schema=new_schema)
-
-def load_rdd_with_column_index(spark, path_to_tweets):
-    '''Loads a set of JSON tweets as strings and adds a column index. We do this so that the ultimate output in the JSON extract will have the same null fields as the original.
+def load_rdd_with_tweet_id(spark, tweet_schema, path_to_tweets):
+    '''Loads a set of JSON tweets as strings and adds a column containing the tweet ID. We do this so that the ultimate output in the JSON extract will have the same null fields as the original.
      
     :param spark: an initialized SparkSession object
-    :param path_to_dataset: a comma-separated list of JSON files to load'''
+    :param schema: a Spark schema object for parsing the Tweet JSON
+    :param path_to_tweets: a comma-separated list of JSON files to load'''
     rdd = spark.sparkContext.textFile(','.join(path_to_tweets))
-    # Define schema for the DataFrame: tweet as <String>, row as <Long>
-    schema = T.StructType(
-                       [
-                                T.StructField('tweet', T.StringType(), False),
-                                T.StructField('row', T.LongType(), False)
-                       ]
-    )
-    return rdd.zipWithIndex().toDF(schema=schema)
+    # Define schema for the DataFrame: tweet as <String>
+    schema_rdd = T.StructType([T.StructField('tweet', T.StringType(), False)])
+    # necessary to map each RDD row to an explicit Row tuple in order to convert to DataFrame
+    df =  rdd.map(lambda x: Row(x)).toDF(schema=schema_rdd)
+    # parse the JSON in order to extract the ID element
+    df = df.withColumn('tweet_parsed', F.from_json(F.col('tweet'), tweet_schema))
+    # return just the tweet as string and the id field
+    return df.select(['tweet', 'tweet_parsed.id_str'])
 
 def make_spark_df(spark, schema, sql, path_to_dataset, dataset_id):
     '''Loads a set of JSON tweets and applies the SQL transform.
@@ -65,12 +87,10 @@ def make_spark_df(spark, schema, sql, path_to_dataset, dataset_id):
     df = df.drop(*cols_to_drop)
     # Add dataset ID column 
     df = df.withColumn('dataset_id', F.lit(dataset_id))
-    # Add column index
-    df = with_column_index(df)
     # Create a second DF that holds the unparsed JSON of the original tweet
-    df_tweets = load_rdd_with_column_index(spark, path_to_dataset)
-    # Join on column index and drop index columns
-    return df.join(df_tweets, df.row==df_tweets.row, 'inner').drop('row')
+    df_tweets = load_rdd_with_tweet_id(spark, tweet_schema=schema, path_to_tweets=path_to_dataset)
+    # Join on unique tweet ID
+    return df.join(df_tweets, df.tweet_id==df_tweets.id_str, 'inner')
 
 def extract_tweet_ids(df, path_to_extract):
     '''Saves Tweet ID's from a dataset to the provided path as zipped CSV files.

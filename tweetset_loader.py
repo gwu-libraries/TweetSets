@@ -322,6 +322,7 @@ if __name__ == '__main__':
                        "es.port": "9200",
                        "es.index.auto.create": "false",
                        "es.mapping.id": "tweet_id",
+                       "es.mapping.exclude": "tweet_id", # To prevent this field from being indexed
                        "es.resource": "{}/_doc".format(new_index_name)}
 
 
@@ -349,7 +350,8 @@ if __name__ == '__main__':
                                 #path_to_dataset=','.join(filepath_list), 
                                 path_to_dataset=filepath_list,
                                 dataset_id=dataset_id)
-            df.write.format('org.elasticsearch.spark.sql').options(**es_conf).save()
+            # Only save to ES the columns defined in the mapping
+            df.select(tweetset_columns).write.format('org.elasticsearch.spark.sql').options(**es_conf).save()
             # TO DO --> Replace path with environment variable
             path_to_extract = '/dataset/' + dataset_id
             os.mkdir(path_to_extract)
