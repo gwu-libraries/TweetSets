@@ -62,7 +62,7 @@ def load_rdd(spark, tweet_schema, path_to_tweets):
     # necessary to map each RDD row to an explicit Row tuple in order to convert to DataFrame
     df =  rdd.map(lambda x: Row(x)).toDF(schema=schema_rdd)
     # parse the JSON in order to extract the fields for indexing and CSV
-    df = df.withColumn('tweet_parsed', F.from_json(F.col('tweet'), tweet_schema))
+    df = df.withColumn('tweet_data', F.from_json(F.col('tweet'), tweet_schema))
     # flatten the top-level struct created above, exposing the individual fields alongside the original tweet object
     return df.select(F.col('tweet'), F.col('tweet_data.*'))
 
