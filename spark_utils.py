@@ -50,8 +50,8 @@ def load_sql(path_to_sql):
     with open(path_to_sql, 'r') as f:
         return f.read()
 
-def load_rdd_with_tweet_id(spark, tweet_schema, path_to_tweets):
-    '''Loads a set of JSON tweets as strings and adds a column containing the tweet ID. We do this so that the ultimate output in the JSON extract will have the same null fields as the original.
+def load_rdd(spark, tweet_schema, path_to_tweets):
+    '''Loads a set of JSON tweets as strings. We do this so that the ultimate output in the JSON extract will have the same null fields as the original.
      
     :param spark: an initialized SparkSession object
     :param schema: a Spark schema object for parsing the Tweet JSON
@@ -61,10 +61,10 @@ def load_rdd_with_tweet_id(spark, tweet_schema, path_to_tweets):
     schema_rdd = T.StructType([T.StructField('tweet', T.StringType(), False)])
     # necessary to map each RDD row to an explicit Row tuple in order to convert to DataFrame
     df =  rdd.map(lambda x: Row(x)).toDF(schema=schema_rdd)
-    # parse the JSON in order to extract the ID element
+    # parse the JSON in order to extract the fields for indexing and CSV
     df = df.withColumn('tweet_parsed', F.from_json(F.col('tweet'), tweet_schema))
-    # return just the tweet as string and the id field
-    return df.select(['tweet', 'tweet_parsed.id_str'])
+    # flatten the top-level struct created above, exposing the individual fields alongside the original tweet object
+    return df.select(F.col('tweet'), F.col('tweet_data.*'))
 
 def make_spark_df(spark, schema, sql, path_to_dataset, dataset_id):
     '''Loads a set of JSON tweets and applies the SQL transform.
@@ -75,9 +75,7 @@ def make_spark_df(spark, schema, sql, path_to_dataset, dataset_id):
     :param path_to_dataset: a comma-separated list of JSON files to load
     :param dataset_id: a string containing the ID for this dataset'''
     # Read JSON files as Spark DataFrame
-    df = spark.read.schema(schema).json(path_to_dataset)
-    # Former method: adding the tweet as a string from the already parsed JSON
-    #df = df.withColumn("tweet", F.to_json(F.struct([df[x] for x in df.columns]), {'ignoreNullFields': 'false'}))
+    df = load_rdd(spark, tweet_schema=schema, path_to_tweets=path_to_dataset)
     # Create a temp view for the SQL ops
     df.createOrReplaceTempView("tweets")
     # Apply SQL transform
@@ -87,10 +85,7 @@ def make_spark_df(spark, schema, sql, path_to_dataset, dataset_id):
     df = df.drop(*cols_to_drop)
     # Add dataset ID column 
     df = df.withColumn('dataset_id', F.lit(dataset_id))
-    # Create a second DF that holds the unparsed JSON of the original tweet
-    df_tweets = load_rdd_with_tweet_id(spark, tweet_schema=schema, path_to_tweets=path_to_dataset)
-    # Join on unique tweet ID
-    return df.join(df_tweets, df.tweet_id==df_tweets.id_str, 'inner')
+    return df
 
 def extract_tweet_ids(df, path_to_extract):
     '''Saves Tweet ID's from a dataset to the provided path as zipped CSV files.

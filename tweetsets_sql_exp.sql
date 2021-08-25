@@ -67,7 +67,8 @@
             user.statuses_count as user_statuses_count,
             /* Remove newline characters for CSV */
             regexp_replace(user.description, '\n|\r', ' ') as user_description,
-            regexp_replace(user.name, '\n|\r', ' ') as user_name
+            regexp_replace(user.name, '\n|\r', ' ') as user_name,
+            tweet
         from tweets)
         select 
             /* Convert text to array for ES indexing */
