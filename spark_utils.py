@@ -1,4 +1,3 @@
-from itertools import compress
 import pyspark.sql.types as T
 from pyspark.sql.functions import col, explode
 import pyspark.sql.functions as F
