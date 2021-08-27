@@ -15,6 +15,7 @@ import os.path
 from pyspark.sql import SparkSession
 from models import TweetIndex, to_tweet, DatasetIndex, to_dataset, DatasetDocument, TweetDocument, get_tweets_index_name
 from utils import read_json, short_uid
+from spark_utils import *
 
 log = logging.getLogger(__name__)
 
@@ -311,13 +312,17 @@ if __name__ == '__main__':
         tweet_index.create()
 
         spark = SparkSession.builder.appName('TweetSets').getOrCreate()
+        # Make Spark v3 use the v2 time parser
+        # TO DO --> update Spark SQL code to use the new time parser
+        spark.conf.set("spark.sql.legacy.timeParserPolicy","LEGACY")
+        # Set UTC as the time zone
+        spark.conf.set('spark.sql.session.timeZone', 'UTC')
         try:
             es_conf = {"es.nodes": os.environ.get('ES_HOST', 'elasticsearch'),
                        "es.port": "9200",
                        "es.index.auto.create": "false",
                        "es.mapping.id": "tweet_id",
                        "es.resource": "{}/_doc".format(new_index_name)}
-
 
             def to_tweet_dict(tweet_str):
                 return clean_tweet_dict(
@@ -334,6 +339,20 @@ if __name__ == '__main__':
                 keyClass="org.apache.hadoop.io.NullWritable",
                 valueClass="org.elasticsearch.hadoop.mr.LinkedMapWritable",
                 conf=es_conf)
+            # Load Spark schema and SQL for preparing TweetSets docs for Elasticsearch
+            ts_schema = load_schema('./tweetsets_schema.json')
+            ts_sql = load_sql('./tweetsets_sql_exp.sql')
+            df = make_spark_df(spark, 
+                                schema=ts_schema, 
+                                sql=ts_sql, 
+                                path_to_dataset=filepath_list,
+                                dataset_id=dataset_id)
+            path_to_extract = '/dataset/' + dataset_id
+            os.mkdir(path_to_extract)
+            extract_tweet_ids(df, path_to_extract + '/tweet_ids')
+            extract_csv(df, path_to_extract + '/tweet_csv')
+            extract_mentions(df, spark, path_to_extract=path_to_extract + '/tweet_mentions')
+            agg_mentions(df, spark, path_to_extract=path_to_extract + '/tweet_mentions')
 
         finally:
             spark.stop()
