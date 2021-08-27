@@ -322,9 +322,7 @@ if __name__ == '__main__':
                        "es.port": "9200",
                        "es.index.auto.create": "false",
                        "es.mapping.id": "tweet_id",
-                       "es.mapping.exclude": "tweet_id", # To prevent this field from being indexed
                        "es.resource": "{}/_doc".format(new_index_name)}
-
 
             def to_tweet_dict(tweet_str):
                 return clean_tweet_dict(
@@ -333,34 +331,28 @@ if __name__ == '__main__':
             filepath_list = []
             filepath_list.extend(filepaths[0])
             filepath_list.extend(filepaths[1])
-            #tweets_str_rdd = spark.sparkContext.textFile(','.join(filepath_list))
-            #tweets_rdd = tweets_str_rdd.map(to_tweet_dict).map(lambda row: (row['tweet_id'], row))
-            #tweets_rdd.saveAsNewAPIHadoopFile(
-            #    path='-',
-            #    outputFormatClass="org.elasticsearch.hadoop.mr.EsOutputFormat",
-            #    keyClass="org.apache.hadoop.io.NullWritable",
-            #    valueClass="org.elasticsearch.hadoop.mr.LinkedMapWritable",
-            #    conf=es_conf)
+            tweets_str_rdd = spark.sparkContext.textFile(','.join(filepath_list))
+            tweets_rdd = tweets_str_rdd.map(to_tweet_dict).map(lambda row: (row['tweet_id'], row))
+            tweets_rdd.saveAsNewAPIHadoopFile(
+                path='-',
+                outputFormatClass="org.elasticsearch.hadoop.mr.EsOutputFormat",
+                keyClass="org.apache.hadoop.io.NullWritable",
+                valueClass="org.elasticsearch.hadoop.mr.LinkedMapWritable",
+                conf=es_conf)
             # Load Spark schema and SQL for preparing TweetSets docs for Elasticsearch
             ts_schema = load_schema('./tweetsets_schema.json')
             ts_sql = load_sql('./tweetsets_sql_exp.sql')
             df = make_spark_df(spark, 
                                 schema=ts_schema, 
                                 sql=ts_sql, 
-                                #path_to_dataset=','.join(filepath_list), 
                                 path_to_dataset=filepath_list,
                                 dataset_id=dataset_id)
-            # Only save to ES the columns defined in the mapping
-            df.select(tweetset_columns).write.format('org.elasticsearch.spark.sql').options(**es_conf).save()
-            # TO DO --> Replace path with environment variable
             path_to_extract = '/dataset/' + dataset_id
             os.mkdir(path_to_extract)
             extract_tweet_ids(df, path_to_extract + '/tweet_ids')
-            extract_tweet_json(df, path_to_extract + '/tweet_json')
             extract_csv(df, path_to_extract + '/tweet_csv')
             extract_mentions(df, spark, path_to_extract=path_to_extract + '/tweet_mentions')
             agg_mentions(df, spark, path_to_extract=path_to_extract + '/tweet_mentions')
-
 
         finally:
             spark.stop()

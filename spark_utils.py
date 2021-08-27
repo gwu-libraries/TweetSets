@@ -6,37 +6,6 @@ from pyspark.sql import Row
 import json
 from twarc import json2csv
 
-# Columns for indexing in Elasticsearch
-tweetset_columns = ['dataset_id', 
-                    'text',
-                    'tweet_type',
-                    'created_at',
-                    'user_id',
-                    'user_screen_name',
-                    'user_follower_count',
-                    'user_verified',
-                    'user_language',
-                    'user_utc_offset',
-                    'user_time_zone',
-                    'user_location',
-                    'mention_user_ids',
-                    'mention_screen_names',
-                    'hashtags',
-                    'language',
-                    'favorite_count',
-                    'retweet_count',
-                    'retweeted_quoted_user_id',
-                    'retweeted_quoted_screen_name',
-                    'retweet_quoted_status_id',
-                    'in_reply_to_user_id',
-                    'in_reply_to_screen_name',
-                    'in_reply_to_status_id',
-                    'has_media',
-                    'urls',
-                    'has_geo',
-                    'tweet',
-                    'tweet_id']
-
 def load_schema(path_to_schema):
     '''Load TweetSets Spark DataFrame schema
     :param path_to_schema: path to a Spark schema JSON document on disk'''
@@ -50,22 +19,6 @@ def load_sql(path_to_sql):
     with open(path_to_sql, 'r') as f:
         return f.read()
 
-def load_rdd(spark, tweet_schema, path_to_tweets):
-    '''Loads a set of JSON tweets as strings. We do this so that the ultimate output in the JSON extract will have the same null fields as the original.
-     
-    :param spark: an initialized SparkSession object
-    :param schema: a Spark schema object for parsing the Tweet JSON
-    :param path_to_tweets: a comma-separated list of JSON files to load'''
-    rdd = spark.sparkContext.textFile(','.join(path_to_tweets))
-    # Define schema for the DataFrame: tweet as <String>
-    schema_rdd = T.StructType([T.StructField('tweet', T.StringType(), False)])
-    # necessary to map each RDD row to an explicit Row tuple in order to convert to DataFrame
-    df =  rdd.map(lambda x: Row(x)).toDF(schema=schema_rdd)
-    # parse the JSON in order to extract the fields for indexing and CSV
-    df = df.withColumn('tweet_data', F.from_json(F.col('tweet'), tweet_schema))
-    # flatten the top-level struct created above, exposing the individual fields alongside the original tweet object
-    return df.select(F.col('tweet'), F.col('tweet_data.*'))
-
 def make_spark_df(spark, schema, sql, path_to_dataset, dataset_id):
     '''Loads a set of JSON tweets and applies the SQL transform.
     
@@ -75,7 +28,8 @@ def make_spark_df(spark, schema, sql, path_to_dataset, dataset_id):
     :param path_to_dataset: a comma-separated list of JSON files to load
     :param dataset_id: a string containing the ID for this dataset'''
     # Read JSON files as Spark DataFrame
-    df = load_rdd(spark, tweet_schema=schema, path_to_tweets=path_to_dataset)
+    #df = load_rdd(spark, tweet_schema=schema, path_to_tweets=path_to_dataset)
+    df = spark.read.schema(schema).json(path_to_dataset)
     # Create a temp view for the SQL ops
     df.createOrReplaceTempView("tweets")
     # Apply SQL transform
@@ -92,7 +46,7 @@ def extract_tweet_ids(df, path_to_extract):
     :param df: Spark DataFrame
     :parm path_to_extract: string of path to folder for files'''
     # Extract ID column and save as zipped CSV
-    df.select('tweet_id').write.option("header", "true").csv(path_to_extract, compression='gzip')
+    df.select('tweet_id').distinct().write.option("header", "true").csv(path_to_extract, compression='gzip')
     
 def extract_tweet_json(df, path_to_extract):
     '''Saves Tweet JSON documents from a dataset to the provided path as zipped JSON files.
@@ -148,6 +102,8 @@ def extract_csv(df, path_to_extract):
           'parsed_created_at': 'created_at'}
     df_csv = df_csv.select([F.col(c).alias(data_mapping.get(c, c)) for c in df_csv.columns])
     # Setting the escape character to the double quote. Otherwise, it causes problems for applications reading the CSV.
+    # Get rid of duplicate tweets
+    df_csv = df_csv.dropDuplicates(['id'])
     df_csv.write.option("header", "true").csv(path_to_extract, compression='gzip', escape='"')
 
 def extract_mentions(df, spark, path_to_extract):
