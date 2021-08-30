@@ -29,6 +29,8 @@ class TestTweet(unittest.TestCase):
                                 dataset_id='test-df')
 
     def testDataFrame(self):
+        self.df = self.df.sort('tweet_id')
+        self.tests = sorted(self.tests, key=lambda x: x['tweet_id'])
         for i, (row, test) in enumerate(zip(self.df.collect(), self.tests)):
             for k, v in row.asDict().items():
                 self.assertEqual(v, test[k], msg=f'Tests failed on tweet number {i}, key={k}. Spark DF has {v}, test has {test[k]}.')
