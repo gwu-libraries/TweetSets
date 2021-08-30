@@ -355,7 +355,7 @@ if __name__ == '__main__':
             mention_nodes, mention_edges = extract_mentions(df, spark)
             mention_nodes.write.option("header", "true").csv(path_to_extract + '/tweet_mentions/nodes', compression='gzip')
             mention_edges.write.option("header", "true").csv(path_to_extract + '/tweet_mentions/edges', compression='gzip')
-            agg_mentions(df, spark).write.option("header", "true").csv(path_to_extract + '/tweet_mention/top_mentions', compression='gzip')
+            agg_mentions(df, spark).write.option("header", "true").csv(path_to_extract + '/tweet_mentions/top_mentions', compression='gzip')
         finally:
             spark.stop()
 
