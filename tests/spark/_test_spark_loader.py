@@ -36,6 +36,9 @@ class TestTweet(unittest.TestCase):
     
     def testCSV(self):
         csv = extract_csv(self.df)
+        # Sort tests and CSV by tweet ID
+        csv = csv.sort('id')
+        self.tests_csv = sorted(self.tests_csv, key=lambda x: x['id'])
         for i, (row, test) in enumerate(zip(csv.collect(), self.tests_csv)):
             for k, v in row.asDict().items():
                 self.assertEqual(v, test[k], msg=f'Tests failed on tweet number {i}, key={k}. Spark CSV has {v}, test_csv has {test[k]}.')
