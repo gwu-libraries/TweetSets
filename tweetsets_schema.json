@@ -9833,6 +9833,108 @@
                         {}
                     },
                     {
+                        "metadata":
+                        {},
+                        "name": "entities",
+                        "nullable": true,
+                        "type":
+                        {
+                            "fields":
+                            [
+                                {
+                                    "metadata":
+                                    {},
+                                    "name": "description",
+                                    "nullable": true,
+                                    "type":
+                                    {
+                                        "fields":
+                                        [
+                                            {
+                                                "metadata":
+                                                {},
+                                                "name": "urls",
+                                                "nullable": true,
+                                                "type":
+                                                {
+                                                    "containsNull": true,
+                                                    "elementType": "string",
+                                                    "type": "array"
+                                                }
+                                            }
+                                        ],
+                                        "type": "struct"
+                                    }
+                                },
+                                {
+                                    "metadata":
+                                    {},
+                                    "name": "url",
+                                    "nullable": true,
+                                    "type":
+                                    {
+                                        "fields":
+                                        [
+                                            {
+                                                "metadata":
+                                                {},
+                                                "name": "urls",
+                                                "nullable": true,
+                                                "type":
+                                                {
+                                                    "containsNull": true,
+                                                    "elementType":
+                                                    {
+                                                        "fields":
+                                                        [
+                                                            {
+                                                                "metadata":
+                                                                {},
+                                                                "name": "display_url",
+                                                                "nullable": true,
+                                                                "type": "string"
+                                                            },
+                                                            {
+                                                                "metadata":
+                                                                {},
+                                                                "name": "expanded_url",
+                                                                "nullable": true,
+                                                                "type": "string"
+                                                            },
+                                                            {
+                                                                "metadata":
+                                                                {},
+                                                                "name": "indices",
+                                                                "nullable": true,
+                                                                "type":
+                                                                {
+                                                                    "containsNull": true,
+                                                                    "elementType": "long",
+                                                                    "type": "array"
+                                                                }
+                                                            },
+                                                            {
+                                                                "metadata":
+                                                                {},
+                                                                "name": "url",
+                                                                "nullable": true,
+                                                                "type": "string"
+                                                            }
+                                                        ],
+                                                        "type": "struct"
+                                                    },
+                                                    "type": "array"
+                                                }
+                                            }
+                                        ],
+                                        "type": "struct"
+                                    }
+                                }
+                            ],
+                            "type": "struct"
+                        }
+                    },
+                    {
                         "name": "favourites_count",
                         "type": "long",
                         "nullable": true,
