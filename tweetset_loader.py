@@ -57,7 +57,24 @@ def copy_json(json_files, dataset_id):
     for file in json_files:
         copy(file, json_extract_dir)
     return
-    
+
+def create_dataset_params(dataset_id):
+    '''Creates the dataset_params file required by tweetset_server.py to be associated with each full extract.
+    :param dataset_id: Id for the dataset being loaded.'''
+    full_dataset_path = os.environ.get('PATH_TO_EXTRACTS')
+    dataset_params_path = os.path.join(full_dataset_path, dataset_id, 'dataset_params.json')
+    # minimal dataset parameters expected for full extract
+    dataset_params = {"tweet_type_original": "true", 
+                    "tweet_type_quote": "true", 
+                    "tweet_type_retweet": "true", 
+                    "tweet_type_reply": "true", 
+                    "source_dataset": dataset_id, 
+                    "dataset_name": f"full-extract-of-{dataset_id}"}
+    with open(dataset_params_path, 'w') as f:
+        json.dump(dataset_params, f)
+    return
+
+   
 def count_normal_lines(filepath):
     return sum(1 for _ in open(filepath))
 
@@ -371,8 +388,10 @@ if __name__ == '__main__':
                                 path_to_dataset=filepath_list,
                                 dataset_id=dataset_id)
             # Reduce number of partitions to constrain number of gzipped files creates
+            log.info(f'Number partitions before coalesce = {df.rdd.getNumPartitions()}')
             num_partitions = int(tweet_count / 25000) or 1
             df = df.coalesce(num_partitions)
+            log.info(f'Number partitions after coalesce = {df.rdd.getNumPartitions()}')
             # Create and save tweet ID's
             tweet_ids_path = os.path.join(full_dataset_path, 'tweet-ids')
             log.info(f'Saving tweet IDs to {tweet_ids_path}.')
@@ -396,6 +415,8 @@ if __name__ == '__main__':
             spark.stop()
         # Copy full JSON tweet files to extracts directory
         copy_json(filepath_list, dataset_id)
+        # Create dataset params file
+        create_dataset_params(dataset_id)
 
     if args.command in ('create', 'reload', 'spark-create', 'spark-reload'):
 
