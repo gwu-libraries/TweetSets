@@ -45,7 +45,7 @@ def extract_tweet_ids(df, path_to_extract):
     :param df: Spark DataFrame
     :parm path_to_extract: string of path to folder for files'''
     # Extract ID column and save as zipped CSV
-    df.select('tweet_id').distinct().write.option("header", "true").csv(path_to_extract, compression='gzip')
+    df.select('tweet_id').distinct().coalesce(14).write.option("header", "true").csv(path_to_extract, compression='gzip')
     
 def extract_tweet_json(df, path_to_extract):
     '''Saves Tweet JSON documents from a dataset to the provided path as zipped JSON files.

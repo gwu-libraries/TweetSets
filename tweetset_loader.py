@@ -389,9 +389,9 @@ if __name__ == '__main__':
                                 dataset_id=dataset_id)
             # Reduce number of partitions to constrain number of gzipped files creates
             log.info(f'Number partitions before coalesce = {df.rdd.getNumPartitions()}')
-            num_partitions = int(tweet_count / 25000) or 1
-            df = df.coalesce(num_partitions)
-            log.info(f'Number partitions after coalesce = {df.rdd.getNumPartitions()}')
+            #num_partitions = int(tweet_count / 25000) or 1
+            #df = df.coalesce(num_partitions)
+            #log.info(f'Number partitions after coalesce = {df.rdd.getNumPartitions()}')
             # Create and save tweet ID's
             tweet_ids_path = os.path.join(full_dataset_path, 'tweet-ids')
             log.info(f'Saving tweet IDs to {tweet_ids_path}.')
