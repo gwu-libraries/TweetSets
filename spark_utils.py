@@ -76,8 +76,7 @@ def make_column_mapping(df_columns, array_fields):
 
 def extract_csv(df):
     '''Creates CSV extract where each row is a Tweet document, using the schema in the twarc.json2csv module.
-    :param df: Spark DataFrame
-    :parm path_to_extract: string of path to folder for files'''
+    :param df: Spark DataFrame'''
     column_mapping = make_column_mapping(df.columns, array_fields=['text'])
     # The hashtags and urls fields are handled differently in the Elasticsearch index and in the CSV (per the twarc.json2csv spec). So we need to drop the ES columns before renaming the CSV-versions of these columns
     df = df.drop('hashtags', 'urls')
@@ -107,8 +106,7 @@ def extract_csv(df):
 def extract_mentions(df, spark):
     '''Creates nodes and edges of full mentions extract.
     :param df: Spark DataFrame (after SQL transform)
-    :param spark: SparkSession object
-    :param path_to_extract: string of path to folder for files'''
+    :param spark: SparkSession object'''
     # Create a temp table so that we can use SQL
     df.createOrReplaceTempView("tweets_parsed")
     # SQL for extracting the mention ids, screen_names, and user_ids
@@ -131,8 +129,7 @@ def extract_mentions(df, spark):
 def agg_mentions(df, spark):
     '''Creates count of Tweets per mentioned user id.
     :param df: Spark DataFrame (after SQL transform)
-    :param spark: SparkSession object
-    :parm path_to_extract: string of path to folder for files'''
+    :param spark: SparkSession object'''
     df.createOrReplaceTempView("tweets_parsed")
     sql_agg = '''
     select count(distinct tweet_id) as number_mentions,
@@ -144,6 +141,23 @@ def agg_mentions(df, spark):
         from tweets_parsed
     )
     group by mention_user_id
+    order by count(distinct tweet_id) desc
     '''
     mentions_agg_df = spark.sql(sql_agg)  
     return mentions_agg_df
+
+def agg_users(df, spark):
+    '''Creates count of tweets per user id/screen name.
+    :param df: Spark DataFrame (after SQL transform)
+    :param spark: SparkSession object'''
+
+    df.createOrReplaceTempView("tweets_parsed")
+    sql_agg = '''
+    select count(distinct tweet_id) as tweet_count,
+        user_id,
+        user_screen_name
+    from tweets_parsed
+    group by user_id, user_screen_name
+    order by count(distinct tweet_id) desc
+    '''
+    return spark.sql(sql_agg)

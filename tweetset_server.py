@@ -6,7 +6,7 @@ from elasticsearch_dsl.connections import connections as es_connections
 from elasticsearch.exceptions import ElasticsearchException
 import os
 import requests
-import fnmatch
+from pathlib import Path
 from models import DatasetDocument
 import redis as redispy
 from datetime import date, datetime, timedelta
@@ -197,12 +197,12 @@ def dataset(dataset_id, full_dataset=False):
 
     # Check for existing exports
     filenames_list = []
-    _add_filenames('Generated tweet JSON files', 'tweets-*.jsonl.zip', dataset_path, filenames_list, hide=not context['is_local_mode'])
-    _add_filenames('Generated tweet CSV files', 'tweets-*.csv.zip', dataset_path, filenames_list, hide=not context['is_local_mode'])
-    _add_filenames('Generated tweet id files', 'tweet-ids-*.txt.zip', dataset_path, filenames_list)
-    _add_filenames('Generated mentions files', 'mention-*.csv.zip', dataset_path, filenames_list)
-    _add_filenames('Generated top mentions files', 'top-mentions-*.csv.zip', dataset_path, filenames_list)
-    _add_filenames('Generated top users files', 'top-users-*.csv.zip', dataset_path, filenames_list)
+    _add_filenames('Generated tweet JSON files', 'json', dataset_path, filenames_list, hide=not context['is_local_mode'])
+    _add_filenames('Generated tweet CSV files', 'csv', dataset_path, filenames_list, hide=not context['is_local_mode'])
+    _add_filenames('Generated tweet id files', 'ids', dataset_path, filenames_list)
+    _add_filenames('Generated mentions nodes/edges files', 'nodes/edges', dataset_path, filenames_list)
+    _add_filenames('Generated aggregate mentions files', 'mentions_agg', dataset_path, filenames_list)
+    _add_filenames('Generated aggregate users files', 'users_agg', dataset_path, filenames_list)
     context['filenames_list'] = filenames_list
 
     context['dataset_id'] = dataset_id
@@ -213,11 +213,35 @@ def dataset(dataset_id, full_dataset=False):
 
 
 def _add_filenames(label, filter, dataset_path, filename_list, hide=False):
-    filenames = fnmatch.filter(os.listdir(dataset_path), filter)
+    '''Adds files that match a given pattern within a supplied directory.
+    :param label: a label to associate with this group of files
+    :param filter: a type of file to search for; should correspond to a key in the patterns dict below
+    :param dataset_path: a path where the files can be found
+    :param filename_list: a list to be modified and returned, containing the files that match filter appended
+    :param hide: whether to hide these files from this user
+    '''
+    patterns = {'json': ('tweets-*.jsonl.zip',
+                        'tweet-json/*.json.gz',
+                        'tweet-json/*.jsonl.gz'),
+                'ids': ('tweet-ids-*.txt.zip',
+                        'tweet-ids/*.csv.gz'),
+                'csv': ('tweets-*.csv.zip',
+                        'tweet-csv/*.csv.gz'),
+                'nodes/edges': ('mention-*.csv.zip',
+                        'tweet-mentions/edges/*.csv.gz',
+                        'tweet-mentions/nodes/*.csv.gz'),
+                'agg_mentions': ('top-mentions-*.csv.zip',
+                                'tweet-mentions/agg-mentions/*.csz/gz'),
+                'agg_users': ('top-users-*.csv.zip',
+                            'tweet-users/*.csv.gz')}
+    p = Path(dataset_path)
+    filenames = []
+    # Iterate over possible patterns
+    for pattern in patterns[filter]:
+        filenames.extend(list(p.glob(pattern)))
     if filenames and not hide:
         filenames.sort()
         filename_list.append((label, filenames))
-
 
 @app.route('/dataset', methods=['POST'])
 def limit_dataset():

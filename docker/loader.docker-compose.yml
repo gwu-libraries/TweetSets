@@ -12,6 +12,7 @@ services:
               max-file: ${DOCKER_LOG_MAX_FILE}
       volumes:
         - ${DATASET_PATH}:/dataset
+        - ${TWEETSETS_DATA_PATH}/full_datasets:/tweetsets_data/full_datasets
       # Using host networking so that spark can choose own ports
       # and the ports inside the container match the ports outside
       # the container. (Spark needs to be able to share the correct
@@ -23,3 +24,4 @@ services:
         - ES_HOST=${HOSTNAME}
         - SPARK_DRIVER_HOST=${HOSTNAME}
         - SPARK_MASTER_HOST=${HOSTNAME}
+        - PATH_TO_EXTRACTS=/tweetsets_data/full_datasets
