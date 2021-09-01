@@ -52,7 +52,7 @@ def copy_json(json_files, dataset_id):
         return
     json_extract_dir = os.path.join(full_dataset_path, dataset_id, 'tweet-json')
     if not os.path.isdir(json_extract_dir):
-        os.mkdirs(json_extract_dir)
+        os.makedirs(json_extract_dir)
     log.info(f'Copying {len(json_files)} JSON files to {json_extract_dir}.')
     for file in json_files:
         copy(file, json_extract_dir)
