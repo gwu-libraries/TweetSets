@@ -230,9 +230,9 @@ def _add_filenames(label, filter, dataset_path, filename_list, hide=False):
                 'nodes/edges': ('mention-*.csv.zip',
                         'tweet-mentions/edges/*.csv.gz',
                         'tweet-mentions/nodes/*.csv.gz'),
-                'agg_mentions': ('top-mentions-*.csv.zip',
+                'mentions_agg': ('top-mentions-*.csv.zip',
                                 'tweet-mentions/agg-mentions/*.csz/gz'),
-                'agg_users': ('top-users-*.csv.zip',
+                'users_agg': ('top-users-*.csv.zip',
                             'tweet-users/*.csv.gz')}
     p = Path(dataset_path)
     filenames = []
