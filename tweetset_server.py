@@ -222,7 +222,7 @@ def _add_filenames(label, filter, dataset_path, filename_list, hide=False):
     '''
     patterns = {'json': ('tweets-*.jsonl.zip',
                         'tweet-json/*.json.gz',
-                        'tweet-json/*.jsonl.gz'
+                        'tweet-json/*.jsonl.gz',
                         'tweet-json/*.jsonl',
                         'tweet-json/*.json'),
                 'ids': ('tweet-ids-*.txt.zip',
