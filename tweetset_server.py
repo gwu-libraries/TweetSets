@@ -240,8 +240,10 @@ def _add_filenames(label, filter, dataset_path, filename_list, hide=False):
     filenames = []
     # Iterate over possible patterns
     for pattern in patterns[filter]:
-        # Extract just the file name
-        filenames.extend([f.name for f in  p.glob(pattern)])
+        # to account for nested directories
+        pattern_path = Path(pattern)
+        # Extract just the file name and add its relative parent
+        filenames.extend([pattern_path.parent / f.name for f in  p.glob(pattern)])
     if filenames and not hide:
         filenames.sort()
         filename_list.append((label, filenames))
