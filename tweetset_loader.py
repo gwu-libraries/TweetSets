@@ -370,6 +370,9 @@ if __name__ == '__main__':
                                 sql=ts_sql, 
                                 path_to_dataset=filepath_list,
                                 dataset_id=dataset_id)
+            # Reduce number of partitions to constrain number of gzipped files creates
+            num_partitions = (tweet_count / 25000) or 1
+            df = df.coalesce(num_partitions)
             # Create and save tweet ID's
             tweet_ids_path = os.path.join(full_dataset_path, 'tweet-ids')
             log.info(f'Saving tweet IDs to {tweet_ids_path}.')
