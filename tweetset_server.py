@@ -222,7 +222,9 @@ def _add_filenames(label, filter, dataset_path, filename_list, hide=False):
     '''
     patterns = {'json': ('tweets-*.jsonl.zip',
                         'tweet-json/*.json.gz',
-                        'tweet-json/*.jsonl.gz'),
+                        'tweet-json/*.jsonl.gz'
+                        'tweet-json/*.jsonl',
+                        'tweet-json/*.json'),
                 'ids': ('tweet-ids-*.txt.zip',
                         'tweet-ids/*.csv.gz'),
                 'csv': ('tweets-*.csv.zip',
@@ -238,7 +240,8 @@ def _add_filenames(label, filter, dataset_path, filename_list, hide=False):
     filenames = []
     # Iterate over possible patterns
     for pattern in patterns[filter]:
-        filenames.extend(list(p.glob(pattern)))
+        # Extract just the file name
+        filenames.extend([f.name for f in  p.glob(pattern)])
     if filenames and not hide:
         filenames.sort()
         filename_list.append((label, filenames))
