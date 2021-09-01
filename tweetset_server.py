@@ -298,9 +298,13 @@ def limit_dataset():
         return render_template('dataset.html', **context)
 
 @app.route('/full-dataset-file/<dataset_id>/<filename>', defaults={'full_dataset': True}, endpoint='full_dataset_file')
+@app.route('/full-dataset-file/<dataset_id>/<path:extract_subpath>/<filename>', defaults={'full_dataset': True}, endpoint='full_dataset_file')
 @app.route('/dataset-file/<dataset_id>/<filename>')
-def dataset_file(dataset_id, filename, full_dataset=False):
-    filepath = os.path.join(_dataset_path(dataset_id, full_dataset), filename)
+def dataset_file(dataset_id, filename, extract_subpath=None, full_dataset=False):
+    if extract_subpath:
+        filepath = os.path.join(_dataset_path(dataset_id, full_dataset), extract_subpath, filename)
+    else:
+        filepath = os.path.join(_dataset_path(dataset_id, full_dataset), filename)
     return send_file(filepath, as_attachment=True, attachment_filename=filename)
 
 
