@@ -388,7 +388,7 @@ if __name__ == '__main__':
             agg_mentions(df, spark).write.option("header", "true").csv(os.path.join(mentions_path, 'agg-mentions'), compression='gzip')
             # Create and save user counts
             users_path = os.path.join(full_dataset_path, 'tweet-users')
-            agg_users(df, spark).option('header', 'true').csv(users_path, compression='gzip', escape='"')
+            agg_users(df, spark).write.option('header', 'true').csv(users_path, compression='gzip', escape='"')
         finally:
             spark.stop()
         # Copy full JSON tweet files to extracts directory
