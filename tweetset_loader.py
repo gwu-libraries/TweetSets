@@ -17,13 +17,13 @@ from models import TweetIndex, to_tweet, DatasetIndex, to_dataset, DatasetDocume
 from utils import read_json, short_uid
 from spark_utils import *
 from shutil import copy
+import re
 
 log = logging.getLogger(__name__)
 
 connections.create_connection(hosts=[os.environ.get('ES_HOST', 'elasticsearch')], timeout=90, sniff_on_start=True,
                               sniff_on_connection_fail=True,
                               retry_on_timeout=True, maxsize=25)
-
 
 def find_files(path):
     """
@@ -370,7 +370,13 @@ if __name__ == '__main__':
             def to_tweet_dict(tweet_str):
                 return clean_tweet_dict(
                     to_tweet(json.loads(tweet_str), dataset_id, '', store_tweet=True).to_dict(include_meta=True))
+            # Calculate number of initial partitions, based on size of dataset
+            num_partitions = compute_read_partitions(filepath_list)
+            # read dataset as RDD (for loading into Elasticsearch)
             tweets_str_rdd = spark.sparkContext.textFile(','.join(filepath_list))
+            # repartition or coalesce for improved performance
+            apply_partitions(tweets_str_rdd, num_partitions, filepath_list)
+            # Apply transform
             tweets_rdd = tweets_str_rdd.map(to_tweet_dict).map(lambda row: (row['tweet_id'], row))
             log.info('Saving tweets to Elasticsearch.')
             tweets_rdd.saveAsNewAPIHadoopFile(
@@ -379,6 +385,10 @@ if __name__ == '__main__':
                 keyClass="org.apache.hadoop.io.NullWritable",
                 valueClass="org.elasticsearch.hadoop.mr.LinkedMapWritable",
                 conf=es_conf)
+            # Calculate number of partitions per extract, given number of tweets
+            # If not supplied, all partitions default to 1
+            # This number determines how many files will be created by the Spark DataFrameWriter
+            file_partitions = compute_output_partitions(tweet_count)
             # Load Spark schema and SQL for preparing TweetSets docs for Elasticsearch
             ts_schema = load_schema('./tweetsets_schema.json')
             ts_sql = load_sql('./tweetsets_sql_exp.sql')
@@ -386,31 +396,43 @@ if __name__ == '__main__':
                                 schema=ts_schema, 
                                 sql=ts_sql, 
                                 path_to_dataset=filepath_list,
-                                dataset_id=dataset_id)
-            # Reduce number of partitions to constrain number of gzipped files creates
-            log.info(f'Number partitions before coalesce = {df.rdd.getNumPartitions()}')
-            #num_partitions = int(tweet_count / 25000) or 1
-            #df = df.coalesce(num_partitions)
-            #log.info(f'Number partitions after coalesce = {df.rdd.getNumPartitions()}')
+                                dataset_id=dataset_id,
+                                num_partitions=num_partitions)
             # Create and save tweet ID's
             tweet_ids_path = os.path.join(full_dataset_path, 'tweet-ids')
             log.info(f'Saving tweet IDs to {tweet_ids_path}.')
-            extract_tweet_ids(df, tweet_ids_path)
+            tweet_ids = extract_tweet_ids(df)
+            save_to_csv(tweet_ids, tweet_ids_path, num_partitions=file_partitions['ids'])
             # Create and save tweet CSV
             tweet_csv_path = os.path.join(full_dataset_path, 'tweet-csv')
             log.info(f'Saving CSV extracts to {tweet_csv_path}.')
             # Setting the escape character to the double quote. Otherwise, it causes problems for applications reading the CSV.
-            extract_csv(df).write.option("header", "true").csv(tweet_csv_path, compression='gzip', escape='"')
+            tweet_csv = extract_csv(df)
+            save_to_csv(tweet_csv, tweet_csv_path, num_partitions=file_partitions['csv'])
             # Create and save mentions
             mentions_path = os.path.join(full_dataset_path, 'tweet-mentions')
             log.info(f'Saving tweet mentions to {mentions_path}.')
-            mention_nodes, mention_edges = extract_mentions(df, spark)
-            mention_nodes.write.option("header", "true").csv(os.path.join(mentions_path, 'nodes'), compression='gzip')
-            mention_edges.write.option("header", "true").csv(os.path.join(mentions_path, 'edges'), compression='gzip')
-            agg_mentions(df, spark).write.option("header", "true").csv(os.path.join(mentions_path, 'agg-mentions'), compression='gzip')
+            mentions_nodes, mentions_edges = extract_mentions(df, spark)
+            save_to_csv(mentions_nodes, 
+                        path_to_extract=os.path.join(mentions_path, 'nodes'),
+                        num_partitions=file_partitions['mentions-nodes']
+                        )
+            save_to_csv(mentions_edges,
+                        path_to_extract=os.path.join(mentions_path, 'edges'),
+                        num_partitions=file_partitions['mentions-edges']
+                        )
+            mentions_agg = extract_agg_mentions(df, spark)
+            save_to_csv(mentions_agg,
+                        path_to_extract=os.path.join(mentions_path, 'agg-mentions'),
+                        num_partitions=file_partitions['mentions-agg']
+                        )
             # Create and save user counts
             users_path = os.path.join(full_dataset_path, 'tweet-users')
-            agg_users(df, spark).write.option('header', 'true').csv(users_path, compression='gzip', escape='"')
+            users = extract_agg_users(df, spark)
+            save_to_csv(users,
+                        path_to_extract=users_path,
+                        num_partitions=file_partitions['users']
+                        )          
         finally:
             spark.stop()
         # Copy full JSON tweet files to extracts directory
