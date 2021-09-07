@@ -50,7 +50,7 @@ def compute_read_partitions(input_files):
     partition_size = os.environ.get('SPARK_PARTITION_SIZE', '128m')
     partition_size = parse_size(partition_size, 'SPARK_PARTITION_SIZE')
     # Number of partitions
-    return int(total_size/partition_size)
+    return int(total_size/partition_size) or 1
     
 def apply_partitions(spark_obj, num_partitions, files):
     '''Applies either a repartition or a coalesce, depending on whether the number of partitions is greater or less than the number of input files. Coalescing generally performs better than repartitioning when *reducing* the number of partitions.
