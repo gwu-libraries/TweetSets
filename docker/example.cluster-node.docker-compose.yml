@@ -58,6 +58,7 @@ services:
         - tweetsets
       volumes:
         - ${DATASET_PATH}:/dataset
+        - ${TWEETSETS_DATA_PATH}/full_datasets:/tweetsets_data/full_datasets
       restart: always
 networks:
   tweetsets:

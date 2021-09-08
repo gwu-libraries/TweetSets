@@ -35,6 +35,7 @@ Modes are configured in the `.env` file as described below.
 
         mkdir -p /tweetset_data/redis
         mkdir -p /tweetset_data/datasets
+        mkdir -p /tweetset_data/full_datasets
         mkdir -p /tweetset_data/elasticsearch/esdata1
         mkdir -p /tweetset_data/elasticsearch/esdata2
         chown -R 1000:1000 /tweetset_data/elasticsearch
@@ -76,7 +77,7 @@ For HTTPS support, uncomment and configure the nginx-proxy container in `docker-
 Clusters must have at least a primary node and two additional nodes.
 
 #### Primary node
-1. Create data directories on a volume with adequate storage:
+1. Create data directories on a volume with adequate storage. Note that in order to use the Spark loader, the `full_datasets` and `dataset_loading` directories (see below) will need to be shared between the primary and cluster nodes as an NFS mount. (The other directories do not need to be shared.)
 
         mkdir -p /tweetset_data/redis
         mkdir -p /tweetset_data/datasets
@@ -88,53 +89,56 @@ Clusters must have at least a primary node and two additional nodes.
 
         mkdir /dataset_loading
 
-2. Clone or download this repository:
+3. Set up the `tweetset_data/full_datasets` and `dataset_loading` NFS mounts as [described here](https://github.com/gwu-libraries/TweetSets/wiki/Setting-up-NFS-mounts-for-cluster-mode).
+
+4. Clone or download this repository:
 
         git clone https://github.com/gwu-libraries/TweetSets.git
         
-3. Change to the `docker` directory:
+5. Change to the `docker` directory:
    
         cd docker
 
-4. Copy the example docker files:
+6. Copy the example docker files:
 
         cp example.cluster-primary.docker-compose.yml docker-compose.yml
         cp example.env .env
 
-5. Edit `.env`. This file is annotated to help you select appropriate values.
-6. Create `dataset_list_msg.txt` in the docker directory. The contents of this file will be displayed on the dataset list page. It can 
+7. Update `.env`. This file is annotated to help you select appropriate values.
+8. Create `dataset_list_msg.txt` in the docker directory. The contents of this file will be displayed on the dataset list page. It can 
 be used to list other datasets that are available, but not yet loaded. If leaving the file empty then:
 
         touch dataset_list_msg.txt
 
-7. Bring up the containers:
-
-        docker-compose up -d
-
 For HTTPS support, uncomment and configure the nginx-proxy container in `docker-compose.yml`.
 
-#### Cluster node
+#### Cluster node(s)
 1. Create data directories on a volume with adequate storage:
 
         mkdir -p /tweetset_data/elasticsearch
+        mkdir -p /tweetset_data/full_datasets
         chown -R 1000:1000 /tweetset_data/elasticsearch
+        mkdir /dataset_loading
 
 2. Clone or download this repository:
 
         git clone https://github.com/gwu-libraries/TweetSets.git
+
+3. Set up the `tweetset_data/full_datasets` and `dataset_loading` NFS mounts as [described here](https://github.com/gwu-libraries/TweetSets/wiki/Setting-up-NFS-mounts-for-cluster-mode).
         
-3. Change to the `docker` directory:
+4. Change to the `docker` directory:
    
         cd docker
 
-4. Copy the example docker files:
+5. Copy the example docker files:
 
         cp example.cluster-node.docker-compose.yml docker-compose.yml
         cp example.cluster-node.env .env
 
-5. Edit `.env`. This file is annotated to help you select appropriate values. Note that 2 cluster nodes
+6. Edit `.env`. This file is annotated to help you select appropriate values. Note that 2 cluster nodes
 must have `MASTER` set to `true`.
-6. Bring up the containers:
+
+7. Bring up the containers, starting with the cluster nodes and then moving to the primary node.
 
         docker-compose up -d
 
@@ -165,10 +169,9 @@ for a dataset that replaces the existing index. The new index replaces the old i
 has been created, so users are not affected by reloading.
 
 ### Loading with Apache Spark
-When using the Spark loader, the dataset files must be located at the dataset filepath on all nodes 
-(e.g., by having separate copies or using a network share such as [NFS](https://www.digitalocean.com/community/tutorials/how-to-set-up-an-nfs-mount-on-ubuntu-16-04)).
+When using the Spark loader, the dataset files must be located at the dataset filepath on all nodes. All nodes must also have access to shared directory (`tweetset_data/full_datasets`) for creating the full extracts. For creating full extracts, this process is more efficient than the method described below ("Creating a manual extract").
 
-In general, using Spark withing Docker is tricky because the Spark driver, Spark master, and Spark
+In general, using Spark within Docker is tricky because the Spark driver, Spark master, and Spark
 nodes all need to be able to communicate and the ports are dynamically selected. (Some of the ports
 can be fixed, but supporting multiple simultaneous loaders requires leaving some dynamic.) This
 doesn't play well with Docker's port mapping, since the hostnames and ports that Spark advertises internally
@@ -190,6 +193,8 @@ loader Elasticsearch is on the same machine as TweetSets (e.g., in a small devel
         --conf spark.driver.host=$SPARK_DRIVER_HOST \
         tweetset_loader.py spark-create /dataset/path/to
 
+3. Extracts will be stored in `/tweetset_data/full_datasets` and will be visible in the UI. 
+
 ### Reloading an existing set with Apache Spark
 1. Start and connect to a loader container:
 
@@ -199,7 +204,7 @@ loader Elasticsearch is on the same machine as TweetSets (e.g., in a small devel
         spark-submit \
         --jars elasticsearch-hadoop.jar \
         --master spark://$SPARK_MASTER_HOST:7101 \
-        --py-files dist/TweetSets-2.1.0-py3.6.egg,dependencies.zip \
+        --py-files dist/TweetSets-2.1.0-py3.8.egg,dependencies.zip \
         --conf spark.driver.bindAddress=0.0.0.0 \
         --conf spark.driver.host=$SPARK_DRIVER_HOST \
         tweetset_loader.py spark-reload dataset-id /dataset/path/to
@@ -213,7 +218,7 @@ invoke the loader with an `update` command:
         spark-submit \
         --jars elasticsearch-hadoop.jar \
         --master spark://$SPARK_MASTER_HOST:7101 \
-        --py-files dist/TweetSets-2.1.0-py3.6.egg,dependencies.zip \
+        --py-files dist/TweetSets-2.1.0-py3.8.egg,dependencies.zip \
         --conf spark.driver.bindAddress=0.0.0.0 \
         --conf spark.driver.host=$SPARK_DRIVER_HOST \
         tweetset_loader.py update dataset-id /dataset/path/to
