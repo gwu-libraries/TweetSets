@@ -197,12 +197,12 @@ def dataset(dataset_id, full_dataset=False):
 
     # Check for existing exports
     filenames_list = []
-    _add_filenames('Generated tweet JSON files', 'json', dataset_path, filenames_list, hide=not context['is_local_mode'])
-    _add_filenames('Generated tweet CSV files', 'csv', dataset_path, filenames_list, hide=not context['is_local_mode'])
-    _add_filenames('Generated tweet id files', 'ids', dataset_path, filenames_list)
-    _add_filenames('Generated mentions nodes/edges files', 'nodes/edges', dataset_path, filenames_list)
-    _add_filenames('Generated aggregate mentions files', 'mentions_agg', dataset_path, filenames_list)
-    _add_filenames('Generated aggregate users files', 'users_agg', dataset_path, filenames_list)
+    _add_filenames('Tweet JSON files', 'json', dataset_path, filenames_list, hide=not context['is_local_mode'])
+    _add_filenames('Tweet CSV files', 'csv', dataset_path, filenames_list, hide=not context['is_local_mode'])
+    _add_filenames('Tweet id files', 'ids', dataset_path, filenames_list)
+    _add_filenames('Mentions nodes/edges files', 'nodes/edges', dataset_path, filenames_list)
+    _add_filenames('Mention counts by user', 'mentions_agg', dataset_path, filenames_list)
+    _add_filenames('Tweet counts by user', 'users_agg', dataset_path, filenames_list)
     context['filenames_list'] = filenames_list
 
     context['dataset_id'] = dataset_id
