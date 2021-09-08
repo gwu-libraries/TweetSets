@@ -375,7 +375,7 @@ if __name__ == '__main__':
             # read dataset as RDD (for loading into Elasticsearch)
             tweets_str_rdd = spark.sparkContext.textFile(','.join(filepath_list))
             # repartition or coalesce for improved performance
-            apply_partitions(tweets_str_rdd, num_partitions, filepath_list)
+            tweets_str_rdd = apply_partitions(tweets_str_rdd, num_partitions, filepath_list)
             # Apply transform
             tweets_rdd = tweets_str_rdd.map(to_tweet_dict).map(lambda row: (row['tweet_id'], row))
             log.info('Saving tweets to Elasticsearch.')
