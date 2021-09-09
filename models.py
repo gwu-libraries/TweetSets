@@ -82,9 +82,7 @@ def to_tweet(tweet_json, dataset_id, index_name, store_tweet=False):
     tweet.meta.index = index_name
     tweet.dataset_id = dataset_id
     tweet.tweet_type = tweet_type(tweet_json)
-    text = [tweet_text(tweet_json)]
     if tweet.tweet_type == 'quote':
-        text.append(tweet_text(tweet_json['quoted_status']))
         tweet.retweeted_quoted_user_id = tweet_json['quoted_status']['user']['id_str']
         tweet.retweeted_quoted_screen_name = tweet_json['quoted_status']['user']['screen_name']
         tweet.retweet_quoted_status_id = tweet_json['quoted_status']['id_str']
@@ -92,12 +90,11 @@ def to_tweet(tweet_json, dataset_id, index_name, store_tweet=False):
         tweet.retweeted_quoted_user_id = tweet_json['retweeted_status']['user']['id_str']
         tweet.retweeted_quoted_screen_name = tweet_json['retweeted_status']['user']['screen_name']
         tweet.retweet_quoted_status_id = tweet_json['retweeted_status']['id_str']
-        text = [tweet_text(tweet_json['retweeted_status'])]
     elif tweet.tweet_type == 'reply':
         tweet.in_reply_to_user_id = tweet_json.get('in_reply_to_user_id_str')
         tweet.in_reply_to_screen_name = tweet_json.get('in_reply_to_screen_name')
         tweet.in_reply_to_status_id = tweet_json.get('in_reply_to_status_id_str')
-    tweet.text = tuple(text)
+    tweet.text = (tweet_text(tweet_json),)
     tweet.created_at = date_parse(tweet_json['created_at'])
     tweet.user_id = tweet_json['user']['id_str']
     tweet.user_screen_name = tweet_json['user']['screen_name']
@@ -109,12 +106,13 @@ def to_tweet(tweet_json, dataset_id, index_name, store_tweet=False):
     tweet.user_time_zone = tweet_json['user']['time_zone']
     tweet.user_location = tweet_json['user']['location']
     tweet.mention_user_ids, tweet.mention_screen_names = mentions(entities)
-    tweet.hashtags = tweet_hashtags(entities)
-    tweet.favorite_count = tweet_json['favorite_count']
+    tweet.hashtags = tweet_hashtags(tweet_json)
+    # Use retweeted_status.favorite_count if present, per twarc 1.12
+    tweet.favorite_count = tweet_json.get('retweeted_status', {}).get('favorite_count') or tweet_json['favorite_count']
     tweet.retweet_count = tweet_json['retweet_count']
     tweet.language = tweet_json['lang']
     tweet.has_media = 'media' in entities
-    tweet.urls = urls(entities, type)
+    tweet.urls = urls(tweet_json)
     tweet.has_geo = tweet.has_geo = True if tweet_json.get('geo') or tweet_json.get('place') or tweet_json.get(
         'coordinates') else False
     if store_tweet:
@@ -134,14 +132,22 @@ def tweet_type(tweet_json):
 
 
 def tweet_text(tweet_json):
-    # This handles compat, extended, and extended streaming tweets.
-    return tweet_json.get('full_text') \
-           or tweet_json.get('extended_tweet', {}).get('full_text') \
+    # This handles compat, extended, and extended streaming tweets. Use retweeted text if present.
+    t = tweet_json.get('retweeted_status')
+    if not t:
+        t = tweet_json
+    return t.get('extended_tweet', {}).get('full_text') \
+           or t.get('full_text') \
            or tweet_json.get('text', '')
 
-
-def tweet_hashtags(entities):
+def tweet_hashtags(tweet_json):
     hashtags = []
+    # Check for retweet
+    t = tweet_json.get('retweeted_status')
+    if not t:
+        t = tweet_json
+    # Use extended_tweet if present
+    entities = t.get('extended_tweet', {}).get('entities') or t['entities']
     for hashtag in entities['hashtags']:
         hashtags.append(hashtag['text'].lower())
     return tuple(hashtags)
@@ -156,14 +162,19 @@ def mentions(entities):
     return tuple(mentions_user_ids), tuple(mention_screen_names)
 
 
-def urls(entities, type):
-    urls = []
-    for url_obj in entities['urls']:
-        url = url_obj.get('expanded_url') or url_obj['url']
-        if url and (not type == 'quote' or not url.startswith('https://twitter.com/')):
+def urls(tweet_json):
+    # URL's in extended_tweet and regular tweet can be different; take the union of these elements
+    urls = tweet_json.get('extended_tweet', {}).get('entities', {}).get('urls', []) \
+            + tweet_json['entities'].get('urls', [])
+    ts_urls = []
+    for url_obj in urls:
+        # Use only the expanded url, per twarc 1.12
+        url = url_obj.get('expanded_url')
+        if url:
             # Normalize to lower case and http
-            urls.append(url.lower().replace('https://', 'http://'))
-    return tuple(urls)
+            ts_urls.append(url.lower().replace('https://', 'http://'))
+    # Dedupe and return
+    return tuple(set(ts_urls))
 
 
 class TweetIndex(Index):

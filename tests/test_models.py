@@ -61,8 +61,7 @@ class TestTweet(TestCase):
     def test_quote(self):
         tweet = to_tweet(quote_tweet, 'test', 'test_index')
         self.assertEqual('quote', tweet.tweet_type)
-        self.assertEqual(('Test 10. Retweet. https://t.co/tBu6RRJoKr',
-                          'First day at Gelman Library. First tweet. http://t.co/Gz5ybAD6os',), tweet.text)
+        self.assertEqual(('Test 10. Retweet. https://t.co/tBu6RRJoKr',), tweet.text)
         self.assertTrue(tweet.urls)
         self.assertEqual('justin_littman', tweet.retweeted_quoted_screen_name)
         self.assertEqual('481186914', tweet.retweeted_quoted_user_id)
