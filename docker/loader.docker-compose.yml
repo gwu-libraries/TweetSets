@@ -12,14 +12,24 @@ services:
               max-file: ${DOCKER_LOG_MAX_FILE}
       volumes:
         - ${DATASET_PATH}:/dataset
+        - ${TWEETSETS_DATA_PATH}/full_datasets:/tweetsets_data/full_datasets
+        # Uncomment the following lines for development
+        #- "../tweetset_loader.py:/opt/tweetsets/tweetset_loader.py"
+        #- "../spark_utils.py:/opt/tweetsets/spark_utils.py"
       # Using host networking so that spark can choose own ports
       # and the ports inside the container match the ports outside
       # the container. (Spark needs to be able to share the correct
       # ports.)
       network_mode: "host"
+      # Exposes Spark Jobs UI
+      ports:
+        - 4040:4040
       environment:
         - TZ
         - STORE_TWEET
         - ES_HOST=${HOSTNAME}
         - SPARK_DRIVER_HOST=${HOSTNAME}
         - SPARK_MASTER_HOST=${HOSTNAME}
+        - PATH_TO_EXTRACTS=/tweetsets_data/full_datasets
+        - SPARK_MAX_FILE_SIZE
+        - SPARK_PARTITION_SIZE

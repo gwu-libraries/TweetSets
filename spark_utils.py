@@ -4,6 +4,64 @@ import pyspark.sql.functions as F
 from pyspark.sql import Row
 import json
 from twarc import json2csv
+import os
+import re
+import logging
+
+log = logging.getLogger(__name__)
+
+def parse_size(size, env):
+    '''Parses a string containing a size that may be in kilobytes, megabytes, or gigabytes.
+    :param size: string representation of size
+    :param env: string corresponding to an environment variable name (used for error messaging)'''
+    try:
+        num, factor = re.match('(\d+)([kmg])', size).groups()
+    except AttributeError:
+        log.exception(f'Environment variable {env} incorrectly specified. Should be one or more digits followed by either m (megabytes), k (kilobytes) or g (gigabytes).')
+        raise
+    # Convert GB, MB, or KB to bytes
+    return int(num) * {'g': 1000**3, 'm': 10**6, 'k': 1000}.get(factor)
+
+def compute_output_partitions(tweet_count): 
+    '''Calculates how many partitions necessary to achieve the target file size for spark.write, as defined in the environment variable MAX_SPARK_FILE_SIZE. Returns a dictionary mapping extract type to target partitions.
+    :param tweet_count: total number of tweets in the collection
+    '''
+    # Derived from sample of 300K tweets / size in bytes per tweet per extract
+    sizes = {'json': 3907.8411268075424,
+            'csv': 184.07439405127573,
+            'mentions-edges': 14.501095724125433,
+            'mentions-nodes': 7.717282851721618,
+            'mentions-agg': 5.743666510612312,
+            'ids': 8.977668650717135,
+            'users': 40.01428571428571}
+    # Get target file size
+    max_size_env = os.environ.get('SPARK_MAX_FILE_SIZE', '2g') # Applying default of 2 GB
+    max_size = parse_size(max_size_env, 'SPARK_MAX_FILE_SIZE')
+    # The number of files should be the total number of tweets divided by the number of tweets per file of this extract type, given the file size target
+    return {k: int((tweet_count * v)/ max_size ) or 1 
+            for k,v in sizes.items()}
+
+def compute_read_partitions(input_files):
+    '''Computes number of partitions to apply after reading data with spark.read/SparkContext.textFile, in order to achieve target partition size.
+    :param input_files: list of files (for computing total file size) 
+    '''
+    # Compute size in bytes
+    total_size = sum([os.stat(f).st_size for f in input_files])
+    partition_size = os.environ.get('SPARK_PARTITION_SIZE', '128m')
+    partition_size = parse_size(partition_size, 'SPARK_PARTITION_SIZE')
+    # Number of partitions
+    return int(total_size/partition_size) or 1
+    
+def apply_partitions(spark_obj, num_partitions, files):
+    '''Applies either a repartition or a coalesce, depending on whether the number of partitions is greater or less than the number of input files. Coalescing generally performs better than repartitioning when *reducing* the number of partitions.
+    :param spark_obj: a Spark DataFrame or RDD
+    :param num_partitions: a target number of partitions
+    :param files: a list of input files
+    '''
+    if num_partitions > len(files):
+        return spark_obj.repartition(num_partitions)
+    else:
+        return spark_obj.coalesce(num_partitions)
 
 def load_schema(path_to_schema):
     '''Load TweetSets Spark DataFrame schema
@@ -18,7 +76,7 @@ def load_sql(path_to_sql):
     with open(path_to_sql, 'r') as f:
         return f.read()
 
-def make_spark_df(spark, schema, sql, path_to_dataset, dataset_id):
+def make_spark_df(spark, schema, sql, path_to_dataset, dataset_id, num_partitions=None):
     '''Loads a set of JSON tweets and applies the SQL transform.
     
     :param spark: an initialized SparkSession object
@@ -27,8 +85,10 @@ def make_spark_df(spark, schema, sql, path_to_dataset, dataset_id):
     :param path_to_dataset: a comma-separated list of JSON files to load
     :param dataset_id: a string containing the ID for this dataset'''
     # Read JSON files as Spark DataFrame
-    #df = load_rdd(spark, tweet_schema=schema, path_to_tweets=path_to_dataset)
     df = spark.read.schema(schema).json(path_to_dataset)
+    # Apply repartition/coalesce
+    if num_partitions:
+        df = apply_partitions(df, num_partitions=num_partitions, files=path_to_dataset)
     # Create a temp view for the SQL ops
     df.createOrReplaceTempView("tweets")
     # Apply SQL transform
@@ -40,12 +100,21 @@ def make_spark_df(spark, schema, sql, path_to_dataset, dataset_id):
     df = df.withColumn('dataset_id', F.lit(dataset_id))
     return df
 
-def extract_tweet_ids(df, path_to_extract):
+
+def save_to_csv(df, path_to_extract, num_partitions=None):
+    '''Performs DataFrame.write.csv with supplied parameters.
+    :param df: a Spark DataFrame
+    :param path_to_extract: a file path for the CSV (should be folder-level)
+    :param num_partitions: if supplied, number of files to create.'''
+    if num_partitions:
+        df = df.coalesce(num_partitions)
+    df.write.option('header', 'true').csv(path_to_extract, compression='gzip', escape='"')
+
+def extract_tweet_ids(df):
     '''Saves Tweet ID's from a dataset to the provided path as zipped CSV files.
-    :param df: Spark DataFrame
-    :parm path_to_extract: string of path to folder for files'''
+    :param df: Spark DataFrame'''
     # Extract ID column and save as zipped CSV
-    df.select('tweet_id').distinct().write.option("header", "true").csv(path_to_extract, compression='gzip')
+    return df.select('tweet_id').distinct()
     
 def extract_tweet_json(df, path_to_extract):
     '''Saves Tweet JSON documents from a dataset to the provided path as zipped JSON files.
@@ -76,8 +145,7 @@ def make_column_mapping(df_columns, array_fields):
 
 def extract_csv(df):
     '''Creates CSV extract where each row is a Tweet document, using the schema in the twarc.json2csv module.
-    :param df: Spark DataFrame
-    :parm path_to_extract: string of path to folder for files'''
+    :param df: Spark DataFrame'''
     column_mapping = make_column_mapping(df.columns, array_fields=['text'])
     # The hashtags and urls fields are handled differently in the Elasticsearch index and in the CSV (per the twarc.json2csv spec). So we need to drop the ES columns before renaming the CSV-versions of these columns
     df = df.drop('hashtags', 'urls')
@@ -107,8 +175,7 @@ def extract_csv(df):
 def extract_mentions(df, spark):
     '''Creates nodes and edges of full mentions extract.
     :param df: Spark DataFrame (after SQL transform)
-    :param spark: SparkSession object
-    :param path_to_extract: string of path to folder for files'''
+    :param spark: SparkSession object'''
     # Create a temp table so that we can use SQL
     df.createOrReplaceTempView("tweets_parsed")
     # SQL for extracting the mention ids, screen_names, and user_ids
@@ -128,11 +195,10 @@ def extract_mentions(df, spark):
     mention_nodes = mentions_df.select('mention_user_ids', 'user_id').distinct()
     return mention_nodes, mention_edges
 
-def agg_mentions(df, spark):
+def extract_agg_mentions(df, spark):
     '''Creates count of Tweets per mentioned user id.
     :param df: Spark DataFrame (after SQL transform)
-    :param spark: SparkSession object
-    :parm path_to_extract: string of path to folder for files'''
+    :param spark: SparkSession object'''
     df.createOrReplaceTempView("tweets_parsed")
     sql_agg = '''
     select count(distinct tweet_id) as number_mentions,
@@ -144,6 +210,23 @@ def agg_mentions(df, spark):
         from tweets_parsed
     )
     group by mention_user_id
+    order by count(distinct tweet_id) desc
     '''
     mentions_agg_df = spark.sql(sql_agg)  
     return mentions_agg_df
+
+def extract_agg_users(df, spark):
+    '''Creates count of tweets per user id/screen name.
+    :param df: Spark DataFrame (after SQL transform)
+    :param spark: SparkSession object'''
+
+    df.createOrReplaceTempView("tweets_parsed")
+    sql_agg = '''
+    select count(distinct tweet_id) as tweet_count,
+        user_id,
+        user_screen_name
+    from tweets_parsed
+    group by user_id, user_screen_name
+    order by count(distinct tweet_id) desc
+    '''
+    return spark.sql(sql_agg)

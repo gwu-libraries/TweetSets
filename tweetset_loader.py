@@ -16,13 +16,14 @@ from pyspark.sql import SparkSession
 from models import TweetIndex, to_tweet, DatasetIndex, to_dataset, DatasetDocument, TweetDocument, get_tweets_index_name
 from utils import read_json, short_uid
 from spark_utils import *
+from shutil import copy
+import re
 
 log = logging.getLogger(__name__)
 
 connections.create_connection(hosts=[os.environ.get('ES_HOST', 'elasticsearch')], timeout=90, sniff_on_start=True,
                               sniff_on_connection_fail=True,
                               retry_on_timeout=True, maxsize=25)
-
 
 def find_files(path):
     """
@@ -39,7 +40,41 @@ def find_files(path):
             gz_filepaths,
             glob('{}/*.txt'.format(path)))
 
+def copy_json(json_files, dataset_id):
+    '''
+    Copies JSON (zipped and unzipped) files to the path for full TS extracts.
+    :param files: list of files to be moved
+    :param dataset_id: 6-character unique ID for this dataset
+    '''
+    full_dataset_path = os.environ.get('PATH_TO_EXTRACTS')
+    if not full_dataset_path:
+        log.error('ENV missing: PATH_TO_EXTRACTS. JSON extracts not copied.')
+        return
+    json_extract_dir = os.path.join(full_dataset_path, dataset_id, 'tweet-json')
+    if not os.path.isdir(json_extract_dir):
+        os.makedirs(json_extract_dir)
+    log.info(f'Copying {len(json_files)} JSON files to {json_extract_dir}.')
+    for file in json_files:
+        copy(file, json_extract_dir)
+    return
 
+def create_dataset_params(dataset_id):
+    '''Creates the dataset_params file required by tweetset_server.py to be associated with each full extract.
+    :param dataset_id: Id for the dataset being loaded.'''
+    full_dataset_path = os.environ.get('PATH_TO_EXTRACTS')
+    dataset_params_path = os.path.join(full_dataset_path, dataset_id, 'dataset_params.json')
+    # minimal dataset parameters expected for full extract
+    dataset_params = {"tweet_type_original": "true", 
+                    "tweet_type_quote": "true", 
+                    "tweet_type_retweet": "true", 
+                    "tweet_type_reply": "true", 
+                    "source_dataset": dataset_id, 
+                    "dataset_name": f"full-extract-of-{dataset_id}"}
+    with open(dataset_params_path, 'w') as f:
+        json.dump(dataset_params, f)
+    return
+
+   
 def count_normal_lines(filepath):
     return sum(1 for _ in open(filepath))
 
@@ -310,13 +345,21 @@ if __name__ == '__main__':
         tweet_index = TweetIndex(new_index_name, shards=shards, replicas=0, refresh_interval=-1)
         tweet_index.document(TweetDocument)
         tweet_index.create()
-
         spark = SparkSession.builder.appName('TweetSets').getOrCreate()
         # Make Spark v3 use the v2 time parser
         # TO DO --> update Spark SQL code to use the new time parser
         spark.conf.set("spark.sql.legacy.timeParserPolicy","LEGACY")
         # Set UTC as the time zone
         spark.conf.set('spark.sql.session.timeZone', 'UTC')
+        # List of JSON files to load (for Spark, loads only *.json and *.gz)
+        filepath_list = []
+        filepath_list.extend(filepaths[0])
+        filepath_list.extend(filepaths[1])
+        # path at which to store full extracts
+        full_dataset_path = os.environ.get('PATH_TO_EXTRACTS')
+        full_dataset_path = os.path.join(full_dataset_path, dataset_id)
+        if not os.path.isdir(full_dataset_path):
+            os.mkdir(full_dataset_path)
         try:
             es_conf = {"es.nodes": os.environ.get('ES_HOST', 'elasticsearch'),
                        "es.port": "9200",
@@ -327,18 +370,25 @@ if __name__ == '__main__':
             def to_tweet_dict(tweet_str):
                 return clean_tweet_dict(
                     to_tweet(json.loads(tweet_str), dataset_id, '', store_tweet=True).to_dict(include_meta=True))
-
-            filepath_list = []
-            filepath_list.extend(filepaths[0])
-            filepath_list.extend(filepaths[1])
+            # Calculate number of initial partitions, based on size of dataset
+            num_partitions = compute_read_partitions(filepath_list)
+            # read dataset as RDD (for loading into Elasticsearch)
             tweets_str_rdd = spark.sparkContext.textFile(','.join(filepath_list))
+            # repartition or coalesce for improved performance
+            tweets_str_rdd = apply_partitions(tweets_str_rdd, num_partitions, filepath_list)
+            # Apply transform
             tweets_rdd = tweets_str_rdd.map(to_tweet_dict).map(lambda row: (row['tweet_id'], row))
+            log.info('Saving tweets to Elasticsearch.')
             tweets_rdd.saveAsNewAPIHadoopFile(
                 path='-',
                 outputFormatClass="org.elasticsearch.hadoop.mr.EsOutputFormat",
                 keyClass="org.apache.hadoop.io.NullWritable",
                 valueClass="org.elasticsearch.hadoop.mr.LinkedMapWritable",
                 conf=es_conf)
+            # Calculate number of partitions per extract, given number of tweets
+            # If not supplied, all partitions default to 1
+            # This number determines how many files will be created by the Spark DataFrameWriter
+            file_partitions = compute_output_partitions(tweet_count)
             # Load Spark schema and SQL for preparing TweetSets docs for Elasticsearch
             ts_schema = load_schema('./tweetsets_schema.json')
             ts_sql = load_sql('./tweetsets_sql_exp.sql')
@@ -346,18 +396,49 @@ if __name__ == '__main__':
                                 schema=ts_schema, 
                                 sql=ts_sql, 
                                 path_to_dataset=filepath_list,
-                                dataset_id=dataset_id)
-            path_to_extract = '/dataset/' + dataset_id
-            os.mkdir(path_to_extract)
-            extract_tweet_ids(df, path_to_extract + '/tweet_ids')
+                                dataset_id=dataset_id,
+                                num_partitions=num_partitions)
+            # Create and save tweet ID's
+            tweet_ids_path = os.path.join(full_dataset_path, 'tweet-ids')
+            log.info(f'Saving tweet IDs to {tweet_ids_path}.')
+            tweet_ids = extract_tweet_ids(df)
+            save_to_csv(tweet_ids, tweet_ids_path, num_partitions=file_partitions['ids'])
+            # Create and save tweet CSV
+            tweet_csv_path = os.path.join(full_dataset_path, 'tweet-csv')
+            log.info(f'Saving CSV extracts to {tweet_csv_path}.')
             # Setting the escape character to the double quote. Otherwise, it causes problems for applications reading the CSV.
-            extract_csv(df).write.option("header", "true").csv(path_to_extract + '/tweet_csv', compression='gzip', escape='"')
-            mention_nodes, mention_edges = extract_mentions(df, spark)
-            mention_nodes.write.option("header", "true").csv(path_to_extract + '/tweet_mentions/nodes', compression='gzip')
-            mention_edges.write.option("header", "true").csv(path_to_extract + '/tweet_mentions/edges', compression='gzip')
-            agg_mentions(df, spark).write.option("header", "true").csv(path_to_extract + '/tweet_mentions/top_mentions', compression='gzip')
+            tweet_csv = extract_csv(df)
+            save_to_csv(tweet_csv, tweet_csv_path, num_partitions=file_partitions['csv'])
+            # Create and save mentions
+            mentions_path = os.path.join(full_dataset_path, 'tweet-mentions')
+            log.info(f'Saving tweet mentions to {mentions_path}.')
+            mentions_nodes, mentions_edges = extract_mentions(df, spark)
+            save_to_csv(mentions_nodes, 
+                        path_to_extract=os.path.join(mentions_path, 'nodes'),
+                        num_partitions=file_partitions['mentions-nodes']
+                        )
+            save_to_csv(mentions_edges,
+                        path_to_extract=os.path.join(mentions_path, 'edges'),
+                        num_partitions=file_partitions['mentions-edges']
+                        )
+            mentions_agg = extract_agg_mentions(df, spark)
+            save_to_csv(mentions_agg,
+                        path_to_extract=os.path.join(mentions_path, 'agg-mentions'),
+                        num_partitions=file_partitions['mentions-agg']
+                        )
+            # Create and save user counts
+            users_path = os.path.join(full_dataset_path, 'tweet-users')
+            users = extract_agg_users(df, spark)
+            save_to_csv(users,
+                        path_to_extract=users_path,
+                        num_partitions=file_partitions['users']
+                        )          
         finally:
             spark.stop()
+        # Copy full JSON tweet files to extracts directory
+        copy_json(filepath_list, dataset_id)
+        # Create dataset params file
+        create_dataset_params(dataset_id)
 
     if args.command in ('create', 'reload', 'spark-create', 'spark-reload'):
 

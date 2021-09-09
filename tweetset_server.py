@@ -6,7 +6,7 @@ from elasticsearch_dsl.connections import connections as es_connections
 from elasticsearch.exceptions import ElasticsearchException
 import os
 import requests
-import fnmatch
+from pathlib import Path
 from models import DatasetDocument
 import redis as redispy
 from datetime import date, datetime, timedelta
@@ -197,12 +197,12 @@ def dataset(dataset_id, full_dataset=False):
 
     # Check for existing exports
     filenames_list = []
-    _add_filenames('Generated tweet JSON files', 'tweets-*.jsonl.zip', dataset_path, filenames_list, hide=not context['is_local_mode'])
-    _add_filenames('Generated tweet CSV files', 'tweets-*.csv.zip', dataset_path, filenames_list, hide=not context['is_local_mode'])
-    _add_filenames('Generated tweet id files', 'tweet-ids-*.txt.zip', dataset_path, filenames_list)
-    _add_filenames('Generated mentions files', 'mention-*.csv.zip', dataset_path, filenames_list)
-    _add_filenames('Generated top mentions files', 'top-mentions-*.csv.zip', dataset_path, filenames_list)
-    _add_filenames('Generated top users files', 'top-users-*.csv.zip', dataset_path, filenames_list)
+    _add_filenames('Tweet JSON files', 'json', dataset_path, filenames_list, hide=not context['is_local_mode'])
+    _add_filenames('Tweet CSV files', 'csv', dataset_path, filenames_list, hide=not context['is_local_mode'])
+    _add_filenames('Tweet id files', 'ids', dataset_path, filenames_list)
+    _add_filenames('Mentions nodes/edges files', 'nodes/edges', dataset_path, filenames_list)
+    _add_filenames('Mention counts by user', 'mentions_agg', dataset_path, filenames_list)
+    _add_filenames('Tweet counts by user', 'users_agg', dataset_path, filenames_list)
     context['filenames_list'] = filenames_list
 
     context['dataset_id'] = dataset_id
@@ -213,11 +213,40 @@ def dataset(dataset_id, full_dataset=False):
 
 
 def _add_filenames(label, filter, dataset_path, filename_list, hide=False):
-    filenames = fnmatch.filter(os.listdir(dataset_path), filter)
+    '''Adds files that match a given pattern within a supplied directory.
+    :param label: a label to associate with this group of files
+    :param filter: a type of file to search for; should correspond to a key in the patterns dict below
+    :param dataset_path: a path where the files can be found
+    :param filename_list: a list to be modified and returned, containing the files that match filter appended
+    :param hide: whether to hide these files from this user
+    '''
+    patterns = {'json': ('tweets-*.jsonl.zip',
+                        'tweet-json/*.json.gz',
+                        'tweet-json/*.jsonl.gz',
+                        'tweet-json/*.jsonl',
+                        'tweet-json/*.json'),
+                'ids': ('tweet-ids-*.txt.zip',
+                        'tweet-ids/*.csv.gz'),
+                'csv': ('tweets-*.csv.zip',
+                        'tweet-csv/*.csv.gz'),
+                'nodes/edges': ('mention-*.csv.zip',
+                        'tweet-mentions/edges/*.csv.gz',
+                        'tweet-mentions/nodes/*.csv.gz'),
+                'mentions_agg': ('top-mentions-*.csv.zip',
+                                'tweet-mentions/agg-mentions/*.csv.gz'),
+                'users_agg': ('top-users-*.csv.zip',
+                            'tweet-users/*.csv.gz')}
+    p = Path(dataset_path)
+    filenames = []
+    # Iterate over possible patterns
+    for pattern in patterns[filter]:
+        # to account for nested directories
+        pattern_path = Path(pattern)
+        # Extract just the file name and add its relative parent
+        filenames.extend([pattern_path.parent / f.name for f in  p.glob(pattern)])
     if filenames and not hide:
         filenames.sort()
         filename_list.append((label, filenames))
-
 
 @app.route('/dataset', methods=['POST'])
 def limit_dataset():
@@ -269,9 +298,13 @@ def limit_dataset():
         return render_template('dataset.html', **context)
 
 @app.route('/full-dataset-file/<dataset_id>/<filename>', defaults={'full_dataset': True}, endpoint='full_dataset_file')
+@app.route('/full-dataset-file/<dataset_id>/<path:extract_subpath>/<filename>', defaults={'full_dataset': True}, endpoint='full_dataset_file')
 @app.route('/dataset-file/<dataset_id>/<filename>')
-def dataset_file(dataset_id, filename, full_dataset=False):
-    filepath = os.path.join(_dataset_path(dataset_id, full_dataset), filename)
+def dataset_file(dataset_id, filename, extract_subpath=None, full_dataset=False):
+    if extract_subpath:
+        filepath = os.path.join(_dataset_path(dataset_id, full_dataset), extract_subpath, filename)
+    else:
+        filepath = os.path.join(_dataset_path(dataset_id, full_dataset), filename)
     return send_file(filepath, as_attachment=True, attachment_filename=filename)
 
 
