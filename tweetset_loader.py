@@ -58,8 +58,8 @@ def create_json_extracts(json_files, dataset_id, by_date=False, to_size=None):
     json_extract_dir = create_extract_path(dataset_id)
     log.info(f'Copying and concatenating {len(json_files)} JSON files to {len(grouped_files)} files at {json_extract_dir}.')
     # Create new file for each grouped file and concatenate contents
-    for name, files in grouped_files:
-        with open(os.path.join(json_extract_dir, f'tweet-{name}.jsonl.gz', 'wb')) as outfile:
+    for name, files in grouped_files.items():
+        with open(os.path.join(json_extract_dir, f'tweet-{name}.jsonl.gz'), 'wb') as outfile:
             # Iterate over the files to be copied
             for file in files:
                 # Uses copyfileobj for fast copying
