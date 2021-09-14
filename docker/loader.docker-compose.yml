@@ -1,10 +1,10 @@
 version: '2'
 services:
   loader:
-      image: gwul/tweetsets-loader
-      #build:
-      #    context: ..
-      #    dockerfile: Dockerfile-loader
+      #image: gwul/tweetsets-loader
+      build:
+          context: ..
+          dockerfile: Dockerfile-loader
       logging:
           driver: json-file
           options:
@@ -16,6 +16,7 @@ services:
         # Uncomment the following lines for development
         #- "../tweetset_loader.py:/opt/tweetsets/tweetset_loader.py"
         #- "../spark_utils.py:/opt/tweetsets/spark_utils.py"
+        #- "../utils.py:/opt/tweetsets/utils.py"
       # Using host networking so that spark can choose own ports
       # and the ports inside the container match the ports outside
       # the container. (Spark needs to be able to share the correct

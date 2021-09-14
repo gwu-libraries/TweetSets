@@ -14,9 +14,9 @@ import multiprocessing
 import os.path
 from pyspark.sql import SparkSession
 from models import TweetIndex, to_tweet, DatasetIndex, to_dataset, DatasetDocument, TweetDocument, get_tweets_index_name
-from utils import read_json, short_uid
+from utils import groupby_size, read_json, short_uid, groupby_date, create_extract_path
 from spark_utils import *
-from shutil import copy
+from shutil import copy, copyfileobj
 import re
 
 log = logging.getLogger(__name__)
@@ -40,17 +40,40 @@ def find_files(path):
             gz_filepaths,
             glob('{}/*.txt'.format(path)))
 
+def create_json_extracts(json_files, dataset_id, by_date=False, to_size=None):
+    '''
+    Concatenates gzipped JSON files to reduce the number of extracts. Either concatenates by date (using the timestamp in the filename) or up to a specified file-size limit.
+    :param json_files: a list of files to concatenate
+    :param dataset_id: 6-character unique ID for this dataset
+    :param by_date: set to True in order to concatenate by date
+    :param to_size: provide a size (in bytes) to concatenate up to a limit size
+    '''
+    if by_date:
+        grouped_files = groupby_date(json_files)
+    elif to_size:
+        grouped_files = groupby_size(json_files, to_size)
+    # If neither parameter supplied, just copy files over as is
+    else:
+        return copy_json(json_files, dataset_id)
+    json_extract_dir = create_extract_path(dataset_id)
+    log.info(f'Copying and concatenating {len(json_files)} JSON files to {len(grouped_files)} files at {json_extract_dir}.')
+    # Create new file for each grouped file and concatenate contents
+    for name, files in grouped_files.items():
+        with open(os.path.join(json_extract_dir, f'tweet-{name}.jsonl.gz'), 'wb') as outfile:
+            # Iterate over the files to be copied
+            for file in files:
+                # Uses copyfileobj for fast copying
+                with open(file, 'rb') as infile:
+                    copyfileobj(infile, outfile)
+    return
+
 def copy_json(json_files, dataset_id):
     '''
     Copies JSON (zipped and unzipped) files to the path for full TS extracts.
     :param files: list of files to be moved
     :param dataset_id: 6-character unique ID for this dataset
     '''
-    full_dataset_path = os.environ.get('PATH_TO_EXTRACTS')
-    if not full_dataset_path:
-        log.error('ENV missing: PATH_TO_EXTRACTS. JSON extracts not copied.')
-        return
-    json_extract_dir = os.path.join(full_dataset_path, dataset_id, 'tweet-json')
+    json_extract_dir = create_extract_path(dataset_id)
     if not os.path.isdir(json_extract_dir):
         os.makedirs(json_extract_dir)
     log.info(f'Copying {len(json_files)} JSON files to {json_extract_dir}.')
@@ -436,7 +459,7 @@ if __name__ == '__main__':
         finally:
             spark.stop()
         # Copy full JSON tweet files to extracts directory
-        copy_json(filepath_list, dataset_id)
+        create_json_extracts(filepath_list, dataset_id, by_date=True)
         # Create dataset params file
         create_dataset_params(dataset_id)
 

@@ -5,6 +5,12 @@ import re
 from elasticsearch_dsl import Search, Q
 from models import get_tweets_index_name
 from celery import Celery
+from itertools import groupby
+import logging
+import os
+from collections import defaultdict
+
+log = logging.getLogger(__name__)
 
 def make_celery(app):
     '''As described in Flask documentation. Adds a Flask application context to the Celery worker thread.'''
@@ -23,6 +29,59 @@ def make_celery(app):
     celery.Task = ContextTask
     return celery
 
+def create_extract_path(dataset_id):
+    '''Creates a path for the tweet JSON extracts, using the supplied dataset_id. 
+    :param dataset_id: unique identifier for this dataset'''
+    full_dataset_path = os.environ.get('PATH_TO_EXTRACTS')
+    if not full_dataset_path:
+        log.error('ENV missing: PATH_TO_EXTRACTS. JSON extracts not copied.')
+        return 
+    json_extract_dir = os.path.join(full_dataset_path, dataset_id, 'tweet-json')
+    if not os.path.isdir(json_extract_dir):
+        os.makedirs(json_extract_dir)
+    return json_extract_dir
+
+def extract_date(filepath):
+    '''
+    Extracts the date portion of an SFM filepath.
+    :param filepath: the string representation of a path to a file whose name is the format XXXXXXXXXX-YYYYMMDDXXXXXXXX-XXXXX-XXXXXXXX.json. If the path does not contain a valid date, will raise an error
+    '''
+    try:
+        filename = filepath.split('/')[-1]
+        fileparts = filename.split('-')
+        date = fileparts[1][:8]
+    except IndexError:
+        log.exception(f'Error parsing JSON file names by date.')
+        raise
+    try:
+        datetime.strptime(date, '%Y%m%d')
+    except ValueError:
+        log.exception(f'Invalid date format in {filepath}')
+        raise  
+    return date
+
+def groupby_date(files):
+    '''Groups a list of files from SFM by date, where the date is embedded in the filename. See the pattern in extract_date above. Returns a dictionary mapping the date to a list of files.
+    :param files: a list of file paths.'''
+    sorted_files = sorted(files, key=extract_date)
+    groups = {k: list(g) for k, g in groupby(sorted_files, extract_date)}
+    return groups
+
+def groupby_size(files, max_size):
+    '''Groups a list of files up to the max_size parameter. Returns a dict mapping a group index to a list of files.
+    :param files: a list of file paths
+    :param max_size: maximum size in bytes'''
+    groups = defaultdict(list) # 
+    size = 0 # Counter for size
+    i = 1 # Index for grouped file names
+    for f in files:
+        size += os.stat(f).st_size
+        # If the size of this file would put us over the limit, and if the current group isn't empty, we create a new group
+        if (size >= max_size) and (len(groups[str(i).zfill(5)]) > 0):
+            size = os.stat(f).st_size
+            i += 1
+        groups[str(i).zfill(5)].append(f)
+    return groups
 
 def write_json(filepath, obj):
     with open(filepath, 'w') as file:
