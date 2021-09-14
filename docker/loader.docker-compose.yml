@@ -14,9 +14,9 @@ services:
         - ${DATASET_PATH}:/dataset
         - ${TWEETSETS_DATA_PATH}/full_datasets:/tweetsets_data/full_datasets
         # Uncomment the following lines for development
-        - "../tweetset_loader.py:/opt/tweetsets/tweetset_loader.py"
-        - "../spark_utils.py:/opt/tweetsets/spark_utils.py"
-        - "../utils.py:/opt/tweetsets/utils.py"
+        #- "../tweetset_loader.py:/opt/tweetsets/tweetset_loader.py"
+        #- "../spark_utils.py:/opt/tweetsets/spark_utils.py"
+        #- "../utils.py:/opt/tweetsets/utils.py"
       # Using host networking so that spark can choose own ports
       # and the ports inside the container match the ports outside
       # the container. (Spark needs to be able to share the correct
