@@ -224,7 +224,7 @@ invoke the loader with an `update` command:
         tweetset_loader.py update dataset-id /dataset/path/to
 
 ### Creating a manual extract (dataset)
-Full extracts of existing datasets can be created from the command line. 
+Full extracts of existing datasets can be created from the command line. Note that this command does not use the Spark loader, so will not generate mentions or user tweet count files. It generates .zip versions of JSON, CSV, and IDs. 
 
 1. Launch a shell session in the server container:
 ```

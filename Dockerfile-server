@@ -14,6 +14,7 @@ ADD tasks.py /opt/tweetsets/
 ADD templates/ /opt/tweetsets/templates/
 ADD static /opt/tweetsets/static/
 
+ENV FLASK_APP=tweetset_server.py
 RUN pip install gunicorn
 
 EXPOSE 8080
