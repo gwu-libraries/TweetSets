@@ -28,7 +28,7 @@ Modes are configured in the `.env` file as described below.
 ### Prerequisites
 * Docker
 * Docker-compose
-* Set `vm_max_map_count` as described in the [ElasticSearch documentation](https://www.elastic.co/guide/en/elasticsearch/reference/current/docker.html).
+* Set `vm_max_map_count` as described in the [ElasticSearch documentation](https://www.elastic.co/guide/en/elasticsearch/reference/current/docker.html).  Each node of the cluster may require this setting.
 
 ### Installation for non-cluster ElasticSearch
 1. Create data directories on a volume with adequate storage:
@@ -46,7 +46,7 @@ Note:
 
 2. Create a directory, to be named as you choose, where tweet data files will be stored for loading.
 
-        mkdir /dataset_loading
+        mkdir /datasets_loading
 
 2. Clone or download this repository:
 
@@ -77,7 +77,7 @@ For HTTPS support, uncomment and configure the nginx-proxy container in `docker-
 Clusters must have at least a primary node and two additional nodes.
 
 #### Primary node
-1. Create data directories on a volume with adequate storage. Note that in order to use the Spark loader, the `full_datasets` and `dataset_loading` directories (see below) will need to be shared between the primary and cluster nodes as an NFS mount. (The other directories do not need to be shared.)
+1. Create data directories on a volume with adequate storage. Note that in order to use the Spark loader, the `full_datasets` and `datasets_loading` directories (see below) will need to be shared between the primary and cluster nodes as an NFS mount. (The other directories do not need to be shared.)
 
         mkdir -p /tweetset_data/redis
         mkdir -p /tweetset_data/datasets
@@ -87,9 +87,9 @@ Clusters must have at least a primary node and two additional nodes.
 
 2. Create a directory, to be named as you choose, where tweet data files will be stored for loading. 
 
-        mkdir /dataset_loading
+        mkdir /datasets_loading
 
-3. Set up the `tweetset_data/full_datasets` and `dataset_loading` NFS mounts as [described here](https://github.com/gwu-libraries/TweetSets/wiki/Setting-up-NFS-mounts-for-cluster-mode).
+3. Set up the `tweetset_data/full_datasets` and `datasets_loading` NFS mounts as [described here](https://github.com/gwu-libraries/TweetSets/wiki/Setting-up-NFS-mounts-for-cluster-mode).
 
 4. Clone or download this repository:
 
@@ -118,13 +118,13 @@ For HTTPS support, uncomment and configure the nginx-proxy container in `docker-
         mkdir -p /tweetset_data/elasticsearch
         mkdir -p /tweetset_data/full_datasets
         chown -R 1000:1000 /tweetset_data/elasticsearch
-        mkdir /dataset_loading
+        mkdir /datasets_loading
 
 2. Clone or download this repository:
 
         git clone https://github.com/gwu-libraries/TweetSets.git
 
-3. Set up the `tweetset_data/full_datasets` and `dataset_loading` NFS mounts as [described here](https://github.com/gwu-libraries/TweetSets/wiki/Setting-up-NFS-mounts-for-cluster-mode).
+3. Set up the `tweetset_data/full_datasets` and `datasets_loading` NFS mounts as [described here](https://github.com/gwu-libraries/TweetSets/wiki/Setting-up-NFS-mounts-for-cluster-mode).
         
 4. Change to the `docker` directory:
    
