@@ -122,7 +122,7 @@ services:
       restart: always
   # For development
 #  server-flaskrun:
-      image: gwul/tweetsets-flaskrun
+#      image: gwul/tweetsets-flaskrun
 ##      build:
 ##          context: ..
 ##          dockerfile: Dockerfile-flaskrun
@@ -137,8 +137,8 @@ services:
 #      ports:
 #          - ${SERVER_PORT}:5000
 #      volumes:
-#        - /tweetsets_data/datasets:/tweetsets_data/datasets
-#        - /tweetsets_data/full_datasets:/tweetsets_data/full_datasets
+#        - ${TWEETSETS_DATA_PATH}/datasets:/tweetsets_data/datasets
+#        - ${TWEETSETS_DATA_PATH}/full_datasets:/tweetsets_data/full_datasets
 #        # Link in a file containing a message to be displayed on dataset list page, e.g., for other
 #        # collections that are available, but not loaded.
 #        - "./dataset_list_msg.txt:/opt/tweetsets/dataset_list_msg.txt"
@@ -199,7 +199,6 @@ services:
       links:
         - elasticsearch:elasticsearch
         - elasticsearch2:elasticsearch2
-        - spark-master
       volumes:
         - ${DATASET_PATH}:/dataset
       networks:
