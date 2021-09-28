@@ -188,9 +188,11 @@ loader Elasticsearch is on the same machine as TweetSets (e.g., in a small devel
         spark-submit \
         --jars elasticsearch-hadoop.jar \
         --master spark://$SPARK_MASTER_HOST:7101 \
-        --py-files dist/TweetSets-2.1.0-py3.8.egg,dependencies.zip \
+        --py-files dist/TweetSets-2.2.0-py3.8.egg,dependencies.zip \
         --conf spark.driver.bindAddress=0.0.0.0 \
         --conf spark.driver.host=$SPARK_DRIVER_HOST \
+        --conf spark.driver.port=7003 \
+        --conf spark.blockManager.port=7020 \
         tweetset_loader.py spark-create /dataset/path/to
 
 3. Extracts will be stored in `/tweetset_data/full_datasets` and will be visible in the UI. 
