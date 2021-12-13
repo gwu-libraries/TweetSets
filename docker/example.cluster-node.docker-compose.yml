@@ -25,7 +25,7 @@ services:
         - bootstrap.memory_lock=true
         - network.host=_eth0_
         - network.publish_host=${HOSTNAME}
-        - "ES_JAVA_OPTS=-Xms${ES_JAVA_MEM} -Xmx${ES_JAVA_MEM}"
+        - "ES_JAVA_OPTS=-Xms${ES_JAVA_MEM} -Xmx${ES_JAVA_MEM} -Dlog4j2.formatMsgNoLookups=true"
         - discovery.zen.ping.unicast.hosts=${PRIMARY_HOSTNAME}
         - node.master=${MASTER}
         - TZ
