@@ -24,7 +24,7 @@ services:
       environment:
         - cluster.name=${CLUSTER_NAME}
         - bootstrap.memory_lock=true
-        - "ES_JAVA_OPTS=-Xms${ES_JAVA_MEM} -Xmx${ES_JAVA_MEM}"
+        - "ES_JAVA_OPTS=-Xms${ES_JAVA_MEM} -Xmx${ES_JAVA_MEM} -Dlog4j2.formatMsgNoLookups=true"
         - TZ
         # added for 7.9.2
         - node.name=elasticsearch
